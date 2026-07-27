@@ -1,5 +1,5 @@
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
-import type { BrowseQuery, EntryPatch, Media, Prefs } from '@shared/types'
+import type { BrowseQuery, EntryPatch, Media, Prefs, WatchEventPatch, WatchEventRef } from '@shared/types'
 import * as anilist from './anilist'
 import { resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
@@ -7,10 +7,12 @@ import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import {
   cacheMedia,
+  cancelRewatch,
   clearWatched,
   dbPath,
   getPrefs,
   removeEntry,
+  removeEvent,
   resetAll,
   schemaInfo,
   setEntry,
@@ -18,7 +20,9 @@ import {
   setWatched,
   setWatchedUpTo,
   snapshot,
-  store
+  startRewatch,
+  store,
+  updateEvent
 } from './store'
 
 function ownerOf(event: Electron.IpcMainInvokeEvent): BrowserWindow {
@@ -50,6 +54,12 @@ export function registerIpc(): void {
   )
   ipcMain.handle('lib:set-watched-up-to', (_e, animeId: number, episode: number) => setWatchedUpTo(animeId, episode))
   ipcMain.handle('lib:clear-watched', (_e, animeId: number) => clearWatched(animeId))
+  ipcMain.handle('lib:start-rewatch', (_e, animeId: number) => startRewatch(animeId))
+  ipcMain.handle('lib:cancel-rewatch', (_e, animeId: number) => cancelRewatch(animeId))
+  ipcMain.handle('lib:update-event', (_e, ref: WatchEventRef, patch: WatchEventPatch) =>
+    updateEvent(ref, patch)
+  )
+  ipcMain.handle('lib:remove-event', (_e, ref: WatchEventRef) => removeEvent(ref))
 
   // ---- preferences ---------------------------------------------------
   ipcMain.handle('prefs:get', () => getPrefs())

@@ -11,7 +11,9 @@ import {
   type Media,
   type Prefs,
   type Snapshot,
-  type WatchEvent
+  type WatchEvent,
+  type WatchEventPatch,
+  type WatchEventRef
 } from '@shared/types'
 
 interface Db {
@@ -41,13 +43,30 @@ let saving: Promise<void> = Promise.resolve()
 let readOnly = false
 let lastReport: MigrationReport | null = null
 
-/** `${animeId}:${episode}` for every episode currently marked as seen. */
+/**
+ * `${animeId}:${episode}` for every episode seen *in the current pass*.
+ *
+ * Earlier passes stay in `db.history` — they still count towards watch time and
+ * keep their notes — but they must not make an episode look ticked after the
+ * user has started watching a series again.
+ */
 let watchedIndex = new Set<string>()
 
 const key = (animeId: number, episode: number): string => `${animeId}:${episode}`
 
+/** Viewing an event belongs to; files written before rewatches have no `pass`. */
+const passOf = (ev: WatchEvent): number => ev.pass ?? 0
+
+/** The pass currently being watched for a series. */
+function currentPass(animeId: number): number {
+  return db.entries[String(animeId)]?.rewatches ?? 0
+}
+
 function rebuildIndex(): void {
-  watchedIndex = new Set(db.history.map((h) => key(h.animeId, h.episode)))
+  watchedIndex = new Set()
+  for (const ev of db.history) {
+    if (passOf(ev) === currentPass(ev.animeId)) watchedIndex.add(key(ev.animeId, ev.episode))
+  }
 }
 
 function sanitize(raw: unknown): Db {
@@ -196,9 +215,11 @@ function runtimeOf(animeId: number): number {
   return db.media[String(animeId)]?.duration || db.prefs.defaultRuntime
 }
 
+/** Episodes seen in the current pass — what drives the entry's status. */
 function watchedCount(animeId: number): number {
+  const pass = currentPass(animeId)
   let n = 0
-  for (const ev of db.history) if (ev.animeId === animeId) n += 1
+  for (const ev of db.history) if (ev.animeId === animeId && passOf(ev) === pass) n += 1
   return n
 }
 
@@ -237,6 +258,14 @@ export function removeEntry(animeId: number): void {
   changed()
 }
 
+/** A new event for the pass being watched. `pass: 0` stays implicit. */
+function newEvent(animeId: number, episode: number, at: number): WatchEvent {
+  const pass = currentPass(animeId)
+  const ev: WatchEvent = { animeId, episode, at, minutes: runtimeOf(animeId) }
+  if (pass > 0) ev.pass = pass
+  return ev
+}
+
 /** Marks or unmarks a single episode, keeping the entry status in sync. */
 export function setWatched(animeId: number, episode: number, watched: boolean): void {
   const k = key(animeId, episode)
@@ -244,10 +273,14 @@ export function setWatched(animeId: number, episode: number, watched: boolean): 
   if (watched === already) return
 
   if (watched) {
-    db.history.push({ animeId, episode, at: Date.now(), minutes: runtimeOf(animeId) })
+    db.history.push(newEvent(animeId, episode, Date.now()))
     watchedIndex.add(k)
   } else {
-    db.history = db.history.filter((h) => !(h.animeId === animeId && h.episode === episode))
+    // Only the current pass is undone; earlier viewings keep their rows.
+    const pass = currentPass(animeId)
+    db.history = db.history.filter(
+      (h) => !(h.animeId === animeId && h.episode === episode && passOf(h) === pass)
+    )
     watchedIndex.delete(k)
   }
   syncProgress(animeId)
@@ -256,22 +289,119 @@ export function setWatched(animeId: number, episode: number, watched: boolean): 
 
 export function setWatchedUpTo(animeId: number, episode: number): void {
   const now = Date.now()
-  const minutes = runtimeOf(animeId)
   for (let ep = 1; ep <= episode; ep += 1) {
     const k = key(animeId, ep)
     if (watchedIndex.has(k)) continue
-    db.history.push({ animeId, episode: ep, at: now, minutes })
+    db.history.push(newEvent(animeId, ep, now))
     watchedIndex.add(k)
   }
   syncProgress(animeId)
   changed()
 }
 
+/** Wipes a series' progress — every pass, not just the current one. */
 export function clearWatched(animeId: number): void {
   db.history = db.history.filter((h) => h.animeId !== animeId)
+  const entry = db.entries[String(animeId)]
+  if (entry) entry.rewatches = 0
   rebuildIndex()
   syncProgress(animeId)
   changed()
+}
+
+// ---------------------------------------------------------------- rewatching
+
+/**
+ * Starts watching a series again.
+ *
+ * The previous pass is left untouched in the history — its watch time still
+ * counts and its per-episode notes survive — but the grid comes back empty so
+ * progress can be ticked afresh.
+ */
+export function startRewatch(animeId: number): Entry | null {
+  const entry = db.entries[String(animeId)]
+  if (!entry) return null
+
+  entry.rewatches += 1
+  entry.status = 'watching'
+  entry.startedAt = Date.now()
+  entry.finishedAt = null
+  entry.updatedAt = Date.now()
+
+  rebuildIndex()
+  changed()
+  return entry
+}
+
+/** Undoes a rewatch started by mistake, discarding only that pass. */
+export function cancelRewatch(animeId: number): Entry | null {
+  const entry = db.entries[String(animeId)]
+  if (!entry || entry.rewatches <= 0) return null
+
+  const pass = entry.rewatches
+  db.history = db.history.filter((h) => !(h.animeId === animeId && passOf(h) === pass))
+  entry.rewatches -= 1
+  entry.updatedAt = Date.now()
+
+  rebuildIndex()
+  syncProgress(animeId)
+  changed()
+  return entry
+}
+
+// ---------------------------------------------------------------- history
+
+function findEvent(ref: WatchEventRef): WatchEvent | undefined {
+  return db.history.find(
+    (h) => h.animeId === ref.animeId && h.episode === ref.episode && passOf(h) === ref.pass
+  )
+}
+
+/**
+ * Corrects one watch event: its date, its runtime, its note, its emotions.
+ *
+ * Editing a date is the main use — an import stamps every episode with the day
+ * it was ticked, not the day it was watched.
+ */
+export function updateEvent(ref: WatchEventRef, patch: WatchEventPatch): boolean {
+  const ev = findEvent(ref)
+  if (!ev) return false
+
+  if (patch.at !== undefined && Number.isFinite(patch.at)) {
+    ev.at = patch.at
+    // A hand-set date is a real date, so it stops being import noise and
+    // rejoins the day-based statistics.
+    delete ev.imported
+  }
+  if (patch.minutes !== undefined && Number.isFinite(patch.minutes)) {
+    ev.minutes = Math.max(0, Math.round(patch.minutes))
+  }
+  if (patch.note !== undefined) {
+    const note = patch.note.trim()
+    if (note) ev.note = note
+    else delete ev.note
+  }
+  if (patch.emotions !== undefined) {
+    if (patch.emotions.length) ev.emotions = patch.emotions
+    else delete ev.emotions
+  }
+
+  changed()
+  return true
+}
+
+/** Removes a single watch event, from any pass. */
+export function removeEvent(ref: WatchEventRef): boolean {
+  const before = db.history.length
+  db.history = db.history.filter(
+    (h) => !(h.animeId === ref.animeId && h.episode === ref.episode && passOf(h) === ref.pass)
+  )
+  if (db.history.length === before) return false
+
+  rebuildIndex()
+  syncProgress(ref.animeId)
+  changed()
+  return true
 }
 
 /** Moves an entry between planned → watching → completed as episodes get ticked. */
@@ -310,11 +440,18 @@ export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): v
     const current = db.entries[String(entry.animeId)]
     if (!current || current.updatedAt <= entry.updatedAt) db.entries[String(entry.animeId)] = entry
   }
+  // Deduplicated per viewing, not per episode: a rewatch legitimately repeats
+  // an episode, and dropping it would lose both its date and its note.
+  const eventKey = (ev: WatchEvent): string => `${ev.animeId}:${ev.episode}:${passOf(ev)}`
+  const known = new Set(db.history.map(eventKey))
   for (const ev of incoming.history ?? []) {
-    if (watchedIndex.has(key(ev.animeId, ev.episode))) continue
+    const k = eventKey(ev)
+    if (known.has(k)) continue
     db.history.push(ev)
-    watchedIndex.add(key(ev.animeId, ev.episode))
+    known.add(k)
   }
+
+  rebuildIndex()
   changed()
 }
 

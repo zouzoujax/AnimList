@@ -144,7 +144,27 @@ export interface WatchEvent {
    * must stay out of day-based stats (best day, streaks, heatmap, monthly).
    */
   imported?: boolean
+  /**
+   * Which viewing this belongs to: absent or `0` is the first watch, `1` the
+   * first rewatch, and so on. Only the pass matching the entry's `rewatches`
+   * counts as "currently seen"; earlier passes stay in the history so watch
+   * time and per-episode notes survive a restart.
+   */
+  pass?: number
+  /** Free note written about this particular viewing. */
+  note?: string
+  /** How this viewing felt. */
+  emotions?: EmotionId[]
 }
+
+/** Identifies one watch event. Three fields, because a rewatch repeats an episode. */
+export interface WatchEventRef {
+  animeId: number
+  episode: number
+  pass: number
+}
+
+export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note' | 'emotions'>>
 
 export interface Prefs {
   titleLang: TitleLang

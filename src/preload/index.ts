@@ -14,7 +14,9 @@ import type {
   Snapshot,
   StudioWorks,
   TvTimeProgress,
-  TvTimeReport
+  TvTimeReport,
+  WatchEventPatch,
+  WatchEventRef
 } from '@shared/types'
 
 const api = {
@@ -39,6 +41,12 @@ const api = {
     setWatchedUpTo: (animeId: number, episode: number): Promise<void> =>
       ipcRenderer.invoke('lib:set-watched-up-to', animeId, episode),
     clearWatched: (animeId: number): Promise<void> => ipcRenderer.invoke('lib:clear-watched', animeId),
+    startRewatch: (animeId: number): Promise<Entry | null> => ipcRenderer.invoke('lib:start-rewatch', animeId),
+    cancelRewatch: (animeId: number): Promise<Entry | null> =>
+      ipcRenderer.invoke('lib:cancel-rewatch', animeId),
+    updateEvent: (ref: WatchEventRef, patch: WatchEventPatch): Promise<boolean> =>
+      ipcRenderer.invoke('lib:update-event', ref, patch),
+    removeEvent: (ref: WatchEventRef): Promise<boolean> => ipcRenderer.invoke('lib:remove-event', ref),
     onChange: (cb: () => void): (() => void) => {
       const handler = (): void => cb()
       ipcRenderer.on('store:change', handler)

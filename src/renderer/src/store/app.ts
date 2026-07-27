@@ -6,7 +6,9 @@ import {
   type Media,
   type Prefs,
   type Snapshot,
-  type WatchEvent
+  type WatchEvent,
+  type WatchEventPatch,
+  type WatchEventRef
 } from '@shared/types'
 import { secondaryFor } from '@/lib/color'
 
@@ -51,6 +53,10 @@ interface AppState {
   toggleEpisode: (animeId: number, episode: number) => Promise<void>
   markUpTo: (animeId: number, episode: number) => Promise<void>
   clearProgress: (animeId: number) => Promise<void>
+  startRewatch: (animeId: number) => Promise<void>
+  cancelRewatch: (animeId: number) => Promise<void>
+  updateEvent: (ref: WatchEventRef, patch: WatchEventPatch) => Promise<void>
+  removeEvent: (ref: WatchEventRef) => Promise<void>
 }
 
 function applyTheme(prefs: Prefs): void {
@@ -64,18 +70,19 @@ function applyTheme(prefs: Prefs): void {
 }
 
 function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' | 'watched' | 'events'> {
+  const entries = new Map(snapshot.entries.map((e) => [e.animeId, e]))
   const watched = new Map<number, Set<number>>()
+
   for (const ev of snapshot.history) {
+    // Only the pass being watched shows as ticked; earlier viewings stay in the
+    // history for watch time and notes without filling the grid again.
+    if ((ev.pass ?? 0) !== (entries.get(ev.animeId)?.rewatches ?? 0)) continue
     let set = watched.get(ev.animeId)
     if (!set) watched.set(ev.animeId, (set = new Set()))
     set.add(ev.episode)
   }
-  return {
-    entries: new Map(snapshot.entries.map((e) => [e.animeId, e])),
-    media: new Map(snapshot.media.map((m) => [m.id, m])),
-    watched,
-    events: snapshot.history
-  }
+
+  return { entries, media: new Map(snapshot.media.map((m) => [m.id, m])), watched, events: snapshot.history }
 }
 
 let toastSeq = 0
@@ -172,6 +179,26 @@ export const useApp = create<AppState>((set, get) => ({
     watched.set(animeId, new Set())
     set({ watched })
     await window.api.library.clearWatched(animeId)
+  },
+
+  // The grid empties at once; the echo brings back the new pass number.
+  startRewatch: async (animeId) => {
+    const watched = new Map(get().watched)
+    watched.set(animeId, new Set())
+    set({ watched })
+    await window.api.library.startRewatch(animeId)
+  },
+
+  cancelRewatch: async (animeId) => {
+    await window.api.library.cancelRewatch(animeId)
+  },
+
+  updateEvent: async (ref, patch) => {
+    await window.api.library.updateEvent(ref, patch)
+  },
+
+  removeEvent: async (ref) => {
+    await window.api.library.removeEvent(ref)
   }
 }))
 
