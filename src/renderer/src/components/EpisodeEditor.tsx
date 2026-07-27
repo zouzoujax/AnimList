@@ -126,8 +126,8 @@ function ViewingForm({
 
       {event.imported && (
         <p className="mt-1.5 text-[0.7rem] text-faint">
-          Cette date est celle du pointage dans l'app d'origine, pas celle du visionnage — les statistiques
-          par jour l'ignorent. La corriger ici la rend réelle.
+          Cette date est celle du pointage dans l'app d'origine, pas celle du visionnage — les statistiques par jour
+          l'ignorent. La corriger ici la rend réelle.
         </p>
       )}
 

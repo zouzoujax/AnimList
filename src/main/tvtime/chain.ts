@@ -57,11 +57,7 @@ function airedOn(c: ImportCandidate): number {
  * `root`. The chain may come back shorter than asked when AniList simply has
  * no more entries — the caller reports the leftover rather than inventing one.
  */
-export async function buildChain(
-  root: ImportCandidate,
-  needed: number,
-  deps: ChainDeps
-): Promise<ImportCandidate[]> {
+export async function buildChain(root: ImportCandidate, needed: number, deps: ChainDeps): Promise<ImportCandidate[]> {
   const chain = [root]
   const seen = new Set([root.media.id])
   let total = episodesOf(root)
@@ -103,9 +99,7 @@ export async function buildChain(
     .filter((c) => !seen.has(c.media.id))
     .filter((c) => BROADCAST.has(c.media.format ?? ''))
     .filter((c) =>
-      [c.media.title.romaji, c.media.title.english, ...c.synonyms].some(
-        (t) => t && normalizeTitle(t).startsWith(key)
-      )
+      [c.media.title.romaji, c.media.title.english, ...c.synonyms].some((t) => t && normalizeTitle(t).startsWith(key))
     )
     .sort((a, b) => airedOn(a) - airedOn(b))
 

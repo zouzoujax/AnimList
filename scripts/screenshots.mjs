@@ -81,10 +81,9 @@ async function ask(query, variables) {
 
 const fetchCast = async () =>
   (
-    await ask(
-      `query($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { ${MEDIA_FIELDS} } } }`,
-      { ids: CAST }
-    )
+    await ask(`query($ids: [Int]) { Page(perPage: 50) { media(id_in: $ids, type: ANIME) { ${MEDIA_FIELDS} } } }`, {
+      ids: CAST
+    })
   ).Page.media
 
 /**
@@ -155,8 +154,7 @@ const DAY = 86_400_000
 const REWATCHING = 3
 
 /** Episodes at 20:30 local, give or take, because that is when anime is watched. */
-const eveningOf = (dayOffset, slot, now) =>
-  now - dayOffset * DAY - 3 * 3600_000 + slot * 26 * 60_000
+const eveningOf = (dayOffset, slot, now) => now - dayOffset * DAY - 3 * 3600_000 + slot * 26 * 60_000
 
 /**
  * Invents a plausible year of watching.
@@ -392,13 +390,7 @@ async function main() {
   const electron = join('node_modules', 'electron', 'dist', 'electron.exe')
   const child = spawn(
     electron,
-    [
-      '.',
-      `--user-data-dir=${dir}`,
-      `--screenshots=${OUT_DIR}`,
-      `--shot-anime=${media[0].id}`,
-      '--disable-gpu-vsync'
-    ],
+    ['.', `--user-data-dir=${dir}`, `--screenshots=${OUT_DIR}`, `--shot-anime=${media[0].id}`, '--disable-gpu-vsync'],
     { stdio: 'inherit' }
   )
 

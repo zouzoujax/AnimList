@@ -111,10 +111,7 @@ export function searchQueries(name: string): string[] {
 }
 
 /** Picks the best-scoring candidate, or `null` when none clears the floor. */
-export function bestMatch<T extends Candidate>(
-  name: string,
-  candidates: T[]
-): { candidate: T; score: number } | null {
+export function bestMatch<T extends Candidate>(name: string, candidates: T[]): { candidate: T; score: number } | null {
   let best: { candidate: T; score: number } | null = null
   for (const candidate of candidates) {
     const score = scoreCandidate(name, candidate)

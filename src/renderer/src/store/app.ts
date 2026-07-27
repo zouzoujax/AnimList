@@ -80,9 +80,7 @@ function applyTheme(prefs: Prefs): void {
   document.body.classList.toggle('reduce-motion', prefs.reduceMotion)
 }
 
-function indexSnapshot(
-  snapshot: Snapshot
-): Pick<AppState, 'entries' | 'media' | 'watched' | 'events' | 'lists'> {
+function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' | 'watched' | 'events' | 'lists'> {
   const entries = new Map(snapshot.entries.map((e) => [e.animeId, e]))
   const watched = new Map<number, Set<number>>()
 

@@ -65,9 +65,7 @@ export function registerIpc(): void {
   ipcMain.handle('lib:clear-watched', (_e, animeId: number) => clearWatched(animeId))
   ipcMain.handle('lib:start-rewatch', (_e, animeId: number) => startRewatch(animeId))
   ipcMain.handle('lib:cancel-rewatch', (_e, animeId: number) => cancelRewatch(animeId))
-  ipcMain.handle('lib:update-event', (_e, ref: WatchEventRef, patch: WatchEventPatch) =>
-    updateEvent(ref, patch)
-  )
+  ipcMain.handle('lib:update-event', (_e, ref: WatchEventRef, patch: WatchEventPatch) => updateEvent(ref, patch))
   ipcMain.handle('lib:remove-event', (_e, ref: WatchEventRef) => removeEvent(ref))
 
   // ---- bulk actions --------------------------------------------------
@@ -77,9 +75,7 @@ export function registerIpc(): void {
 
   // ---- custom lists --------------------------------------------------
   ipcMain.handle('lists:create', (_e, name: string, emoji?: string) => createList(name, emoji))
-  ipcMain.handle('lists:update', (_e, id: string, patch: { name?: string; emoji?: string }) =>
-    updateList(id, patch)
-  )
+  ipcMain.handle('lists:update', (_e, id: string, patch: { name?: string; emoji?: string }) => updateList(id, patch))
   ipcMain.handle('lists:delete', (_e, id: string) => deleteList(id))
   ipcMain.handle('lists:membership', (_e, id: string, animeIds: number[], member: boolean) =>
     setListMembership(id, animeIds, member)

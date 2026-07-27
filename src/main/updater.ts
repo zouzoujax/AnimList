@@ -55,9 +55,7 @@ async function attach(): Promise<Updater | null> {
 
   auto.on('update-available', (info) => set({ phase: 'available', version: info.version, message: null }))
   auto.on('update-not-available', () => set({ phase: 'current', version: null, message: null }))
-  auto.on('download-progress', (progress) =>
-    set({ phase: 'downloading', percent: Math.round(progress.percent) })
-  )
+  auto.on('download-progress', (progress) => set({ phase: 'downloading', percent: Math.round(progress.percent) }))
   auto.on('update-downloaded', (info) => set({ phase: 'ready', version: info.version, percent: 100 }))
   auto.on('error', (err) => set({ phase: 'error', message: err.message }))
 

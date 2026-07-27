@@ -408,9 +408,7 @@ export function setWatched(animeId: number, episode: number, watched: boolean): 
     // Only the current pass is undone; earlier viewings keep their rows.
     touchJournal()
     const pass = currentPass(animeId)
-    db.history = db.history.filter(
-      (h) => !(h.animeId === animeId && h.episode === episode && passOf(h) === pass)
-    )
+    db.history = db.history.filter((h) => !(h.animeId === animeId && h.episode === episode && passOf(h) === pass))
     watchedIndex.delete(k)
   }
   syncProgress(animeId)
@@ -484,9 +482,7 @@ export function cancelRewatch(animeId: number): Entry | null {
 // ---------------------------------------------------------------- history
 
 function findEvent(ref: WatchEventRef): WatchEvent | undefined {
-  return db.history.find(
-    (h) => h.animeId === ref.animeId && h.episode === ref.episode && passOf(h) === ref.pass
-  )
+  return db.history.find((h) => h.animeId === ref.animeId && h.episode === ref.episode && passOf(h) === ref.pass)
 }
 
 /**

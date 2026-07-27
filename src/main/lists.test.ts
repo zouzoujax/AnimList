@@ -267,9 +267,7 @@ describe('importSnapshot et listes', () => {
         media: [],
         history: [],
         prefs: {} as never,
-        lists: [
-          { id: list?.id ?? '', name: 'Locale', emoji: '📁', animeIds: [2], createdAt: 1, updatedAt: 1 }
-        ]
+        lists: [{ id: list?.id ?? '', name: 'Locale', emoji: '📁', animeIds: [2], createdAt: 1, updatedAt: 1 }]
       },
       'merge'
     )

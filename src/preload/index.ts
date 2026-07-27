@@ -44,16 +44,14 @@ const api = {
       ipcRenderer.invoke('lib:set-watched-up-to', animeId, episode),
     clearWatched: (animeId: number): Promise<void> => ipcRenderer.invoke('lib:clear-watched', animeId),
     startRewatch: (animeId: number): Promise<Entry | null> => ipcRenderer.invoke('lib:start-rewatch', animeId),
-    cancelRewatch: (animeId: number): Promise<Entry | null> =>
-      ipcRenderer.invoke('lib:cancel-rewatch', animeId),
+    cancelRewatch: (animeId: number): Promise<Entry | null> => ipcRenderer.invoke('lib:cancel-rewatch', animeId),
     updateEvent: (ref: WatchEventRef, patch: WatchEventPatch): Promise<boolean> =>
       ipcRenderer.invoke('lib:update-event', ref, patch),
     removeEvent: (ref: WatchEventRef): Promise<boolean> => ipcRenderer.invoke('lib:remove-event', ref),
     setEntries: (animeIds: number[], patch: EntryPatch): Promise<number> =>
       ipcRenderer.invoke('lib:set-entries', animeIds, patch),
     removeEntries: (animeIds: number[]): Promise<number> => ipcRenderer.invoke('lib:remove-entries', animeIds),
-    markAllWatched: (animeIds: number[]): Promise<number> =>
-      ipcRenderer.invoke('lib:mark-all-watched', animeIds),
+    markAllWatched: (animeIds: number[]): Promise<number> => ipcRenderer.invoke('lib:mark-all-watched', animeIds),
     onChange: (cb: () => void): (() => void) => {
       const handler = (): void => cb()
       ipcRenderer.on('store:change', handler)
@@ -93,8 +91,7 @@ const api = {
     export: (): Promise<ImportReport> => ipcRenderer.invoke('data:export'),
     import: (mode: 'merge' | 'replace'): Promise<ImportReport> => ipcRenderer.invoke('data:import', mode),
     importMal: (): Promise<ImportReport> => ipcRenderer.invoke('data:import-mal'),
-    importTvTime: (folder?: string | null): Promise<TvTimeReport> =>
-      ipcRenderer.invoke('data:import-tvtime', folder),
+    importTvTime: (folder?: string | null): Promise<TvTimeReport> => ipcRenderer.invoke('data:import-tvtime', folder),
     cancelTvTime: (): Promise<void> => ipcRenderer.invoke('data:cancel-tvtime'),
     onTvTimeProgress: (cb: (progress: TvTimeProgress) => void): (() => void) => {
       const handler = (_e: unknown, progress: TvTimeProgress): void => cb(progress)

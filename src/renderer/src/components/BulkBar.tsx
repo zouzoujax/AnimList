@@ -135,7 +135,9 @@ export default function BulkBar({
         role="region"
         aria-label="Actions groupées"
       >
-        <span className="px-1.5 text-[0.8rem] font-medium tabular-nums">{selected.size} sélectionné{selected.size > 1 ? 's' : ''}</span>
+        <span className="px-1.5 text-[0.8rem] font-medium tabular-nums">
+          {selected.size} sélectionné{selected.size > 1 ? 's' : ''}
+        </span>
 
         <span className="mx-1 h-5 w-px" style={{ background: 'var(--line)' }} />
 

@@ -312,9 +312,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
             <button
               className="btn"
               onClick={() =>
-                setSelected(
-                  selected.size === visible.length ? new Set() : new Set(visible.map((r) => r.media.id))
-                )
+                setSelected(selected.size === visible.length ? new Set() : new Set(visible.map((r) => r.media.id)))
               }
             >
               {selected.size === visible.length ? 'Rien' : 'Tout'}
@@ -389,7 +387,10 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
         </div>
 
         {lists.length > 0 && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5" style={{ borderColor: 'var(--line)' }}>
+          <div
+            className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5"
+            style={{ borderColor: 'var(--line)' }}
+          >
             <span className="label mr-0.5">Listes</span>
             {lists.map((list) => (
               <button

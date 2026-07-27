@@ -40,10 +40,7 @@ export interface ImportDeps extends ChainDeps {
  * Queries are tried from most to least specific and the best result across all
  * of them wins; a confident match stops the ladder early to save requests.
  */
-async function findRoot(
-  name: string,
-  deps: ImportDeps
-): Promise<{ candidate: ImportCandidate; score: number } | null> {
+async function findRoot(name: string, deps: ImportDeps): Promise<{ candidate: ImportCandidate; score: number } | null> {
   let best: { candidate: ImportCandidate; score: number } | null = null
 
   for (const query of searchQueries(name)) {
@@ -110,10 +107,7 @@ export async function runImport(shows: SourceShow[], deps: ImportDeps): Promise<
     }
 
     // Only pay for a chain walk when one entry cannot hold everything.
-    const chain =
-      show.watched > (root.media.episodes ?? 0)
-        ? await buildChain(root, show.watched, deps)
-        : [root]
+    const chain = show.watched > (root.media.episodes ?? 0) ? await buildChain(root, show.watched, deps) : [root]
 
     const slots: Slot[] = chain.map((c) => ({
       animeId: c.media.id,

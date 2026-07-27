@@ -160,8 +160,8 @@ export default function TvTimeImport(): React.JSX.Element {
     <div className="border-t py-3" style={{ borderColor: 'var(--line)' }}>
       <p className="text-[0.85rem] font-medium">Importer depuis TV Time / OpenTV</p>
       <p className="mt-0.5 text-[0.74rem] text-faint">
-        Choisis le dossier de l'export. Les séries suivies sont retrouvées sur AniList et leurs épisodes répartis
-        sur les saisons correspondantes — une série TheTVDB couvre souvent plusieurs fiches AniList.
+        Choisis le dossier de l'export. Les séries suivies sont retrouvées sur AniList et leurs épisodes répartis sur
+        les saisons correspondantes — une série TheTVDB couvre souvent plusieurs fiches AniList.
       </p>
 
       {busy ? (
@@ -216,8 +216,8 @@ export default function TvTimeImport(): React.JSX.Element {
           {problems.length > 0 && !showAll && (
             <p className="mt-1.5 flex items-center gap-1.5 text-[0.74rem]" style={{ color: '#fbbf24' }}>
               <AlertTriangle size={13} />
-              {problems.length} série{problems.length > 1 ? 's' : ''} à vérifier. Associe un id AniList, puis
-              relance : les corrections sont conservées.
+              {problems.length} série{problems.length > 1 ? 's' : ''} à vérifier. Associe un id AniList, puis relance :
+              les corrections sont conservées.
             </p>
           )}
 

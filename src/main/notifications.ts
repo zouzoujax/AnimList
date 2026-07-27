@@ -135,8 +135,7 @@ export function planUpcoming(win: BrowserWindow): void {
       setTimeout(() => {
         planned.delete(k)
         const title = titleFor(media, getPrefs().titleLang)
-        const body =
-          lead > 0 ? `${title} — épisode ${episode} dans ${prefs.notifyLeadMinutes} min` : title
+        const body = lead > 0 ? `${title} — épisode ${episode} dans ${prefs.notifyLeadMinutes} min` : title
         toast(win, media.id, lead > 0 ? 'Bientôt' : `Épisode ${episode} disponible`, body)
       }, delay)
     )

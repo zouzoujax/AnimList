@@ -57,8 +57,7 @@ const journalLines = (): string[] =>
         .filter((l) => l.trim())
     : []
 
-const core = (): Record<string, unknown> =>
-  JSON.parse(readFileSync(dbPath(), 'utf8')) as Record<string, unknown>
+const core = (): Record<string, unknown> => JSON.parse(readFileSync(dbPath(), 'utf8')) as Record<string, unknown>
 
 beforeAll(() => initStore())
 beforeEach(async () => {

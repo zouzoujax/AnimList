@@ -34,9 +34,7 @@ describe('parseCsv', () => {
 
 describe('champs entre guillemets', () => {
   it('keeps a comma inside quotes', () => {
-    expect(parseCsv('title\n"Kaguya-sama, Love Is War"')).toEqual([
-      { title: 'Kaguya-sama, Love Is War' }
-    ])
+    expect(parseCsv('title\n"Kaguya-sama, Love Is War"')).toEqual([{ title: 'Kaguya-sama, Love Is War' }])
   })
 
   it('unescapes a doubled quote', () => {

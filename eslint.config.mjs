@@ -12,15 +12,7 @@ export default tseslint.config(
   {
     // `.claude/` holds vendored agent tooling installed by npx, not project
     // source: linting it reports on someone else's code style.
-    ignores: [
-      'node_modules/**',
-      'out/**',
-      'release/**',
-      'build/**',
-      'dist/**',
-      'DATA EXPORT/**',
-      '.claude/**'
-    ]
+    ignores: ['node_modules/**', 'out/**', 'release/**', 'build/**', 'dist/**', 'DATA EXPORT/**', '.claude/**']
   },
 
   js.configs.recommended,

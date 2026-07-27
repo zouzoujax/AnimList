@@ -468,9 +468,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                   onClick={() => patch({ notify: entry.notify === false })}
                   aria-label={entry.notify === false ? 'Réactiver les notifications' : 'Couper les notifications'}
                   title={
-                    entry.notify === false
-                      ? 'Notifications coupées pour cette série'
-                      : 'Prévenir quand un épisode sort'
+                    entry.notify === false ? 'Notifications coupées pour cette série' : 'Prévenir quand un épisode sort'
                   }
                   style={entry.notify === false ? { color: 'var(--color-faint)' } : undefined}
                 >

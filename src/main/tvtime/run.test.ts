@@ -73,7 +73,12 @@ describe('import nominal', () => {
   })
 
   it('uses the runtime of each entry', async () => {
-    const long = candidate({ id: 100, episodes: 12, duration: 47, title: { romaji: 'Bleach', english: null, native: null } })
+    const long = candidate({
+      id: 100,
+      episodes: 12,
+      duration: 47,
+      title: { romaji: 'Bleach', english: null, native: null }
+    })
     const out = await runImport([show()], deps([long]))
     expect(out.history.every((h) => h.minutes === 47)).toBe(true)
   })
@@ -112,7 +117,10 @@ describe('séries longues', () => {
 
 describe('appariement introuvable', () => {
   it('reports a series with no match rather than failing', async () => {
-    const out = await runImport([show({ name: 'Série inconnue' })], deps([candidate({ id: 9, title: { romaji: 'Berserk', english: null, native: null } })]))
+    const out = await runImport(
+      [show({ name: 'Série inconnue' })],
+      deps([candidate({ id: 9, title: { romaji: 'Berserk', english: null, native: null } })])
+    )
     expect(out.shows[0].status).toBe('unmatched')
     expect(out.entries).toEqual([])
   })
@@ -162,9 +170,12 @@ describe('progression et annulation', () => {
 
   it('stops when cancelled and keeps what it already has', async () => {
     let seen = 0
-    const out = await runImport([show({ id: '1' }), show({ id: '2' }), show({ id: '3' })], deps([bleach], {
-      isCancelled: () => seen++ >= 1
-    }))
+    const out = await runImport(
+      [show({ id: '1' }), show({ id: '2' }), show({ id: '3' })],
+      deps([bleach], {
+        isCancelled: () => seen++ >= 1
+      })
+    )
     expect(out.shows).toHaveLength(1)
     expect(out.entries).toHaveLength(1)
   })
