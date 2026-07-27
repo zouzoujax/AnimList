@@ -101,6 +101,14 @@ export function initStore(): MigrationReport | null {
       lastReport = migrate(raw)
       readOnly = lastReport.ahead
       db = sanitize(raw)
+
+      // From v5 the history lives in a journal beside the core file. When the
+      // journal is missing the core still holds it — a file written before v5,
+      // or a first run — and it has to be laid down.
+      const journal = readJournal()
+      if (journal !== null) db.history = journal
+      else journalDirty = true
+
       rebuildIndex()
 
       if (readOnly) {
@@ -115,7 +123,11 @@ export function initStore(): MigrationReport | null {
           console.error('[store] sauvegarde avant migration impossible', err)
         }
         for (const line of lastReport.applied) console.warn('[store] migration', line)
-        void writeNow()
+        coreDirty = true
+        enqueueWrite()
+      } else if (journalDirty) {
+        // Nothing migrated, but the journal still has to be laid down.
+        enqueueWrite()
       }
 
       return lastReport
@@ -143,16 +155,113 @@ export function dbPath(): string {
   return file
 }
 
-async function writeNow(): Promise<void> {
-  const tmp = `${file}.tmp`
-  const payload = JSON.stringify(db)
+/**
+ * Writes are split in two, because the two halves change at wildly different
+ * rates.
+ *
+ * The **core** file holds media, entries, preferences and lists. It is small and
+ * rewritten whole — that is fine, it only changes when the user edits something
+ * about a series.
+ *
+ * The **history journal** holds one JSON object per line. Ticking an episode
+ * appends a single line instead of re-serialising thousands of rows, which is
+ * what the old single-file store did on every click. Only edits and deletions
+ * force a full rewrite, and those are rare.
+ *
+ * A crash mid-append can leave a truncated last line; the reader skips lines it
+ * cannot parse, so the cost is at most the one episode being written.
+ */
+
+/** The core file needs writing. */
+let coreDirty = false
+/** The journal must be rewritten from scratch (an event was edited or removed). */
+let journalDirty = false
+/** Events to append on the next save, when no rewrite is pending. */
+let appendBuffer: WatchEvent[] = []
+
+const historyPath = (): string => file.replace(/\.json$/, '-history.jsonl')
+
+/**
+ * Any change that is not a pure addition means the journal has to be redone.
+ *
+ * Call it *before* the mutation, so events pushed afterwards are not also queued
+ * for an append that the rewrite would duplicate.
+ */
+function touchJournal(): void {
+  journalDirty = true
+  appendBuffer = []
+}
+
+/** Records a new event both in memory and in the next append. */
+function pushEvent(ev: WatchEvent): void {
+  db.history.push(ev)
+  if (!journalDirty) appendBuffer.push(ev)
+}
+
+function readJournal(): WatchEvent[] | null {
+  const path = historyPath()
+  if (!existsSync(path)) return null
+
+  const out: WatchEvent[] = []
+  let skipped = 0
+  for (const line of readFileSync(path, 'utf8').split('\n')) {
+    if (!line.trim()) continue
+    try {
+      const ev = JSON.parse(line) as WatchEvent
+      if (typeof ev?.animeId === 'number' && typeof ev?.episode === 'number') out.push(ev)
+      else skipped += 1
+    } catch {
+      // A torn final line from a crash during append: losing it costs one episode.
+      skipped += 1
+    }
+  }
+  if (skipped) console.warn(`[store] ${skipped} ligne(s) d'historique illisibles ignorées`)
+  return out
+}
+
+/** tmp + rename, so a reader never sees a half-written file. */
+async function writeAtomic(path: string, payload: string): Promise<void> {
+  const tmp = `${path}.tmp`
   await fs.writeFile(tmp, payload, 'utf8')
   try {
-    await fs.copyFile(file, `${file}.bak`)
+    await fs.copyFile(path, `${path}.bak`)
   } catch {
     // no previous file to back up
   }
-  await fs.rename(tmp, file)
+  await fs.rename(tmp, path)
+}
+
+const journalLines = (events: WatchEvent[]): string =>
+  events.length ? events.map((ev) => JSON.stringify(ev)).join('\n') + '\n' : ''
+
+async function writeNow(): Promise<void> {
+  if (coreDirty) {
+    coreDirty = false
+    // History is deliberately left out: it lives in the journal now.
+    await writeAtomic(file, JSON.stringify({ ...db, history: [] }))
+  }
+
+  if (journalDirty) {
+    journalDirty = false
+    appendBuffer = []
+    await writeAtomic(historyPath(), journalLines(db.history))
+  } else if (appendBuffer.length) {
+    const batch = appendBuffer
+    appendBuffer = []
+    await fs.appendFile(historyPath(), journalLines(batch), 'utf8')
+  }
+}
+
+/**
+ * Every write goes through this one chain.
+ *
+ * Two saves must never overlap: they share the same `.tmp` paths, and a rename
+ * landing out of order would publish stale content. Chaining also means `flush`
+ * can await a write that was started elsewhere — the one `initStore` fires after
+ * a migration, in particular.
+ */
+function enqueueWrite(): void {
+  saving = saving.then(writeNow).catch((err) => console.error('[store] save failed', err))
 }
 
 function persist(): void {
@@ -161,7 +270,7 @@ function persist(): void {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     saveTimer = null
-    saving = saving.then(writeNow).catch((err) => console.error('[store] save failed', err))
+    enqueueWrite()
   }, 400)
 }
 
@@ -169,12 +278,20 @@ export async function flush(): Promise<void> {
   if (saveTimer) {
     clearTimeout(saveTimer)
     saveTimer = null
-    saving = saving.then(writeNow)
+    enqueueWrite()
   }
   await saving.catch((err) => console.error('[store] flush failed', err))
 }
 
+/**
+ * Marks the core file dirty and announces the change.
+ *
+ * Every mutation touches the core one way or another — even an episode tick
+ * moves the entry's status and timestamp — so it is the default. Mutations that
+ * also rewrite history call `touchJournal()` first.
+ */
 function changed(): void {
+  coreDirty = true
   persist()
   store.emit('change')
 }
@@ -257,6 +374,7 @@ export function setEntry(animeId: number, patch: EntryPatch, media?: Media): Ent
 }
 
 export function removeEntry(animeId: number): void {
+  touchJournal()
   delete db.entries[String(animeId)]
   db.history = db.history.filter((h) => h.animeId !== animeId)
   // A list must never point at a series that is gone.
@@ -284,10 +402,11 @@ export function setWatched(animeId: number, episode: number, watched: boolean): 
   if (watched === already) return
 
   if (watched) {
-    db.history.push(newEvent(animeId, episode, Date.now()))
+    pushEvent(newEvent(animeId, episode, Date.now()))
     watchedIndex.add(k)
   } else {
     // Only the current pass is undone; earlier viewings keep their rows.
+    touchJournal()
     const pass = currentPass(animeId)
     db.history = db.history.filter(
       (h) => !(h.animeId === animeId && h.episode === episode && passOf(h) === pass)
@@ -303,7 +422,7 @@ export function setWatchedUpTo(animeId: number, episode: number): void {
   for (let ep = 1; ep <= episode; ep += 1) {
     const k = key(animeId, ep)
     if (watchedIndex.has(k)) continue
-    db.history.push(newEvent(animeId, ep, now))
+    pushEvent(newEvent(animeId, ep, now))
     watchedIndex.add(k)
   }
   syncProgress(animeId)
@@ -312,6 +431,7 @@ export function setWatchedUpTo(animeId: number, episode: number): void {
 
 /** Wipes a series' progress — every pass, not just the current one. */
 export function clearWatched(animeId: number): void {
+  touchJournal()
   db.history = db.history.filter((h) => h.animeId !== animeId)
   const entry = db.entries[String(animeId)]
   if (entry) entry.rewatches = 0
@@ -349,6 +469,7 @@ export function cancelRewatch(animeId: number): Entry | null {
   const entry = db.entries[String(animeId)]
   if (!entry || entry.rewatches <= 0) return null
 
+  touchJournal()
   const pass = entry.rewatches
   db.history = db.history.filter((h) => !(h.animeId === animeId && passOf(h) === pass))
   entry.rewatches -= 1
@@ -377,6 +498,7 @@ function findEvent(ref: WatchEventRef): WatchEvent | undefined {
 export function updateEvent(ref: WatchEventRef, patch: WatchEventPatch): boolean {
   const ev = findEvent(ref)
   if (!ev) return false
+  touchJournal()
 
   if (patch.at !== undefined && Number.isFinite(patch.at)) {
     ev.at = patch.at
@@ -403,6 +525,7 @@ export function updateEvent(ref: WatchEventRef, patch: WatchEventPatch): boolean
 
 /** Removes a single watch event, from any pass. */
 export function removeEvent(ref: WatchEventRef): boolean {
+  touchJournal()
   const before = db.history.length
   db.history = db.history.filter(
     (h) => !(h.animeId === ref.animeId && h.episode === ref.episode && passOf(h) === ref.pass)
@@ -442,6 +565,7 @@ function syncProgress(animeId: number): void {
 }
 
 export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): void {
+  touchJournal()
   if (mode === 'replace') {
     db = emptyDb()
     db.prefs = { ...DEFAULT_PREFS, ...incoming.prefs }
@@ -574,6 +698,7 @@ export function removeEntries(animeIds: number[]): number {
   }
   if (!touched) return 0
 
+  touchJournal()
   db.history = db.history.filter((h) => !drop.has(h.animeId))
   for (const list of db.lists) {
     const before = list.animeIds.length
@@ -596,7 +721,7 @@ export function markAllWatched(animeIds: number[]): number {
     for (let ep = 1; ep <= total; ep += 1) {
       const k = key(animeId, ep)
       if (watchedIndex.has(k)) continue
-      db.history.push(newEvent(animeId, ep, now))
+      pushEvent(newEvent(animeId, ep, now))
       watchedIndex.add(k)
       added += 1
     }
@@ -607,6 +732,7 @@ export function markAllWatched(animeIds: number[]): number {
 }
 
 export function resetAll(): void {
+  touchJournal()
   const prefs = db.prefs
   db = emptyDb()
   db.prefs = prefs

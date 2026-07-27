@@ -208,3 +208,53 @@ describe('v4 — listes personnalisées', () => {
     expect(file.lists?.[0].name).toBe('Espacé')
   })
 })
+
+describe('v5 — dédoublonnage de l’historique', () => {
+  const row = (episode: number, over: Record<string, unknown> = {}): Record<string, unknown> => ({
+    animeId: 1,
+    episode,
+    at: 1_700_000_000_000,
+    minutes: 24,
+    ...over
+  })
+
+  it('collapses two identical rows into one', () => {
+    // The append-only journal makes this newly possible: an append interrupted
+    // and retried can land the same row twice.
+    const file = db({ entries: { '1': { animeId: 1 } }, history: [row(1), row(1)] })
+    migrate(file)
+    expect(file.history).toHaveLength(1)
+  })
+
+  it('keeps two viewings of the same episode', () => {
+    // Different passes are different viewings, each with its own note.
+    const file = db({
+      entries: { '1': { animeId: 1 } },
+      history: [row(1, { note: 'première' }), row(1, { pass: 1, note: 'seconde' })]
+    })
+    migrate(file)
+    expect(file.history).toHaveLength(2)
+    expect(file.history.map((h) => h.note)).toEqual(['première', 'seconde'])
+  })
+
+  it('keeps the first of a duplicate pair', () => {
+    const file = db({
+      entries: { '1': { animeId: 1 } },
+      history: [row(1, { note: 'gardée' }), row(1, { note: 'jetée' })]
+    })
+    migrate(file)
+    expect(file.history[0].note).toBe('gardée')
+  })
+
+  it('leaves distinct episodes alone', () => {
+    const file = db({ entries: { '1': { animeId: 1 } }, history: [row(1), row(2), row(3)] })
+    migrate(file)
+    expect(file.history).toHaveLength(3)
+  })
+
+  it('treats an absent pass as pass 0', () => {
+    const file = db({ entries: { '1': { animeId: 1 } }, history: [row(1), row(1, { pass: 0 })] })
+    migrate(file)
+    expect(file.history).toHaveLength(1)
+  })
+})

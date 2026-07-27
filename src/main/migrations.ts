@@ -12,7 +12,7 @@
  * Never edit a released migration — write a new one on top.
  */
 
-export const SCHEMA_VERSION = 4
+export const SCHEMA_VERSION = 5
 
 /** The raw file shape. Fields are `unknown` because old files are untrusted. */
 export interface StoredDb {
@@ -120,6 +120,32 @@ const migrations: Migration[] = [
         list.animeIds = Array.isArray(list.animeIds)
           ? [...new Set(list.animeIds.filter((v): v is number => typeof v === 'number'))]
           : []
+        return true
+      })
+    }
+  },
+  {
+    to: 5,
+    describe: 'Dédoublonne l’historique par visionnage',
+    run(db) {
+      // From v5 the history lives in an append-only journal
+      // (`animelist-history.jsonl`), which is what this version number is really
+      // for: an older build must refuse to write to a store whose history it
+      // cannot see. The journal makes duplicates newly possible — an append
+      // interrupted and retried can land the same row twice — so this is also
+      // where they get removed.
+      //
+      // Identity is (anime, episode, pass): a rewatch legitimately repeats an
+      // episode, and collapsing those would erase a viewing and its note.
+      // Fields are `unknown` here, so the key is built from numbers only —
+      // stringifying an unexpected object would collapse unrelated rows.
+      const num = (value: unknown): number => (typeof value === 'number' ? value : Number.NaN)
+
+      const seen = new Set<string>()
+      db.history = db.history.filter((row) => {
+        const k = `${num(row.animeId)}:${num(row.episode)}:${typeof row.pass === 'number' ? row.pass : 0}`
+        if (seen.has(k)) return false
+        seen.add(k)
         return true
       })
     }
