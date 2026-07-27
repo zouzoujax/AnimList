@@ -10,7 +10,7 @@ toute ta bibliothèque vit dans un fichier sur ton PC.
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-109%20passing-3FB950)
+![Tests](https://img.shields.io/badge/tests-231%20passing-3FB950)
 ![Runtime deps](https://img.shields.io/badge/dépendances%20runtime-0-8957E5)
 
 Auteur : **Zaidal**
@@ -37,6 +37,12 @@ Inspiré des fonctionnalités d'*OpenTV: TV & Movie Tracker*, transposées à l'
   mensuel, top genres/studios, 12 badges, panthéon des mieux notées
 - **Notifications Windows** quand un épisode d'une série suivie sort
 - **Import MyAnimeList** (`animelist_*.xml` ou `.xml.gz`) avec reconstruction de l'historique
+- **Import TV Time / OpenTV** — choisis le dossier de l'export, les séries suivies sont
+  retrouvées sur AniList et leurs épisodes répartis sur les bonnes saisons. TheTVDB modélise
+  un long anime comme une série à saisons là où AniList le découpe en une entrée par cour,
+  donc les épisodes sont versés le long d'une chaîne de suites avec débordement. Les séries
+  introuvables sont listées avec un champ pour saisir un id AniList ; les corrections sont
+  conservées et rejouées
 - **Export / restauration** JSON, et fonctionnement hors-ligne grâce au cache disque
 
 ## Démarrer
@@ -134,14 +140,16 @@ Rail, Barre haute, Tableau de bord) se combinent librement depuis les Réglages.
 ## Qualité
 
 ```bash
-npm test           # 109 tests unitaires (Vitest)
+npm test           # 231 tests unitaires (Vitest)
 npm run lint       # ESLint 10, typé, 0 erreur
 npm run typecheck  # tsc sur les deux projets
 npm run format     # Prettier
 ```
 
 Ce qui est couvert par des tests : appariement et normalisation des titres, formatage,
-lecture/écriture du store, migrations de schéma, ordonnanceur de requêtes.
+lecture/écriture du store, migrations de schéma, ordonnanceur de requêtes, et toute la
+chaîne d'import TV Time (lecture CSV, appariement, marche dans les suites, répartition
+des épisodes, localisation des fichiers).
 
 Deux mécanismes méritent d'être signalés :
 
@@ -155,7 +163,7 @@ Deux mécanismes méritent d'être signalés :
 
 ## Feuille de route
 
-- [ ] Importeur TV Time / OpenTV intégré à l'app (le moteur vit encore dans `scripts/tvtime/`)
+- [x] Importeur TV Time / OpenTV intégré à l'app
 - [ ] Interface de revisionnage
 - [ ] Édition de l'historique (corriger une date, retirer un épisode)
 - [ ] Notes et ressentis par épisode
