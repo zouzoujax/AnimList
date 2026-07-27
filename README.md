@@ -59,7 +59,10 @@ personnel.</sub>
 - **Historique corrigeable** — modifier la date ou la durée d'un épisode vu, en supprimer un.
   Une date corrigée à la main rejoint les statistiques par jour, dont les imports sont exclus
 - **Découverte** — tendances, saison en cours, populaires, mieux notés, à venir, recherche
-  instantanée, bandes-annonces, casting, relations, recommandations
+  instantanée, casting, relations, recommandations
+- **Bandes-annonces dans l'app**, dans une fenêtre dédiée, sans quitter l'application. Voir la
+  note technique plus bas : le lecteur intégré de YouTube refuse de démarrer sur une page
+  `file://`, ce qui demande un détour
 - **Calendrier** — grille hebdomadaire des prochains épisodes de tes séries
 - **Où regarder** — chaque fiche propose Crunchyroll, Anime-Sama et ADN, en indiquant
   si le lien mène à l'anime lui-même ou à une recherche. Les slugs Anime-Sama étant
@@ -110,6 +113,29 @@ géométrie que le logo affiché dans l'app, à relancer si tu changes la marque
 > Les autres scripts bloqués par npm 11 (`esbuild`, `electron-winstaller`) n'ont pas d'impact :
 > esbuild passe par ses paquets de binaires optionnels, et `electron-winstaller` ne sert qu'à la
 > cible Squirrel, alors qu'on package en NSIS.
+
+> **Pourquoi la bande-annonce ouvre une fenêtre.** Le lecteur intégré de YouTube refuse de
+> démarrer quand la page qui l'intègre n'envoie pas d'en-tête `Referer` : il répond *erreur 153*.
+> Le renderer packagé est chargé depuis `file://`, qui n'en envoie aucun — un `<iframe>` sur la
+> fiche est donc impossible. Mesuré et non supposé : charger l'URL d'intégration comme page
+> principale échoue pareil, elle n'envoie pas de referrer non plus.
+>
+> La bande-annonce s'ouvre donc dans sa propre fenêtre, dont le document est servi depuis
+> `http://127.0.0.1:<port>`. Cette page contient l'iframe, le navigateur envoie un `Referer`
+> véridique pour une page qui intègre réellement la vidéo, et le lecteur démarre. Rien n'est
+> falsifié — l'autre solution, forcer un `httpReferrer` de `youtube.com`, consisterait à
+> revendiquer une origine qui n'est pas la nôtre.
+>
+> Le serveur écoute sur `127.0.0.1` uniquement, sur un port éphémère, ne sert qu'une page derrière
+> un chemin aléatoire, et s'arrête avec la fenêtre. Celle-ci a sa propre partition de session :
+> c'est ce qui la soustrait à la CSP globale de l'app, dont le `frame-src 'none'` bloquerait
+> l'iframe — vérifié en comparant les deux cas, la fenêtre sur la session par défaut rend un
+> rectangle noir. Elle n'a ni preload ni intégration Node, et les cookies de YouTube n'entrent pas
+> dans la session de l'app.
+>
+> Certaines chaînes désactivent l'intégration de leurs vidéos. Le lecteur affiche alors sa propre
+> erreur avec un lien « regarder sur YouTube », qui ouvre le vrai navigateur. Sur les 48 bandes-
+> annonces des animes les plus populaires d'AniList, l'intégration était autorisée dans 48 cas.
 
 > **Audit.** `npm audit` remonte des alertes « high » sur l'arbre d'`electron-builder`
 > (`brace-expansion` → `minimatch` → `glob`…). Ce sont des dépendances de développement utilisées
@@ -247,7 +273,6 @@ Deux mécanismes méritent d'être signalés :
 - [x] Écriture incrémentale du store
 - [x] Mise à jour automatique
 - [x] Captures d'écran générées (`npm run screenshots`, jeu de démo)
-- [ ] Cinquième thème
 
 ## Régénérer les captures
 

@@ -110,6 +110,10 @@ const api = {
       schema: { version: number; expected: number; readOnly: boolean; applied: string[] }
     }> => ipcRenderer.invoke('app:info'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:open-external', url),
+    /** Opens the trailer in its own window. Resolves false when the id is unusable. */
+    openTrailer: (videoId: string, title: string): Promise<boolean> =>
+      ipcRenderer.invoke('trailer:open', videoId, title),
+    closeTrailer: (): Promise<void> => ipcRenderer.invoke('trailer:close'),
     updateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
     checkUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:download'),

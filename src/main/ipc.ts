@@ -7,6 +7,7 @@ import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
+import { closeTrailer, openTrailer } from './trailer'
 import {
   cacheMedia,
   cancelRewatch,
@@ -136,6 +137,8 @@ export function registerIpc(): void {
     dbPath: dbPath(),
     schema: schemaInfo()
   }))
+  ipcMain.handle('trailer:open', (e, videoId: string, title: string) => openTrailer(ownerOf(e), videoId, title))
+  ipcMain.handle('trailer:close', () => closeTrailer())
   ipcMain.handle('update:status', () => updateStatus())
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:download', () => downloadUpdate())

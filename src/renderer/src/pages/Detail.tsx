@@ -225,43 +225,60 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
 }
 
 /**
- * A packaged renderer runs on file://, which sends no Referer, so YouTube's
- * embedded player refuses to start ("Erreur 153"). Opening the trailer in the
- * real browser sidesteps that entirely — and gives fullscreen and quality back.
+ * The trailer plays in the app, in its own window — see `src/main/trailer.ts` for
+ * why it cannot be an iframe on this page. YouTube stays available as a second
+ * action, and is also where an unembeddable video ends up.
  */
-function Trailer({ id, cover }: { id: string; cover: string }): React.JSX.Element {
+function Trailer({ id, cover, title }: { id: string; cover: string; title: string }): React.JSX.Element {
+  const toast = useApp((s) => s.toast)
   const [thumb, setThumb] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`)
 
   const onThumbError = (): void =>
     setThumb((current) => (current.includes('maxresdefault') ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : cover))
 
+  const play = async (): Promise<void> => {
+    const ok = await window.api.app.openTrailer(id, title)
+    // A malformed id or a port that would not bind: fall back rather than
+    // leaving the click doing nothing.
+    if (!ok) {
+      toast('Lecture impossible dans l’app, ouverture sur YouTube.', 'info')
+      void window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)
+    }
+  }
+
   return (
-    <button
-      onClick={() => window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)}
+    <div
       className="group relative aspect-video w-full overflow-hidden rounded-[18px]"
       style={{ border: '1px solid var(--line)' }}
     >
-      <img
-        src={thumb}
-        alt=""
-        onError={onThumbError}
-        className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
-      />
-      <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
-      <span className="absolute inset-0 grid place-items-center">
-        <span
-          className="grid h-16 w-16 place-items-center rounded-full transition-transform group-hover:scale-110"
-          style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#07080f' }}
-        >
-          <Play size={24} fill="currentColor" strokeWidth={0} className="ml-1" />
+      <button onClick={() => void play()} className="absolute inset-0" aria-label={`Lire la bande-annonce de ${title}`}>
+        <img
+          src={thumb}
+          alt=""
+          onError={onThumbError}
+          className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
+        />
+        <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+        <span className="absolute inset-0 grid place-items-center">
+          <span
+            className="grid h-16 w-16 place-items-center rounded-full transition-transform group-hover:scale-110"
+            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#07080f' }}
+          >
+            <Play size={24} fill="currentColor" strokeWidth={0} className="ml-1" />
+          </span>
         </span>
-      </span>
-      <span className="absolute bottom-3 left-4 text-[0.8rem] font-semibold">Bande-annonce</span>
-      <span className="absolute bottom-3 right-4 flex items-center gap-1.5 text-[0.72rem] text-white/70">
-        Ouvrir sur YouTube
+        <span className="absolute bottom-3 left-4 text-[0.8rem] font-semibold">Bande-annonce</span>
+      </button>
+
+      <button
+        onClick={() => void window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)}
+        className="absolute bottom-2.5 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem] text-white/75 transition-colors hover:bg-black/50 hover:text-white"
+        title="Ouvrir dans le navigateur"
+      >
+        YouTube
         <ExternalLink size={12} />
-      </span>
-    </button>
+      </button>
+    </div>
   )
 }
 
@@ -528,7 +545,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
 
           {media.trailer && (
             <section className="mb-8">
-              <Trailer id={media.trailer.id} cover={media.banner ?? media.cover.xl} />
+              <Trailer id={media.trailer.id} cover={media.banner ?? media.cover.xl} title={titleOf(media, lang)} />
             </section>
           )}
 
