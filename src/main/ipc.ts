@@ -6,6 +6,7 @@ import { chromeFor } from '@shared/types'
 import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
+import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
 import {
   cacheMedia,
   cancelRewatch,
@@ -139,6 +140,10 @@ export function registerIpc(): void {
     dbPath: dbPath(),
     schema: schemaInfo()
   }))
+  ipcMain.handle('update:status', () => updateStatus())
+  ipcMain.handle('update:check', () => checkForUpdates())
+  ipcMain.handle('update:download', () => downloadUpdate())
+  ipcMain.handle('update:install', () => installUpdate())
   ipcMain.handle('app:open-external', (_e, url: string) => {
     if (/^https?:\/\//i.test(url)) return shell.openExternal(url)
     return undefined

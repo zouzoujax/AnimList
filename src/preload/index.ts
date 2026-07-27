@@ -16,6 +16,7 @@ import type {
   StudioWorks,
   TvTimeProgress,
   TvTimeReport,
+  UpdateStatus,
   WatchEventPatch,
   WatchEventRef
 } from '@shared/types'
@@ -112,6 +113,15 @@ const api = {
       schema: { version: number; expected: number; readOnly: boolean; applied: string[] }
     }> => ipcRenderer.invoke('app:info'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:open-external', url),
+    updateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
+    checkUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
+    downloadUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:download'),
+    installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+    onUpdateStatus: (cb: (status: UpdateStatus) => void): (() => void) => {
+      const handler = (_e: unknown, status: UpdateStatus): void => cb(status)
+      ipcRenderer.on('update:status', handler)
+      return () => ipcRenderer.off('update:status', handler)
+    },
     onOpenAnime: (cb: (id: number) => void): (() => void) => {
       const handler = (_e: unknown, id: number): void => cb(id)
       ipcRenderer.on('nav:open-anime', handler)

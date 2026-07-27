@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "build": "npm run typecheck && electron-vite build",
     "dist": "npm run build && electron-builder --win --config electron-builder.yml",
-    "dist:dir": "npm run build && electron-builder --win --dir --config electron-builder.yml"
+    "dist:dir": "npm run build && electron-builder --win --dir --config electron-builder.yml",
+    "release": "npm run build && electron-builder --win --publish always --config electron-builder.yml"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -44,5 +45,8 @@
     "vite": "^7.3.6",
     "vitest": "^4.1.10",
     "zustand": "^5.0.14"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }

@@ -27,3 +27,12 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: AnimeList
   deleteAppDataOnUninstall: false
+
+# Where the app looks for updates, and where `npm run release` uploads them.
+# electron-updater needs the `latest.yml` that electron-builder generates next to
+# the installer, so publishing by hand-uploading only the .exe will not work.
+publish:
+  provider: github
+  owner: zouzoujax
+  repo: AnimList
+  releaseType: release

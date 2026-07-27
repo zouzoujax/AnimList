@@ -16,6 +16,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { LAYOUTS, THEMES, type ImportReport, type LayoutId, type TitleLang } from '@shared/types'
 import { Modal } from '@/components/ui'
 import TvTimeImport from '@/components/TvTimeImport'
+import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
 import { minutesToHuman } from '@/lib/format'
 import { useApp } from '@/store/app'
@@ -444,6 +445,7 @@ export default function SettingsPage(): React.JSX.Element {
         <Row label="Auteur">
           <span className="text-[0.82rem] font-semibold">Zaidal</span>
         </Row>
+        <UpdatePanel version={info?.version ?? null} />
         <Row label="Schéma de données" hint="Version du format de ton fichier local.">
           <span className="text-[0.8rem] tabular-nums text-muted">
             v{info?.schema.version ?? '—'}

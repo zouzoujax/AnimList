@@ -10,8 +10,8 @@ toute ta bibliothèque vit dans un fichier sur ton PC.
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-262%20passing-3FB950)
-![Runtime deps](https://img.shields.io/badge/dépendances%20runtime-0-8957E5)
+![Tests](https://img.shields.io/badge/tests-319%20passing-3FB950)
+![Runtime deps](https://img.shields.io/badge/dépendances%20runtime-1-8957E5)
 
 Auteur : **Zaidal**
 
@@ -59,6 +59,7 @@ npm run dev      # développement, HMR sur le renderer
 npm start        # lance la version buildée
 npm run build    # typecheck + bundles de production dans out/
 npm run dist     # installeur Windows (NSIS) dans release/
+npm run release  # build + publication sur les Releases GitHub (voir plus bas)
 ```
 
 Développé et vérifié sur **Node 24.18.0 / npm 11.16.0**.
@@ -98,13 +99,18 @@ géométrie que le logo affiché dans l'app, à relancer si tu changes la marque
 
 ## Où sont mes données
 
-Un seul fichier JSON, écrit de façon atomique avec une copie de secours :
+Deux fichiers, chacun écrit de façon atomique avec une copie de secours :
 
 ```
-%APPDATA%\animelist\animelist.json      # bibliothèque, historique, préférences
-%APPDATA%\animelist\animelist.json.bak  # sauvegarde du dernier état valide
-%APPDATA%\animelist\anilist-cache.json  # cache réseau (supprimable sans risque)
+%APPDATA%\animelist\animelist.json              # bibliothèque, préférences, listes
+%APPDATA%\animelist\animelist-history.jsonl     # un épisode vu par ligne
+%APPDATA%\animelist\animelist.json.bak          # dernier état valide
+%APPDATA%\animelist\anilist-cache.json          # cache réseau (supprimable sans risque)
 ```
+
+L'historique est séparé parce que les deux moitiés changent à des rythmes très différents :
+cocher un épisode ajoute une ligne au journal au lieu de re-sérialiser des milliers
+d'entrées. Seules les modifications et suppressions forcent une réécriture complète.
 
 Réglages → *Mes données* → **Ouvrir** te dépose directement dedans. L'export produit
 exactement le même format que le fichier principal : c'est ta sauvegarde.
@@ -119,8 +125,11 @@ src/
   shared/      types partagés main ↔ renderer
 ```
 
-- **Zéro dépendance runtime.** Tout est bundlé ; aucun module natif, donc aucun outil de
-  compilation C++ requis et aucun problème d'ABI au packaging.
+- **Une seule dépendance runtime**, `electron-updater`. Tout le reste est bundlé ; aucun module
+  natif, donc aucun outil de compilation C++ requis et aucun problème d'ABI au packaging. Le
+  compromis est assumé : faire les mises à jour à la main voudrait dire télécharger un binaire,
+  vérifier sa signature et lancer l'installeur NSIS soi-même — se tromper là, c'est se livrer un
+  logiciel malveillant à soi-même.
 - **Le main détient les données.** Le renderer mute via IPC, le main renvoie un événement
   `store:change`, le renderer resynchronise. Les coches d'épisodes sont optimistes pour rester
   instantanées.
@@ -147,7 +156,7 @@ Rail, Barre haute, Tableau de bord) se combinent librement depuis les Réglages.
 ## Qualité
 
 ```bash
-npm test           # 262 tests unitaires (Vitest)
+npm test           # 319 tests unitaires (Vitest)
 npm run lint       # ESLint 10, typé, 0 erreur
 npm run typecheck  # tsc sur les deux projets
 npm run format     # Prettier
@@ -175,10 +184,31 @@ Deux mécanismes méritent d'être signalés :
 - [x] Édition de l'historique (corriger une date, retirer un épisode)
 - [x] Notes et ressentis par épisode
 - [ ] Listes personnalisées et actions groupées
-- [ ] Notifications par série, avec délai configurable
-- [ ] Accessibilité et découpage du bundle
-- [ ] Écriture incrémentale du store
-- [ ] Mise à jour automatique
+- [x] Notifications par série, avec délai configurable
+- [x] Accessibilité et découpage du bundle
+- [x] Écriture incrémentale du store
+- [x] Mise à jour automatique
+- [ ] Captures d'écran générées (`npm run screenshots`, jeu de démo)
+- [ ] Cinquième thème
+
+## Publier une mise à jour
+
+```bash
+# 1. incrémenter "version" dans package.json
+# 2. exporter un jeton GitHub ayant le droit d'écrire les releases
+export GH_TOKEN=...
+npm run release
+```
+
+`electron-updater` ne lit pas la page de release : il lui faut le `latest.yml` que
+`electron-builder` dépose à côté de l'installeur. Envoyer le `.exe` à la main ne suffit donc
+pas — il faut passer par `npm run release`, ou joindre le `latest.yml` généré.
+
+Deux limites à connaître. L'application n'est **pas signée** : Windows SmartScreen avertira
+à l'installation comme à la mise à jour, et c'est pour ça que l'installeur reste visible au
+lieu de tourner en silence — un échec silencieux ressemblerait à un plantage. Et rien ne
+s'installe sans être demandé : la vérification est automatique, le téléchargement et le
+redémarrage sont deux clics explicites.
 
 ## Licence
 

@@ -301,6 +301,29 @@ export type TvTimeOverrides = Record<string, number>
 
 export const TVTIME_SKIP = 0
 
+// ---------------------------------------------------------------- updates
+
+export type UpdatePhase =
+  | 'idle'
+  | 'checking'
+  /** Up to date. */
+  | 'current'
+  /** A newer version exists but has not been downloaded. */
+  | 'available'
+  | 'downloading'
+  /** Downloaded and waiting for a restart. */
+  | 'ready'
+  | 'error'
+  /** Running from source: there is no installed app to replace. */
+  | 'unsupported'
+
+export interface UpdateStatus {
+  phase: UpdatePhase
+  version: string | null
+  percent: number
+  message: string | null
+}
+
 export const EMOTIONS: { id: EmotionId; emoji: string; label: string }[] = [
   { id: 'love', emoji: '💜', label: 'Coup de cœur' },
   { id: 'hype', emoji: '🔥', label: 'Hype' },
