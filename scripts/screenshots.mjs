@@ -14,7 +14,7 @@
 
 import { spawn } from 'node:child_process'
 import { promises as fs } from 'node:fs'
-import { mkdtempSync } from 'node:fs'
+import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -395,7 +395,9 @@ async function main() {
   )
 
   child.on('exit', (code) => {
-    void fs.rm(dir, { recursive: true, force: true })
+    // Synchronous on purpose: `process.exit` below would kill a pending async
+    // removal, and eight runs left eight demo libraries behind in the temp dir.
+    rmSync(dir, { recursive: true, force: true })
     if (code === 0) process.stdout.write(`\nÉcrit dans ${OUT_DIR}/\n`)
     process.exit(code ?? 1)
   })
