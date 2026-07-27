@@ -1,9 +1,22 @@
-import { ArrowUpDown, Heart, LayoutGrid, LibraryBig, Plus, Rows3, Search, Star, X } from 'lucide-react'
+import {
+  ArrowUpDown,
+  Check,
+  CheckSquare,
+  Heart,
+  LayoutGrid,
+  LibraryBig,
+  Plus,
+  Rows3,
+  Search,
+  Star,
+  X
+} from 'lucide-react'
 import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { GENRE_LABELS, STATUS_LABELS, type Entry, type LibraryStatus, type Media } from '@shared/types'
 import { titleMatches } from '@shared/titles'
 import { AnimeCard } from '@/components/AnimeCard'
+import BulkBar from '@/components/BulkBar'
 import { EmptyState, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { titleOf } from '@/lib/format'
@@ -101,6 +114,59 @@ function ListRow({ media, entry, index }: { media: Media; entry: Entry; index: n
   )
 }
 
+/** Checkbox that reads as ticked without relying on colour alone. */
+function Tick({ on }: { on: boolean }): React.JSX.Element {
+  return (
+    <span
+      aria-hidden
+      className="grid h-[20px] w-[20px] shrink-0 place-items-center rounded-[6px] border"
+      style={
+        on
+          ? { background: 'var(--accent)', borderColor: 'var(--accent)', color: '#07080f' }
+          : { borderColor: 'var(--line-2)' }
+      }
+    >
+      {on && <Check size={13} strokeWidth={3} />}
+    </span>
+  )
+}
+
+function SelectableCard({
+  media,
+  index,
+  on,
+  onToggle
+}: {
+  media: Media
+  index: number
+  on: boolean
+  onToggle: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      className="relative cursor-pointer rounded-[16px]"
+      onClick={onToggle}
+      style={on ? { outline: '2px solid var(--accent)', outlineOffset: 2 } : undefined}
+    >
+      {/* The card's own click targets are covered so selecting never navigates. */}
+      <div className="pointer-events-none">
+        <AnimeCard media={media} width="100%" index={index} />
+      </div>
+      <button
+        className="absolute left-2 top-2 z-10"
+        onClick={(e) => {
+          e.stopPropagation()
+          onToggle()
+        }}
+        aria-pressed={on}
+        aria-label={on ? 'Retirer de la sélection' : 'Ajouter à la sélection'}
+      >
+        <Tick on={on} />
+      </button>
+    </div>
+  )
+}
+
 export default function LibraryPage({ initialGenre }: { initialGenre?: string }): React.JSX.Element {
   const entries = useApp((s) => s.entries)
   const mediaMap = useApp((s) => s.media)
@@ -114,6 +180,30 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
   const [search, setSearch] = useState('')
   const [genre, setGenre] = useState<string | null>(initialGenre ?? null)
   const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [listId, setListId] = useState<string | null>(null)
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  const lists = useApp((s) => s.lists)
+  const deleteList = useApp((s) => s.deleteList)
+  const setListMembership = useApp((s) => s.setListMembership)
+
+  const toggleSelected = (animeId: number): void => {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (next.has(animeId)) next.delete(animeId)
+      else next.add(animeId)
+      return next
+    })
+  }
+
+  /** Leaving selection mode must not keep a stale selection around. */
+  const stopSelecting = (): void => {
+    setSelecting(false)
+    setSelected(new Set())
+  }
+
+  const activeList = lists.find((l) => l.id === listId) ?? null
 
   const lastWatchAt = useMemo(() => {
     const map = new Map<number, number>()
@@ -144,7 +234,9 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
+    const inList = activeList ? new Set(activeList.animeIds) : null
     const filtered = rows.filter(({ entry, media }) => {
+      if (inList && !inList.has(media.id)) return false
       if (filter === 'favorites' ? !entry.favorite : filter !== 'all' && entry.status !== filter) return false
       if (genre && !media.genres.includes(genre)) return false
       if (!needle) return true
@@ -171,7 +263,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
           )
       }
     })
-  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched])
+  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched, activeList])
 
   if (rows.length === 0) {
     return (
@@ -205,6 +297,27 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
           </p>
         </div>
         <div className="flex gap-1.5">
+          <button
+            className="btn"
+            data-on={selecting}
+            onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
+            style={selecting ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
+          >
+            <CheckSquare size={14} />
+            {selecting ? 'Terminer' : 'Sélectionner'}
+          </button>
+          {selecting && visible.length > 0 && (
+            <button
+              className="btn"
+              onClick={() =>
+                setSelected(
+                  selected.size === visible.length ? new Set() : new Set(visible.map((r) => r.media.id))
+                )
+              }
+            >
+              {selected.size === visible.length ? 'Rien' : 'Tout'}
+            </button>
+          )}
           <button
             className="icon-btn"
             data-on={view === 'grid'}
@@ -272,23 +385,88 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
             </button>
           ))}
         </div>
+
+        {lists.length > 0 && (
+          <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5" style={{ borderColor: 'var(--line)' }}>
+            <span className="label mr-0.5">Listes</span>
+            {lists.map((list) => (
+              <button
+                key={list.id}
+                data-on={listId === list.id}
+                className="chip"
+                onClick={() => setListId(listId === list.id ? null : list.id)}
+              >
+                <span aria-hidden>{list.emoji}</span>
+                {list.name}
+                <span className="tabular-nums opacity-60">{list.animeIds.length}</span>
+              </button>
+            ))}
+            {activeList && (
+              <>
+                {selecting && selected.size > 0 && (
+                  <button
+                    className="btn !h-7 text-[0.74rem]"
+                    onClick={() => void setListMembership(activeList.id, [...selected], false)}
+                  >
+                    Retirer de la liste
+                  </button>
+                )}
+                <button
+                  className="btn !h-7 text-[0.74rem]"
+                  style={{ color: '#ff8080', borderColor: 'rgba(255,128,128,.3)' }}
+                  onClick={() => {
+                    void deleteList(activeList.id)
+                    setListId(null)
+                  }}
+                >
+                  Supprimer « {activeList.name} »
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {visible.length === 0 ? (
         <p className="py-16 text-center text-sm text-faint">Aucun anime ne correspond à ces filtres.</p>
       ) : view === 'grid' ? (
         <div className="card-grid">
-          {visible.map(({ media }, i) => (
-            <AnimeCard key={media.id} media={media} width="100%" index={i % 30} />
-          ))}
+          {visible.map(({ media }, i) =>
+            selecting ? (
+              <SelectableCard
+                key={media.id}
+                media={media}
+                index={i % 30}
+                on={selected.has(media.id)}
+                onToggle={() => toggleSelected(media.id)}
+              />
+            ) : (
+              <AnimeCard key={media.id} media={media} width="100%" index={i % 30} />
+            )
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {visible.map(({ media, entry }, i) => (
-            <ListRow key={media.id} media={media} entry={entry} index={i} />
-          ))}
+          {visible.map(({ media, entry }, i) =>
+            selecting ? (
+              <button
+                key={media.id}
+                className="glass flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left"
+                onClick={() => toggleSelected(media.id)}
+                aria-pressed={selected.has(media.id)}
+                style={selected.has(media.id) ? { outline: '2px solid var(--accent)' } : undefined}
+              >
+                <Tick on={selected.has(media.id)} />
+                <span className="flex-1 truncate text-[0.85rem]">{titleOf(media, lang)}</span>
+              </button>
+            ) : (
+              <ListRow key={media.id} media={media} entry={entry} index={i} />
+            )
+          )}
         </div>
       )}
+
+      {selecting && <BulkBar selected={selected} onClear={() => setSelected(new Set())} />}
     </div>
   )
 }

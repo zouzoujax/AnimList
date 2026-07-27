@@ -12,7 +12,7 @@
  * Never edit a released migration — write a new one on top.
  */
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4
 
 /** The raw file shape. Fields are `unknown` because old files are untrusted. */
 export interface StoredDb {
@@ -21,6 +21,7 @@ export interface StoredDb {
   entries: Record<string, Record<string, unknown>>
   history: Record<string, unknown>[]
   prefs: Record<string, unknown>
+  lists?: Record<string, unknown>[]
 }
 
 export interface MigrationReport {
@@ -86,6 +87,41 @@ const migrations: Migration[] = [
       for (const id of Object.keys(db.media)) {
         if (!referenced.has(id)) delete db.media[id]
       }
+    }
+  },
+  {
+    to: 4,
+    describe: 'Ajoute les listes personnalisées',
+    run(db) {
+      if (!Array.isArray(db.lists)) {
+        db.lists = []
+        return
+      }
+
+      const now = Date.now()
+      const seen = new Set<string>()
+      db.lists = db.lists.filter((list) => {
+        if (!list || typeof list !== 'object') return false
+
+        // A list without a usable name could never be told apart in the UI.
+        const name = typeof list.name === 'string' ? list.name.trim() : ''
+        if (!name) return false
+        list.name = name
+
+        // Ids must be unique: two lists sharing one would edit each other.
+        const id = typeof list.id === 'string' && list.id ? list.id : `list-${now}-${seen.size}`
+        if (seen.has(id)) return false
+        seen.add(id)
+        list.id = id
+
+        list.emoji = typeof list.emoji === 'string' ? list.emoji : '📁'
+        list.createdAt = typeof list.createdAt === 'number' ? list.createdAt : now
+        list.updatedAt = typeof list.updatedAt === 'number' ? list.updatedAt : now
+        list.animeIds = Array.isArray(list.animeIds)
+          ? [...new Set(list.animeIds.filter((v): v is number => typeof v === 'number'))]
+          : []
+        return true
+      })
     }
   }
 ]

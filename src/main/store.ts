@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { migrate, SCHEMA_VERSION, type MigrationReport, type StoredDb } from './migrations'
 import {
   DEFAULT_PREFS,
+  type CustomList,
   type Entry,
   type EntryPatch,
   type Media,
@@ -22,6 +23,7 @@ interface Db {
   entries: Record<string, Entry>
   history: WatchEvent[]
   prefs: Prefs
+  lists: CustomList[]
 }
 
 const emptyDb = (): Db => ({
@@ -29,7 +31,8 @@ const emptyDb = (): Db => ({
   media: {},
   entries: {},
   history: [],
-  prefs: { ...DEFAULT_PREFS }
+  prefs: { ...DEFAULT_PREFS },
+  lists: []
 })
 
 export const store = new EventEmitter()
@@ -78,7 +81,8 @@ function sanitize(raw: unknown): Db {
     media: input.media && typeof input.media === 'object' ? input.media : {},
     entries: input.entries && typeof input.entries === 'object' ? input.entries : {},
     history: Array.isArray(input.history) ? input.history : [],
-    prefs: { ...DEFAULT_PREFS, ...(input.prefs ?? {}) }
+    prefs: { ...DEFAULT_PREFS, ...(input.prefs ?? {}) },
+    lists: Array.isArray(input.lists) ? input.lists : []
   }
 }
 
@@ -181,7 +185,8 @@ export function snapshot(): Snapshot {
     entries: Object.values(db.entries),
     media: Object.values(db.media),
     history: db.history,
-    prefs: db.prefs
+    prefs: db.prefs,
+    lists: db.lists
   }
 }
 
@@ -254,6 +259,12 @@ export function setEntry(animeId: number, patch: EntryPatch, media?: Media): Ent
 export function removeEntry(animeId: number): void {
   delete db.entries[String(animeId)]
   db.history = db.history.filter((h) => h.animeId !== animeId)
+  // A list must never point at a series that is gone.
+  for (const list of db.lists) {
+    if (!list.animeIds.includes(animeId)) continue
+    list.animeIds = list.animeIds.filter((id) => id !== animeId)
+    list.updatedAt = Date.now()
+  }
   rebuildIndex()
   changed()
 }
@@ -451,8 +462,148 @@ export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): v
     known.add(k)
   }
 
+  // Lists merge by id: a restore must not duplicate a list the user already
+  // has, but it should bring across memberships recorded elsewhere.
+  for (const incomingList of incoming.lists ?? []) {
+    const current = db.lists.find((l) => l.id === incomingList.id)
+    if (!current) {
+      db.lists.push(incomingList)
+      continue
+    }
+    if (current.updatedAt < incomingList.updatedAt) {
+      current.name = incomingList.name
+      current.emoji = incomingList.emoji
+      current.updatedAt = incomingList.updatedAt
+    }
+    current.animeIds = [...new Set([...current.animeIds, ...incomingList.animeIds])]
+  }
+
   rebuildIndex()
   changed()
+}
+
+// ---------------------------------------------------------------- lists
+
+/** Short, readable and collision-free enough for a local file. */
+function newListId(): string {
+  return `l${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
+}
+
+export function createList(name: string, emoji = '📁'): CustomList | null {
+  const trimmed = name.trim()
+  if (!trimmed) return null
+
+  const now = Date.now()
+  const list: CustomList = { id: newListId(), name: trimmed, emoji, animeIds: [], createdAt: now, updatedAt: now }
+  db.lists.push(list)
+  changed()
+  return list
+}
+
+export function updateList(id: string, patch: { name?: string; emoji?: string }): CustomList | null {
+  const list = db.lists.find((l) => l.id === id)
+  if (!list) return null
+
+  if (patch.name !== undefined) {
+    const trimmed = patch.name.trim()
+    // Refusing an empty rename beats leaving a list the user cannot identify.
+    if (trimmed) list.name = trimmed
+  }
+  if (patch.emoji !== undefined) list.emoji = patch.emoji
+  list.updatedAt = Date.now()
+  changed()
+  return list
+}
+
+export function deleteList(id: string): boolean {
+  const before = db.lists.length
+  db.lists = db.lists.filter((l) => l.id !== id)
+  if (db.lists.length === before) return false
+  changed()
+  return true
+}
+
+/** Adds or removes several anime at once; returns the resulting membership. */
+export function setListMembership(id: string, animeIds: number[], member: boolean): CustomList | null {
+  const list = db.lists.find((l) => l.id === id)
+  if (!list) return null
+
+  if (member) {
+    const known = new Set(list.animeIds)
+    for (const animeId of animeIds) {
+      if (known.has(animeId)) continue
+      list.animeIds.push(animeId)
+      known.add(animeId)
+    }
+  } else {
+    const drop = new Set(animeIds)
+    list.animeIds = list.animeIds.filter((animeId) => !drop.has(animeId))
+  }
+
+  list.updatedAt = Date.now()
+  changed()
+  return list
+}
+
+// ---------------------------------------------------------------- bulk actions
+
+/** Applies one patch to many entries in a single write and a single echo. */
+export function setEntries(animeIds: number[], patch: EntryPatch): number {
+  let touched = 0
+  for (const animeId of animeIds) {
+    const existing = db.entries[String(animeId)]
+    if (!existing) continue
+    const entry: Entry = { ...existing, ...patch, updatedAt: Date.now() }
+    if (patch.status === 'watching' && !entry.startedAt) entry.startedAt = Date.now()
+    if (patch.status === 'completed' && !entry.finishedAt) entry.finishedAt = Date.now()
+    db.entries[String(animeId)] = entry
+    touched += 1
+  }
+  if (touched) changed()
+  return touched
+}
+
+/** Removes many entries, and every list membership that pointed at them. */
+export function removeEntries(animeIds: number[]): number {
+  const drop = new Set(animeIds)
+  let touched = 0
+  for (const animeId of drop) {
+    if (!db.entries[String(animeId)]) continue
+    delete db.entries[String(animeId)]
+    touched += 1
+  }
+  if (!touched) return 0
+
+  db.history = db.history.filter((h) => !drop.has(h.animeId))
+  for (const list of db.lists) {
+    const before = list.animeIds.length
+    list.animeIds = list.animeIds.filter((id) => !drop.has(id))
+    if (list.animeIds.length !== before) list.updatedAt = Date.now()
+  }
+
+  rebuildIndex()
+  changed()
+  return touched
+}
+
+/** Marks every known episode of each series as seen, in one write. */
+export function markAllWatched(animeIds: number[]): number {
+  const now = Date.now()
+  let added = 0
+  for (const animeId of animeIds) {
+    const total = db.media[String(animeId)]?.episodes
+    if (!total || total <= 0) continue
+    for (let ep = 1; ep <= total; ep += 1) {
+      const k = key(animeId, ep)
+      if (watchedIndex.has(k)) continue
+      db.history.push(newEvent(animeId, ep, now))
+      watchedIndex.add(k)
+      added += 1
+    }
+    syncProgress(animeId)
+  }
+  if (added) changed()
+  return added
 }
 
 export function resetAll(): void {

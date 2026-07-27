@@ -149,3 +149,62 @@ describe('v3 — purge du cache de fiches', () => {
     expect(file.media).toEqual({})
   })
 })
+
+describe('v4 — listes personnalisées', () => {
+  it('creates the field on a file that has none', () => {
+    const file = db()
+    migrate(file)
+    expect(file.lists).toEqual([])
+  })
+
+  it('leaves a valid list untouched', () => {
+    const list = { id: 'a', name: 'Été', emoji: '☀️', animeIds: [1, 2], createdAt: 5, updatedAt: 6 }
+    const file = db({ lists: [{ ...list }] })
+    migrate(file)
+    expect(file.lists).toEqual([list])
+  })
+
+  it('fills the fields a list is missing', () => {
+    const file = db({ lists: [{ name: 'Minimale' }] })
+    migrate(file)
+    expect(file.lists?.[0]).toMatchObject({ name: 'Minimale', emoji: '📁', animeIds: [] })
+    expect(file.lists?.[0].id).toBeTypeOf('string')
+  })
+
+  it('drops a list with no usable name', () => {
+    const file = db({ lists: [{ id: 'a', name: '   ' }, { id: 'b' }, { id: 'c', name: 'Vraie' }] })
+    migrate(file)
+    expect(file.lists?.map((l) => l.name)).toEqual(['Vraie'])
+  })
+
+  it('drops a duplicate id', () => {
+    // Two lists sharing an id would edit each other.
+    const file = db({
+      lists: [
+        { id: 'same', name: 'Première' },
+        { id: 'same', name: 'Seconde' }
+      ]
+    })
+    migrate(file)
+    expect(file.lists).toHaveLength(1)
+    expect(file.lists?.[0].name).toBe('Première')
+  })
+
+  it('deduplicates memberships and drops non-numeric ids', () => {
+    const file = db({ lists: [{ id: 'a', name: 'A', animeIds: [1, 1, 2, 'x', null] }] })
+    migrate(file)
+    expect(file.lists?.[0].animeIds).toEqual([1, 2])
+  })
+
+  it('replaces a lists field that is not an array', () => {
+    const file = db({ lists: 'nope' as never })
+    migrate(file)
+    expect(file.lists).toEqual([])
+  })
+
+  it('trims the name', () => {
+    const file = db({ lists: [{ id: 'a', name: '  Espacé  ' }] })
+    migrate(file)
+    expect(file.lists?.[0].name).toBe('Espacé')
+  })
+})

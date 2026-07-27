@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   DEFAULT_PREFS,
+  type CustomList,
   type Entry,
   type EntryPatch,
   type Media,
@@ -37,6 +38,7 @@ interface AppState {
   media: Map<number, Media>
   watched: Map<number, Set<number>>
   events: WatchEvent[]
+  lists: CustomList[]
   toasts: Toast[]
   paletteOpen: boolean
 
@@ -57,6 +59,15 @@ interface AppState {
   cancelRewatch: (animeId: number) => Promise<void>
   updateEvent: (ref: WatchEventRef, patch: WatchEventPatch) => Promise<void>
   removeEvent: (ref: WatchEventRef) => Promise<void>
+
+  createList: (name: string, emoji?: string) => Promise<CustomList | null>
+  updateList: (id: string, patch: { name?: string; emoji?: string }) => Promise<void>
+  deleteList: (id: string) => Promise<void>
+  setListMembership: (id: string, animeIds: number[], member: boolean) => Promise<void>
+
+  bulkPatch: (animeIds: number[], patch: EntryPatch) => Promise<number>
+  bulkRemove: (animeIds: number[]) => Promise<number>
+  bulkMarkWatched: (animeIds: number[]) => Promise<number>
 }
 
 function applyTheme(prefs: Prefs): void {
@@ -69,7 +80,9 @@ function applyTheme(prefs: Prefs): void {
   document.body.classList.toggle('reduce-motion', prefs.reduceMotion)
 }
 
-function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' | 'watched' | 'events'> {
+function indexSnapshot(
+  snapshot: Snapshot
+): Pick<AppState, 'entries' | 'media' | 'watched' | 'events' | 'lists'> {
   const entries = new Map(snapshot.entries.map((e) => [e.animeId, e]))
   const watched = new Map<number, Set<number>>()
 
@@ -82,7 +95,13 @@ function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' |
     set.add(ev.episode)
   }
 
-  return { entries, media: new Map(snapshot.media.map((m) => [m.id, m])), watched, events: snapshot.history }
+  return {
+    entries,
+    media: new Map(snapshot.media.map((m) => [m.id, m])),
+    watched,
+    events: snapshot.history,
+    lists: snapshot.lists ?? []
+  }
 }
 
 let toastSeq = 0
@@ -97,6 +116,7 @@ export const useApp = create<AppState>((set, get) => ({
   media: new Map(),
   watched: new Map(),
   events: [],
+  lists: [],
   toasts: [],
   paletteOpen: false,
 
@@ -199,7 +219,25 @@ export const useApp = create<AppState>((set, get) => ({
 
   removeEvent: async (ref) => {
     await window.api.library.removeEvent(ref)
-  }
+  },
+
+  createList: (name, emoji) => window.api.lists.create(name, emoji),
+
+  updateList: async (id, patch) => {
+    await window.api.lists.update(id, patch)
+  },
+
+  deleteList: async (id) => {
+    await window.api.lists.remove(id)
+  },
+
+  setListMembership: async (id, animeIds, member) => {
+    await window.api.lists.membership(id, animeIds, member)
+  },
+
+  bulkPatch: (animeIds, patch) => window.api.library.setEntries(animeIds, patch),
+  bulkRemove: (animeIds) => window.api.library.removeEntries(animeIds),
+  bulkMarkWatched: (animeIds) => window.api.library.markAllWatched(animeIds)
 }))
 
 // ---------------------------------------------------------------- selectors

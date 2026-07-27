@@ -1,4 +1,6 @@
 import {
+  Bell,
+  BellOff,
   Bookmark,
   Check,
   CheckCheck,
@@ -453,6 +455,22 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               >
                 <Heart size={16} fill={entry?.favorite ? 'currentColor' : 'none'} />
               </button>
+
+              {entry && (
+                <button
+                  className="icon-btn !h-[38px] !w-[38px]"
+                  onClick={() => patch({ notify: entry.notify === false })}
+                  aria-label={entry.notify === false ? 'Réactiver les notifications' : 'Couper les notifications'}
+                  title={
+                    entry.notify === false
+                      ? 'Notifications coupées pour cette série'
+                      : 'Prévenir quand un épisode sort'
+                  }
+                  style={entry.notify === false ? { color: 'var(--color-faint)' } : undefined}
+                >
+                  {entry.notify === false ? <BellOff size={15} /> : <Bell size={15} />}
+                </button>
+              )}
 
               {entry && (
                 <button

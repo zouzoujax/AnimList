@@ -3,6 +3,7 @@ import type {
   AiringEntry,
   AiringItem,
   BrowseQuery,
+  CustomList,
   Entry,
   EntryPatch,
   ImportReport,
@@ -47,6 +48,11 @@ const api = {
     updateEvent: (ref: WatchEventRef, patch: WatchEventPatch): Promise<boolean> =>
       ipcRenderer.invoke('lib:update-event', ref, patch),
     removeEvent: (ref: WatchEventRef): Promise<boolean> => ipcRenderer.invoke('lib:remove-event', ref),
+    setEntries: (animeIds: number[], patch: EntryPatch): Promise<number> =>
+      ipcRenderer.invoke('lib:set-entries', animeIds, patch),
+    removeEntries: (animeIds: number[]): Promise<number> => ipcRenderer.invoke('lib:remove-entries', animeIds),
+    markAllWatched: (animeIds: number[]): Promise<number> =>
+      ipcRenderer.invoke('lib:mark-all-watched', animeIds),
     onChange: (cb: () => void): (() => void) => {
       const handler = (): void => cb()
       ipcRenderer.on('store:change', handler)
@@ -68,6 +74,15 @@ const api = {
   watch: {
     animeSama: (animeId: number, titles: string[]): Promise<{ url: string; direct: boolean; absent?: boolean }> =>
       ipcRenderer.invoke('watch:anime-sama', animeId, titles)
+  },
+  lists: {
+    create: (name: string, emoji?: string): Promise<CustomList | null> =>
+      ipcRenderer.invoke('lists:create', name, emoji),
+    update: (id: string, patch: { name?: string; emoji?: string }): Promise<CustomList | null> =>
+      ipcRenderer.invoke('lists:update', id, patch),
+    remove: (id: string): Promise<boolean> => ipcRenderer.invoke('lists:delete', id),
+    membership: (id: string, animeIds: number[], member: boolean): Promise<CustomList | null> =>
+      ipcRenderer.invoke('lists:membership', id, animeIds, member)
   },
   prefs: {
     get: (): Promise<Prefs> => ipcRenderer.invoke('prefs:get'),

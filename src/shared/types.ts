@@ -129,6 +129,11 @@ export interface Entry {
   rewatches: number
   startedAt: number | null
   finishedAt: number | null
+  /**
+   * Whether to be told when an episode of this series airs. Absent means yes,
+   * so muting is opt-in and existing files keep working.
+   */
+  notify?: boolean
 }
 
 export type EntryPatch = Partial<Omit<Entry, 'animeId' | 'addedAt' | 'updatedAt'>>
@@ -173,6 +178,14 @@ export interface Prefs {
   accent: string
   mica: boolean
   notifications: boolean
+  /**
+   * How long before an episode airs to be told, in minutes. `0` means "when it
+   * airs"; a negative value is not allowed. A lead time only works for episodes
+   * AniList has scheduled, so a catch-up sweep still covers the rest.
+   */
+  notifyLeadMinutes: number
+  /** Minutes between airing checks. Lower means fresher and more requests. */
+  notifyEveryMinutes: number
   reduceMotion: boolean
   defaultRuntime: number
   showAdult: boolean
@@ -184,12 +197,26 @@ export interface Prefs {
   tvtimeFolder: string | null
 }
 
+/** A user-made collection, orthogonal to the five statuses. */
+export interface CustomList {
+  id: string
+  name: string
+  emoji: string
+  /** Membership order is the user's, so it is an array rather than a set. */
+  animeIds: number[]
+  createdAt: number
+  updatedAt: number
+}
+
 export interface Snapshot {
   version: number
   entries: Entry[]
   media: Media[]
   history: WatchEvent[]
   prefs: Prefs
+  /** Optional: this type doubles as the shape of a restored backup, and files
+   * exported before custom lists existed simply do not have the field. */
+  lists?: CustomList[]
 }
 
 export interface PageInfo {
@@ -352,6 +379,8 @@ export const DEFAULT_PREFS: Prefs = {
   accent: '#7C5CFF',
   mica: true,
   notifications: true,
+  notifyLeadMinutes: 0,
+  notifyEveryMinutes: 15,
   reduceMotion: false,
   defaultRuntime: 24,
   showAdult: false,

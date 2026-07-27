@@ -17,6 +17,7 @@ import { LAYOUTS, THEMES, type ImportReport, type LayoutId, type TitleLang } fro
 import { Modal } from '@/components/ui'
 import TvTimeImport from '@/components/TvTimeImport'
 import { ACCENT_PRESETS } from '@/lib/color'
+import { minutesToHuman } from '@/lib/format'
 import { useApp } from '@/store/app'
 
 /** Tiny wireframe so the option is legible without trying it. */
@@ -116,6 +117,13 @@ export default function SettingsPage(): React.JSX.Element {
   useEffect(() => {
     void window.api.app.info().then(setInfo)
   }, [])
+
+  const media = useApp((s) => s.media)
+  const muted = [...entries.values()].filter((e) => e.notify === false)
+  const mutedNames = muted
+    .map((e) => media.get(e.animeId)?.title.romaji ?? `#${e.animeId}`)
+    .slice(0, 4)
+    .join(', ')
 
   const run = async (id: string, action: () => Promise<ImportReport>): Promise<void> => {
     setBusy(id)
@@ -301,9 +309,46 @@ export default function SettingsPage(): React.JSX.Element {
       <Card title="Notifications" icon={<Bell size={17} />}>
         <Row
           label="Prévenir quand un épisode sort"
-          hint="Notification Windows pour les séries en cours ou à voir, vérifiée toutes les 30 minutes."
+          hint="Notification Windows pour les séries en cours ou à voir. Chaque série peut être coupée individuellement depuis sa fiche."
         >
           <Toggle on={prefs.notifications} onChange={(notifications) => setPrefs({ notifications })} />
+        </Row>
+
+        <Row
+          label="Prévenir à l'avance"
+          hint="Ne vaut que pour les épisodes dont AniList connaît l'heure de diffusion ; les autres sont annoncés au rattrapage."
+        >
+          <select
+            className="field !w-[9.5rem]"
+            value={prefs.notifyLeadMinutes}
+            disabled={!prefs.notifications}
+            onChange={(e) => setPrefs({ notifyLeadMinutes: Number(e.target.value) })}
+          >
+            {[0, 15, 30, 60, 180, 720, 1440].map((minutes) => (
+              <option key={minutes} value={minutes} style={{ background: '#0b0e1a' }}>
+                {minutes === 0 ? 'À la diffusion' : minutesToHuman(minutes)}
+              </option>
+            ))}
+          </select>
+        </Row>
+
+        <Row label="Fréquence de vérification" hint="Plus court = plus réactif, mais plus de requêtes vers AniList.">
+          <select
+            className="field !w-[9.5rem]"
+            value={prefs.notifyEveryMinutes}
+            disabled={!prefs.notifications}
+            onChange={(e) => setPrefs({ notifyEveryMinutes: Number(e.target.value) })}
+          >
+            {[5, 15, 30, 60, 180].map((minutes) => (
+              <option key={minutes} value={minutes} style={{ background: '#0b0e1a' }}>
+                {minutesToHuman(minutes)}
+              </option>
+            ))}
+          </select>
+        </Row>
+
+        <Row label="Séries en silence" hint={mutedNames || 'Aucune série coupée pour l’instant.'}>
+          <span className="text-[0.8rem] tabular-nums text-muted">{muted.length}</span>
         </Row>
       </Card>
 

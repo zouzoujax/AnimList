@@ -5,24 +5,32 @@ import { resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
 import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
+import { planUpcoming } from './notifications'
 import {
   cacheMedia,
   cancelRewatch,
   clearWatched,
+  createList,
   dbPath,
+  deleteList,
   getPrefs,
+  markAllWatched,
+  removeEntries,
   removeEntry,
   removeEvent,
   resetAll,
   schemaInfo,
+  setEntries,
   setEntry,
+  setListMembership,
   setPrefs,
   setWatched,
   setWatchedUpTo,
   snapshot,
   startRewatch,
   store,
-  updateEvent
+  updateEvent,
+  updateList
 } from './store'
 
 function ownerOf(event: Electron.IpcMainInvokeEvent): BrowserWindow {
@@ -60,6 +68,21 @@ export function registerIpc(): void {
     updateEvent(ref, patch)
   )
   ipcMain.handle('lib:remove-event', (_e, ref: WatchEventRef) => removeEvent(ref))
+
+  // ---- bulk actions --------------------------------------------------
+  ipcMain.handle('lib:set-entries', (_e, animeIds: number[], patch: EntryPatch) => setEntries(animeIds, patch))
+  ipcMain.handle('lib:remove-entries', (_e, animeIds: number[]) => removeEntries(animeIds))
+  ipcMain.handle('lib:mark-all-watched', (_e, animeIds: number[]) => markAllWatched(animeIds))
+
+  // ---- custom lists --------------------------------------------------
+  ipcMain.handle('lists:create', (_e, name: string, emoji?: string) => createList(name, emoji))
+  ipcMain.handle('lists:update', (_e, id: string, patch: { name?: string; emoji?: string }) =>
+    updateList(id, patch)
+  )
+  ipcMain.handle('lists:delete', (_e, id: string) => deleteList(id))
+  ipcMain.handle('lists:membership', (_e, id: string, animeIds: number[], member: boolean) =>
+    setListMembership(id, animeIds, member)
+  )
 
   // ---- preferences ---------------------------------------------------
   ipcMain.handle('prefs:get', () => getPrefs())
@@ -121,7 +144,18 @@ export function registerIpc(): void {
     return undefined
   })
 
+  // Re-planning walks the whole media cache, so it is coalesced: a bulk action
+  // fires many changes and only the last one needs to be acted on.
+  let replanTimer: NodeJS.Timeout | null = null
+
   store.on('change', () => {
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('store:change')
+
+    if (replanTimer) clearTimeout(replanTimer)
+    replanTimer = setTimeout(() => {
+      replanTimer = null
+      const [win] = BrowserWindow.getAllWindows()
+      if (win) planUpcoming(win)
+    }, 1500)
   })
 }
