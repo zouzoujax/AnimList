@@ -76,7 +76,7 @@ function splitRows(text: string): string[][] {
 export function parseCsv(text: string): CsvRow[] {
   // Excel and several exporters prefix a byte-order mark, which would otherwise
   // end up glued to the first column name and break every lookup on it.
-  const rows = splitRows(text.replace(/^﻿/, ''))
+  const rows = splitRows(text.replace(/^\uFEFF/, ''))
   const header = rows.shift()
   if (!header) return []
 
