@@ -190,8 +190,14 @@ export default function StatsPage(): React.JSX.Element {
       if (d.getDay() === 0 || d.getDay() === 6) weekend += 1
     }
 
+    // Moods and notes come from two places: the series as a whole, and each
+    // individual viewing.
     const emotionsUsed = new Set<string>()
     let notes = 0
+    for (const ev of events) {
+      for (const emotion of ev.emotions ?? []) emotionsUsed.add(emotion)
+      if (ev.note?.trim()) notes += 1
+    }
     let favorites = 0
     let rewatches = 0
     let movies = 0

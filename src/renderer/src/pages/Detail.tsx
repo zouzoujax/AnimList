@@ -1,4 +1,16 @@
-import { Bookmark, Check, CheckCheck, ExternalLink, Heart, Play, RotateCcw, Star, Trash2, Users } from 'lucide-react'
+import {
+  Bookmark,
+  Check,
+  CheckCheck,
+  ExternalLink,
+  Heart,
+  Play,
+  Repeat,
+  RotateCcw,
+  Star,
+  Trash2,
+  Users
+} from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
@@ -11,6 +23,7 @@ import {
   type MediaDetail
 } from '@shared/types'
 import { MiniCard } from '@/components/AnimeCard'
+import EpisodeEditor from '@/components/EpisodeEditor'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
@@ -62,10 +75,16 @@ function Stars({ value, onChange }: { value: number | null; onChange: (v: number
 function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): React.JSX.Element {
   const seen = useApp((s) => s.watched.get(detail.id))
   const next = useApp((s) => nextEpisodeOf(s, detail.id, detail.episodes))
+  const entry = useApp((s) => s.entries.get(detail.id))
+  const events = useApp((s) => s.events)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
   const markUpTo = useApp((s) => s.markUpTo)
   const clearProgress = useApp((s) => s.clearProgress)
+  const startRewatch = useApp((s) => s.startRewatch)
+  const cancelRewatch = useApp((s) => s.cancelRewatch)
+  const toast = useApp((s) => s.toast)
   const [hovered, setHovered] = useState<number | null>(null)
+  const [editing, setEditing] = useState<number | null>(null)
 
   const episodes = detail.episodeMeta
   if (!episodes.length) {
@@ -78,6 +97,13 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
 
   const hoveredMeta = hovered ? episodes[hovered - 1] : null
   const count = seen?.size ?? 0
+  const pass = entry?.rewatches ?? 0
+  const finished = count === episodes.length && count > 0
+
+  /** Episodes carrying a note or a mood, in any pass — worth flagging. */
+  const annotated = new Set(
+    events.filter((e) => e.animeId === detail.id && (e.note || e.emotions?.length)).map((e) => e.episode)
+  )
 
   return (
     <div>
@@ -94,6 +120,34 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
           <RotateCcw size={14} />
           Réinitialiser
         </button>
+
+        {entry && finished && (
+          <button
+            className="btn btn-primary !h-8"
+            onClick={() => {
+              void startRewatch(detail.id)
+              toast('Nouveau visionnage commencé — l’historique précédent est conservé.', 'ok')
+            }}
+          >
+            <Repeat size={14} />
+            Revoir
+          </button>
+        )}
+
+        {pass > 0 && (
+          <>
+            <span
+              className="rounded-full px-2.5 py-1 text-[0.72rem] font-medium"
+              style={{ background: rgba(glow, 0.16), color: glow }}
+            >
+              {pass === 1 ? '2ᵉ' : `${pass + 1}ᵉ`} visionnage
+            </span>
+            <button className="btn !h-8 text-[0.75rem]" onClick={() => void cancelRewatch(detail.id)}>
+              Annuler ce visionnage
+            </button>
+          </>
+        )}
+
         <p className="ml-auto min-h-[1.2rem] text-[0.76rem] text-muted">
           {hoveredMeta?.title ? (
             <span>
@@ -101,10 +155,17 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
               {hoveredMeta.title}
             </span>
           ) : (
-            <span className="text-faint">Clic pour cocher · Maj+clic pour cocher jusque-là</span>
+            <span className="text-faint">Clic pour cocher · Maj+clic jusque-là · Clic droit pour éditer</span>
           )}
         </p>
       </div>
+
+      <EpisodeEditor
+        animeId={detail.id}
+        episode={editing}
+        title={editing ? (episodes[editing - 1]?.title ?? null) : null}
+        onClose={() => setEditing(null)}
+      />
 
       <div className="flex flex-wrap gap-1.5">
         {episodes.map((ep) => {
@@ -116,8 +177,12 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
               onMouseEnter={() => setHovered(ep.number)}
               onMouseLeave={() => setHovered(null)}
               onClick={(e) => (e.shiftKey ? markUpTo(detail.id, ep.number) : toggleEpisode(detail.id, ep.number))}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                setEditing(ep.number)
+              }}
               title={ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`}
-              className="grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 hover:scale-110"
+              className="relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 hover:scale-110"
               style={
                 watched
                   ? { background: `linear-gradient(140deg, ${glow}, var(--accent-2))`, color: '#07080f' }
@@ -136,6 +201,13 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
               }
             >
               {watched ? <Check size={14} strokeWidth={3} /> : ep.number}
+              {annotated.has(ep.number) && (
+                <span
+                  className="absolute right-1 top-1 h-[5px] w-[5px] rounded-full"
+                  style={{ background: watched ? '#07080f' : glow }}
+                  title="Cet épisode a une note"
+                />
+              )}
             </button>
           )
         })}
