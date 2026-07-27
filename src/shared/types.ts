@@ -158,6 +158,10 @@ export interface Prefs {
   showAdult: boolean
   weekStart: 0 | 1
   lastAiringCheck: number
+  /** Hand corrections for the TV Time importer, keyed by source series id. */
+  tvtimeOverrides: Record<string, number>
+  /** Last export folder read, so a re-run can offer it straight away. */
+  tvtimeFolder: string | null
 }
 
 export interface Snapshot {
@@ -216,6 +220,39 @@ export interface ImportReport {
   episodes: number
   skipped: number
 }
+
+// ---------------------------------------------------------------- TV Time
+
+/** What became of one series of a TV Time / OpenTV export. */
+export interface TvTimeShowResult {
+  /** TheTVDB id, the key an override is stored under. */
+  sourceId: string
+  sourceName: string
+  watched: number
+  placed: number
+  /** Match confidence, or `null` when the series was pinned by hand. */
+  score: number | null
+  status: 'ok' | 'partial' | 'unmatched' | 'skipped'
+  chain: { id: number; title: string; took: number; of: number | null }[]
+}
+
+export interface TvTimeReport extends ImportReport {
+  shows: TvTimeShowResult[]
+  /** The folder that was read, kept so a re-run can skip the picker. */
+  folder: string | null
+  cancelled: boolean
+}
+
+export interface TvTimeProgress {
+  done: number
+  total: number
+  label: string
+}
+
+/** A hand-made decision: a positive AniList id pins the match, `0` skips it. */
+export type TvTimeOverrides = Record<string, number>
+
+export const TVTIME_SKIP = 0
 
 export const EMOTIONS: { id: EmotionId; emoji: string; label: string }[] = [
   { id: 'love', emoji: '💜', label: 'Coup de cœur' },
@@ -299,5 +336,7 @@ export const DEFAULT_PREFS: Prefs = {
   defaultRuntime: 24,
   showAdult: false,
   weekStart: 1,
-  lastAiringCheck: 0
+  lastAiringCheck: 0,
+  tvtimeOverrides: {},
+  tvtimeFolder: null
 }

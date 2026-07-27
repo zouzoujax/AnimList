@@ -6,24 +6,14 @@
  * arrives through `deps`, so an entire import can be replayed in tests.
  */
 
-import type { Entry, Media, WatchEvent } from '@shared/types'
+import type { Entry, Media, TvTimeShowResult, WatchEvent } from '@shared/types'
 import { allocate, statusFor, type Slot } from './allocate'
 import { buildChain, type ChainDeps, type ImportCandidate } from './chain'
 import { bestMatch, MATCH_CONFIDENT, searchQueries } from './match'
 import type { SourceShow } from './read'
 
-/** What became of one source series. */
-export interface ShowResult {
-  sourceId: string
-  sourceName: string
-  watched: number
-  placed: number
-  /** Confidence of the title match, or `null` when it was forced by hand. */
-  score: number | null
-  status: 'ok' | 'partial' | 'unmatched' | 'skipped'
-  /** AniList entries that received episodes. */
-  chain: { id: number; title: string; took: number; of: number | null }[]
-}
+/** What became of one source series — the shape the renderer displays. */
+export type ShowResult = TvTimeShowResult
 
 export interface ImportOutcome {
   entries: Entry[]

@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { baseAndSeason, compact } from '@shared/titles'
 import { createQueue, type Lane } from './queue'
+import type { ImportCandidate } from './tvtime/chain'
 import type {
   AiringEntry,
   AiringItem,
@@ -609,6 +610,86 @@ export async function refreshMedia(ids: number[]): Promise<Media[]> {
     out.push(...data.Page.media.map(toMedia))
   }
   return out
+}
+
+// ---------------------------------------------------------------- import
+
+/**
+ * The importer needs more than `browse` returns: synonyms, because TheTVDB and
+ * AniList romanise differently, and sequel relations, to rebuild the chain of
+ * cours a single followed series spans.
+ *
+ * Every import request rides the background lane. The user is waiting on the
+ * batch as a whole, not on any one call, so browsing the app meanwhile must
+ * stay instant.
+ */
+const IMPORT_FIELDS = `
+  ${MEDIA_FIELDS}
+  relations { edges { relationType(version: 2) node { id type format episodes } } }
+`
+
+const IMPORT_SEARCH_QUERY = `
+query ImportSearch($search: String, $perPage: Int, $sort: [MediaSort]) {
+  Page(perPage: $perPage) { media(search: $search, type: ANIME, sort: $sort) { ${IMPORT_FIELDS} } }
+}`
+
+const IMPORT_BY_ID_QUERY = `
+query ImportById($id: Int) { Media(id: $id, type: ANIME) { ${IMPORT_FIELDS} } }`
+
+interface RawRelated extends RawMedia {
+  relations: {
+    edges: {
+      relationType: string | null
+      node: { id: number; type: string | null; format: string | null; episodes: number | null }
+    }[]
+  } | null
+}
+
+function toCandidate(m: RawRelated): ImportCandidate {
+  return {
+    media: toMedia(m),
+    synonyms: m.synonyms ?? [],
+    sequels: (m.relations?.edges ?? [])
+      .filter((e) => e.relationType === 'SEQUEL' && e.node?.type === 'ANIME')
+      .map((e) => ({ id: e.node.id, format: e.node.format, episodes: e.node.episodes }))
+  }
+}
+
+/** Candidates for a series name, best guesses first. */
+export async function importSearch(search: string): Promise<ImportCandidate[]> {
+  const data = await request<{ Page: { media: RawRelated[] } }>(
+    IMPORT_SEARCH_QUERY,
+    { search, perPage: 8, sort: ['SEARCH_MATCH'] },
+    'background',
+    `import:search:${search}`
+  )
+  return data.Page.media.map(toCandidate)
+}
+
+/** Everything sharing a franchise name, oldest first, to patch a broken chain. */
+export async function importFranchise(search: string): Promise<ImportCandidate[]> {
+  const data = await request<{ Page: { media: RawRelated[] } }>(
+    IMPORT_SEARCH_QUERY,
+    { search, perPage: 25, sort: ['START_DATE'] },
+    'background',
+    `import:franchise:${search}`
+  )
+  return data.Page.media.map(toCandidate)
+}
+
+export async function importById(id: number): Promise<ImportCandidate | null> {
+  try {
+    const data = await request<{ Media: RawRelated | null }>(
+      IMPORT_BY_ID_QUERY,
+      { id },
+      'background',
+      `import:media:${id}`
+    )
+    return data.Media ? toCandidate(data.Media) : null
+  } catch {
+    // A single unreachable entry ends that chain; the import carries on.
+    return null
+  }
 }
 
 export async function mediaByMalIds(malIds: number[]): Promise<Map<number, Media>> {

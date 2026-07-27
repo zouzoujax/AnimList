@@ -4,6 +4,7 @@ import * as anilist from './anilist'
 import { resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
 import { exportData, importData, importMal, revealDataFolder } from './backup'
+import { cancelImport, importTvTime } from './tvtime/service'
 import {
   cacheMedia,
   clearWatched,
@@ -92,6 +93,8 @@ export function registerIpc(): void {
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))
   ipcMain.handle('data:import', (e, mode: 'merge' | 'replace') => importData(ownerOf(e), mode))
   ipcMain.handle('data:import-mal', (e) => importMal(ownerOf(e)))
+  ipcMain.handle('data:import-tvtime', (e, folder?: string | null) => importTvTime(ownerOf(e), folder))
+  ipcMain.handle('data:cancel-tvtime', () => cancelImport())
   ipcMain.handle('data:reset', () => resetAll())
   ipcMain.handle('data:reveal', () => revealDataFolder())
 

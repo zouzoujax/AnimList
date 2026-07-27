@@ -15,6 +15,7 @@ import {
 import { useEffect, useState, type ReactNode } from 'react'
 import { LAYOUTS, THEMES, type ImportReport, type LayoutId, type TitleLang } from '@shared/types'
 import { Modal } from '@/components/ui'
+import TvTimeImport from '@/components/TvTimeImport'
 import { ACCENT_PRESETS } from '@/lib/color'
 import { useApp } from '@/store/app'
 
@@ -369,6 +370,8 @@ export default function SettingsPage(): React.JSX.Element {
             {busy === 'mal' ? 'Import en cours…' : 'Importer'}
           </button>
         </Row>
+
+        <TvTimeImport />
 
         <Row label="Dossier de données" hint={info?.dbPath ?? '—'}>
           <button className="btn" onClick={() => window.api.data.reveal()}>

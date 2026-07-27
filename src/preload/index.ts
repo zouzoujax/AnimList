@@ -12,7 +12,9 @@ import type {
   Prefs,
   SeasonName,
   Snapshot,
-  StudioWorks
+  StudioWorks,
+  TvTimeProgress,
+  TvTimeReport
 } from '@shared/types'
 
 const api = {
@@ -67,6 +69,14 @@ const api = {
     export: (): Promise<ImportReport> => ipcRenderer.invoke('data:export'),
     import: (mode: 'merge' | 'replace'): Promise<ImportReport> => ipcRenderer.invoke('data:import', mode),
     importMal: (): Promise<ImportReport> => ipcRenderer.invoke('data:import-mal'),
+    importTvTime: (folder?: string | null): Promise<TvTimeReport> =>
+      ipcRenderer.invoke('data:import-tvtime', folder),
+    cancelTvTime: (): Promise<void> => ipcRenderer.invoke('data:cancel-tvtime'),
+    onTvTimeProgress: (cb: (progress: TvTimeProgress) => void): (() => void) => {
+      const handler = (_e: unknown, progress: TvTimeProgress): void => cb(progress)
+      ipcRenderer.on('tvtime:progress', handler)
+      return () => ipcRenderer.off('tvtime:progress', handler)
+    },
     reset: (): Promise<void> => ipcRenderer.invoke('data:reset'),
     reveal: (): Promise<void> => ipcRenderer.invoke('data:reveal')
   },
