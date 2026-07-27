@@ -10,7 +10,7 @@ toute ta bibliothèque vit dans un fichier sur ton PC.
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-231%20passing-3FB950)
+![Tests](https://img.shields.io/badge/tests-262%20passing-3FB950)
 ![Runtime deps](https://img.shields.io/badge/dépendances%20runtime-0-8957E5)
 
 Auteur : **Zaidal**
@@ -24,7 +24,13 @@ Inspiré des fonctionnalités d'*OpenTV: TV & Movie Tracker*, transposées à l'
 - **Suivi épisode par épisode** — grille cliquable, `Maj+clic` pour cocher jusqu'à un épisode,
   passage automatique de « À voir » → « En cours » → « Terminé »
 - **Bibliothèque** — 5 statuts + favoris, filtres par genre/format, tri, vues grille et liste
-- **Notes & ressentis** — étoiles par demi-point (0–10), réactions emoji, notes libres
+- **Notes & ressentis** — étoiles par demi-point (0–10), réactions emoji, notes libres, au
+  niveau de la série **et de chaque épisode** (clic droit sur une vignette)
+- **Revisionnage** — « Revoir » ouvre un nouveau passage : la grille se vide, l'historique
+  précédent reste et continue de compter dans le temps total. Chaque visionnage garde sa
+  propre date, sa durée, ses ressentis et sa note
+- **Historique corrigeable** — modifier la date ou la durée d'un épisode vu, en supprimer un.
+  Une date corrigée à la main rejoint les statistiques par jour, dont les imports sont exclus
 - **Découverte** — tendances, saison en cours, populaires, mieux notés, à venir, recherche
   instantanée, bandes-annonces, casting, relations, recommandations
 - **Calendrier** — grille hebdomadaire des prochains épisodes de tes séries
@@ -88,6 +94,7 @@ géométrie que le logo affiché dans l'app, à relancer si tu changes la marque
 | `↑` `↓` `⏎` | Naviguer / ouvrir dans la palette |
 | `Alt+←` | Retour |
 | `Maj+clic` sur un épisode | Cocher tous les épisodes jusque-là |
+| Clic droit sur un épisode | Éditer ses visionnages : date, durée, ressenti, note |
 
 ## Où sont mes données
 
@@ -140,7 +147,7 @@ Rail, Barre haute, Tableau de bord) se combinent librement depuis les Réglages.
 ## Qualité
 
 ```bash
-npm test           # 231 tests unitaires (Vitest)
+npm test           # 262 tests unitaires (Vitest)
 npm run lint       # ESLint 10, typé, 0 erreur
 npm run typecheck  # tsc sur les deux projets
 npm run format     # Prettier
@@ -164,9 +171,9 @@ Deux mécanismes méritent d'être signalés :
 ## Feuille de route
 
 - [x] Importeur TV Time / OpenTV intégré à l'app
-- [ ] Interface de revisionnage
-- [ ] Édition de l'historique (corriger une date, retirer un épisode)
-- [ ] Notes et ressentis par épisode
+- [x] Interface de revisionnage
+- [x] Édition de l'historique (corriger une date, retirer un épisode)
+- [x] Notes et ressentis par épisode
 - [ ] Listes personnalisées et actions groupées
 - [ ] Notifications par série, avec délai configurable
 - [ ] Accessibilité et découpage du bundle
