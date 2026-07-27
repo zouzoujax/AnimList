@@ -45,10 +45,8 @@ export function Aurora(): React.JSX.Element {
       />
       <div className="fx-grid absolute inset-x-0" />
       <div className="fx-scanlines absolute inset-0" />
-      {/* Named so a theme can change how the grain blends: overlay reads as film
-          on a dark background, multiply as paper on a light one. */}
       <div
-        className="fx-noise absolute inset-0 mix-blend-overlay"
+        className="absolute inset-0 mix-blend-overlay"
         style={{ backgroundImage: NOISE, backgroundRepeat: 'repeat', opacity: 'var(--noise)' }}
       />
       <div

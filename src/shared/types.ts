@@ -4,7 +4,7 @@ export type SeasonName = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
 export type LibraryStatus = 'watching' | 'planned' | 'completed' | 'paused' | 'dropped'
 export type EmotionId = 'love' | 'hype' | 'cry' | 'laugh' | 'mind' | 'chill' | 'scared' | 'bored'
 export type TitleLang = 'romaji' | 'english' | 'native'
-export type ThemeId = 'nebula' | 'paper' | 'terminal' | 'synth' | 'presse'
+export type ThemeId = 'nebula' | 'paper' | 'terminal' | 'synth'
 
 export interface ThemeDef {
   id: ThemeId
@@ -43,13 +43,6 @@ export const THEMES: ThemeDef[] = [
     hint: 'Saturé, arrondi, néon assumé',
     swatch: ['#1a0b2e', '#ff2e97'],
     titlebar: { color: '#210D3A', symbolColor: '#C9A4DC' }
-  },
-  {
-    id: 'presse',
-    name: 'Presse',
-    hint: 'Aplats francs, cadres noirs, ombres dures',
-    swatch: ['#f2f0e9', '#ff4d1f'],
-    titlebar: { color: '#E9E6DB', symbolColor: '#3D3A33' }
   }
 ]
 
