@@ -10,7 +10,17 @@ import tseslint from 'typescript-eslint'
  */
 export default tseslint.config(
   {
-    ignores: ['node_modules/**', 'out/**', 'release/**', 'build/**', 'dist/**', 'DATA EXPORT/**']
+    // `.claude/` holds vendored agent tooling installed by npx, not project
+    // source: linting it reports on someone else's code style.
+    ignores: [
+      'node_modules/**',
+      'out/**',
+      'release/**',
+      'build/**',
+      'dist/**',
+      'DATA EXPORT/**',
+      '.claude/**'
+    ]
   },
 
   js.configs.recommended,

@@ -12,3 +12,8 @@ Thumbs.db
 
 # Export GDPR personnel : contient jetons d'accès, IP, données de compte
 DATA EXPORT/
+
+# Outillage agent installé par `npx impeccable install` (2,9 Mo, 125 fichiers) :
+# réinstallable en une commande, et settings.local.json est par convention local.
+.claude/
+.impeccable/

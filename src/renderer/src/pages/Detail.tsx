@@ -138,9 +138,15 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
 
         {pass > 0 && (
           <>
+            {/* The tint and the outline carry the accent; the text stays ink, so
+                the badge is readable whatever accent and theme are in use. */}
             <span
               className="rounded-full px-2.5 py-1 text-[0.72rem] font-medium"
-              style={{ background: rgba(glow, 0.16), color: glow }}
+              style={{
+                background: rgba(glow, 0.16),
+                border: `1px solid ${rgba(glow, 0.5)}`,
+                color: 'var(--color-ink)'
+              }}
             >
               {pass === 1 ? '2ᵉ' : `${pass + 1}ᵉ`} visionnage
             </span>

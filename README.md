@@ -150,8 +150,44 @@ La rampe de la heatmap est une rampe ordinale validée (teinte unique, clarté m
 plus clair à ≥ 2:1 sur la surface du graphique), et les libellés portent des couleurs de texte,
 jamais celle de la série.
 
-Quatre **thèmes** (Nuit, Papier, Terminal, Synth) et quatre **dispositions** (Barre latérale,
-Rail, Barre haute, Tableau de bord) se combinent librement depuis les Réglages.
+Cinq **thèmes** et quatre **dispositions** (Classique, Rail, Barre haute, Tableau de bord) se
+combinent librement depuis les Réglages. Un thème est une réécriture complète du jeu de
+variables — couleurs, typographie, rayons, ombres, flou, effets de fond — pas seulement une
+teinte.
+
+| Thème | Monde |
+|---|---|
+| **Nébuleuse** | Verre dépoli, aurore animée, néons doux |
+| **Papier** | Clair, éditorial, serif, sans effets |
+| **Terminal** | Monospace, angles vifs, scanlines, fort contraste |
+| **Synthwave** | Saturé, entièrement arrondi, néon assumé |
+| **Presse** | Brutalisme éditorial : aplats francs, cadres noirs de 3 px, ombres dures décalées, grotesque condensée |
+
+Trois décisions du thème Presse méritent d'être connues, parce qu'elles dérogent volontairement
+aux réflexes habituels :
+
+- **L'ombre est décalée sans flou.** Ailleurs ce serait de la décoration ; ici c'est la grammaire
+  du monde — une feuille posée sur une autre, telle que l'imprime une presse mal calée.
+- **Les traits fins restent gris, pas noirs.** Les séparateurs de lignes denses seraient
+  illisibles en noir plein. Le noir épais est réservé aux conteneurs, où le cadre signifie
+  quelque chose : le brutalisme ne doit pas manger la tâche.
+- **L'accent reste celui de l'utilisateur.** Sur ce fond crème, l'orange signal ne fait que
+  2,91:1 — il ne peut donc pas porter de petit texte. Les boutons primaires sont en aplat noir et
+  l'accent ne sert qu'aux marques non textuelles. `--accent-2` est dérivé en assombrissant
+  l'accent de 55 % vers l'encre, ce qui garantit **5,49:1 au pire** sur les sept accents
+  proposés.
+
+### Outillage de conception
+
+Le thème Presse a été conçu avec [Impeccable](https://impeccable.style), installé hors du dépôt :
+
+```bash
+npx impeccable install          # écrit dans .claude/ (ignoré par git)
+node .claude/skills/impeccable/scripts/detect.mjs src/renderer   # audit d'anti-patterns
+```
+
+`PRODUCT.md` à la racine est son fichier de contexte : il consigne la vérité produit — usagers,
+contraintes, principes — sans aucune décision visuelle.
 
 ## Qualité
 

@@ -40,7 +40,9 @@ export const ACCENT_PRESETS = [
   { name: 'Magenta', value: '#ff4d8d' },
   { name: 'Menthe', value: '#34e5a5' },
   { name: 'Ambre', value: '#ffb038' },
-  { name: 'Sang', value: '#ff5449' }
+  { name: 'Sang', value: '#ff5449' },
+  /* Signal orange, the accent the Presse theme was drawn around. */
+  { name: 'Signal', value: '#ff4d1f' }
 ]
 
 export function mixHex(a: string, b: string, t: number): string {

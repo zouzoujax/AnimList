@@ -301,7 +301,9 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
             className="btn"
             data-on={selecting}
             onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
-            style={selecting ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
+            // The accent tints the border, not the label: on a light theme's
+            // surface an accent-coloured word can fall under 3:1.
+            style={selecting ? { borderColor: 'var(--accent)', color: 'var(--color-ink)' } : undefined}
           >
             <CheckSquare size={14} />
             {selecting ? 'Terminer' : 'Sélectionner'}

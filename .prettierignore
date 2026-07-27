@@ -6,3 +6,6 @@ dist/
 DATA EXPORT/
 package-lock.json
 *.md
+.claude/
+.impeccable/
+PRODUCT.md
