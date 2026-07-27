@@ -1,18 +1,27 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useRef } from 'react'
+import { Suspense, lazy, useEffect, useRef } from 'react'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { Aurora, Sidebar, TitleBar } from '@/components/Shell'
 import { Toasts } from '@/components/Toasts'
-import CalendarPage from '@/pages/Calendar'
-import DetailPage from '@/pages/Detail'
-import DiscoverPage from '@/pages/Discover'
+import { Spinner } from '@/components/ui'
 import HomePage from '@/pages/Home'
-import LibraryPage from '@/pages/Library'
-import SettingsPage from '@/pages/Settings'
-import StatsPage from '@/pages/Stats'
-import StudioPage from '@/pages/Studio'
 import { useApp } from '@/store/app'
+
+/**
+ * Only the home page is in the entry bundle — it is what the window opens on.
+ *
+ * Everything else is fetched on first visit. The pages differ wildly in weight:
+ * Stats pulls in the whole charting layer and Detail the trailer and cast views,
+ * neither of which most sessions ever open.
+ */
+const DiscoverPage = lazy(() => import('@/pages/Discover'))
+const LibraryPage = lazy(() => import('@/pages/Library'))
+const StudioPage = lazy(() => import('@/pages/Studio'))
+const CalendarPage = lazy(() => import('@/pages/Calendar'))
+const StatsPage = lazy(() => import('@/pages/Stats'))
+const SettingsPage = lazy(() => import('@/pages/Settings'))
+const DetailPage = lazy(() => import('@/pages/Detail'))
 
 function Boot(): React.JSX.Element {
   return (
@@ -105,8 +114,12 @@ export default function App(): React.JSX.Element {
         <Boot />
       ) : (
         <div className="flex min-h-0 flex-1">
+          {/* First thing Tab reaches, so the whole navigation can be skipped. */}
+          <a href="#contenu" className="skip-link">
+            Aller au contenu
+          </a>
           <Sidebar />
-          <main ref={scrollRef} className="scroll-y relative flex-1">
+          <main id="contenu" ref={scrollRef} className="scroll-y relative flex-1" tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={routeKey}
@@ -116,14 +129,16 @@ export default function App(): React.JSX.Element {
                 transition={{ duration: 0.22, ease: [0.22, 0.8, 0.24, 1] }}
               >
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
-                  {route.name === 'home' && <HomePage />}
-                  {route.name === 'discover' && <DiscoverPage initialSearch={route.search} />}
-                  {route.name === 'library' && <LibraryPage initialGenre={route.genre} />}
-                  {route.name === 'studio' && <StudioPage studio={route.studio} />}
-                  {route.name === 'calendar' && <CalendarPage />}
-                  {route.name === 'stats' && <StatsPage />}
-                  {route.name === 'settings' && <SettingsPage />}
-                  {route.name === 'anime' && <DetailPage id={route.id} />}
+                  <Suspense fallback={<Spinner label="Chargement de la page…" />}>
+                    {route.name === 'home' && <HomePage />}
+                    {route.name === 'discover' && <DiscoverPage initialSearch={route.search} />}
+                    {route.name === 'library' && <LibraryPage initialGenre={route.genre} />}
+                    {route.name === 'studio' && <StudioPage studio={route.studio} />}
+                    {route.name === 'calendar' && <CalendarPage />}
+                    {route.name === 'stats' && <StatsPage />}
+                    {route.name === 'settings' && <SettingsPage />}
+                    {route.name === 'anime' && <DetailPage id={route.id} />}
+                  </Suspense>
                 </ErrorBoundary>
               </motion.div>
             </AnimatePresence>

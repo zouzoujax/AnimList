@@ -19,7 +19,15 @@ export function Toasts(): React.JSX.Element {
   const dismiss = useApp((s) => s.dismissToast)
 
   return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[min(380px,90vw)] flex-col gap-2.5">
+    // `polite` rather than `assertive`: these confirm an action the user just
+    // took, so interrupting whatever a screen reader is saying would be rude.
+    // Errors are announced the same way — nothing here is time-critical.
+    <div
+      className="pointer-events-none fixed bottom-5 right-5 z-[60] flex w-[min(380px,90vw)] flex-col gap-2.5"
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+    >
       <AnimatePresence initial={false}>
         {toasts.map((toast) => {
           const Icon = ICONS[toast.kind]

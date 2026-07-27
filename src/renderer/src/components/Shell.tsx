@@ -179,6 +179,7 @@ export function Sidebar(): React.JSX.Element {
 
   return (
     <nav
+      aria-label="Navigation principale"
       className="nav-shell flex w-[228px] shrink-0 flex-col gap-1 border-r px-3 py-4"
       style={{ borderColor: 'var(--line)', background: 'color-mix(in oklab, var(--bg) 55%, transparent)' }}
     >
@@ -189,6 +190,10 @@ export function Sidebar(): React.JSX.Element {
             key={target.name}
             onClick={() => navigate(target)}
             title={label}
+            // The rail layout hides the labels, so the accessible name has to
+            // come from somewhere other than the text.
+            aria-label={label}
+            aria-current={active ? 'page' : undefined}
             className="nav-item relative flex h-[42px] items-center gap-3 rounded-xl px-3 text-[0.855rem] font-medium transition-colors"
             style={{ color: active ? 'var(--on-accent)' : 'var(--color-muted)' }}
           >
