@@ -1,0 +1,14 @@
+node_modules/
+out/
+release/
+dist/
+.vite/
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.env
+.env.local
+
+# Export GDPR personnel : contient jetons d'accès, IP, données de compte
+DATA EXPORT/

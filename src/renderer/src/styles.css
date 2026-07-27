@@ -1,0 +1,665 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-ink: #e9ecf8;
+  --color-muted: #98a0bf;
+  --color-faint: #616990;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+}
+
+/*
+ * Every theme is a full override of this token set — colours, typography,
+ * corner radii, shadows, blur and background effects — so switching one changes
+ * the whole look rather than just the hue.
+ */
+:root {
+  --accent: #7c5cff;
+  --accent-2: #22d3ee;
+  --bg: #05060c;
+  --chrome: #0b0e1a;
+  --scrim: rgba(5, 6, 12, 0.74);
+  --panel: rgba(255, 255, 255, 0.042);
+  --panel-2: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.075);
+  --line-2: rgba(255, 255, 255, 0.14);
+  --inset-hi: rgba(255, 255, 255, 0.06);
+  --glow: color-mix(in oklab, var(--accent) 55%, var(--accent-2));
+  --radius-ctl: 12px;
+  --blur: 28px;
+  --num-hi: #ffffff;
+  --on-accent: #ffffff;
+  --on-accent-ink: #07080f;
+  --aurora: 1;
+  --noise: 0.035;
+  --grid-min: 158px;
+  --gutter: 1.75rem;
+  color-scheme: dark;
+}
+
+* {
+  min-width: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-synthesis-weight: none;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Mica lets the Windows 11 desktop tint bleed through; the scrim keeps text readable. */
+body.mica {
+  background: transparent;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 45%, transparent);
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--thumb, rgba(255, 255, 255, 0.09));
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--thumb-hover, rgba(255, 255, 255, 0.2));
+  background-clip: content-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+@layer components {
+  .glass {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    box-shadow: inset 0 1px 0 var(--inset-hi);
+  }
+
+  .glass-blur {
+    background: color-mix(in oklab, var(--chrome) 72%, transparent);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(var(--blur)) saturate(150%);
+  }
+
+  /* Gradient hairline used to separate stacked sections. */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--line-2), transparent);
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    height: 2.375rem;
+    padding: 0 0.95rem;
+    border-radius: var(--radius-ctl);
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--color-ink);
+    font-size: 0.83rem;
+    font-weight: 550;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background 0.18s,
+      border-color 0.18s,
+      transform 0.18s,
+      box-shadow 0.18s;
+  }
+  .btn:hover {
+    background: var(--panel-2);
+    border-color: var(--line-2);
+  }
+  .btn:active {
+    transform: scale(0.975);
+  }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--accent), color-mix(in oklab, var(--accent-2) 70%, var(--accent)));
+    color: var(--on-accent-ink);
+    font-weight: 650;
+    box-shadow: 0 10px 30px -12px var(--glow);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 14px 38px -12px var(--glow);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--color-muted);
+  }
+  .btn-ghost:hover {
+    background: var(--panel);
+    color: var(--color-ink);
+  }
+
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.16s;
+  }
+  .icon-btn:hover {
+    background: var(--panel-2);
+    border-color: var(--line);
+    color: var(--color-ink);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    height: 1.85rem;
+    padding: 0 0.7rem;
+    border-radius: 99px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    font-weight: 550;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.16s;
+  }
+  .chip:hover {
+    color: var(--color-ink);
+    border-color: var(--line-2);
+  }
+  .chip[data-on='true'] {
+    background: color-mix(in oklab, var(--accent) 22%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+    color: var(--on-accent);
+  }
+
+  .field {
+    height: 2.375rem;
+    padding: 0 0.8rem;
+    border-radius: var(--radius-ctl);
+    border: 1px solid var(--line);
+    background: rgba(0, 0, 0, 0.25);
+    font-size: 0.84rem;
+    outline: none;
+    transition:
+      border-color 0.16s,
+      box-shadow 0.16s;
+  }
+  .field:focus {
+    border-color: color-mix(in oklab, var(--accent) 60%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--accent) 18%, transparent);
+  }
+
+  .label {
+    font-size: 0.7rem;
+    font-weight: 650;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+
+  .title-xl {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.028em;
+  }
+
+  /* Big metrics read as light emitted by the accent rather than plain text. */
+  .stat-num {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.045em;
+    font-variant-numeric: tabular-nums;
+    background: linear-gradient(
+      160deg,
+      var(--num-hi) 10%,
+      color-mix(in oklab, var(--accent) 65%, var(--num-hi)) 60%,
+      var(--accent-2)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Every poster grid in the app; density follows the layout. */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--grid-min), 1fr));
+    column-gap: 1rem;
+    row-gap: 1.75rem;
+  }
+
+  .page {
+    margin-inline: auto;
+    max-width: var(--page-max, 1500px);
+    padding: var(--gutter);
+  }
+
+  .scroll-x {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-y {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .drag {
+    -webkit-app-region: drag;
+  }
+  .no-drag {
+    -webkit-app-region: no-drag;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.04) 20%,
+      rgba(255, 255, 255, 0.09) 40%,
+      rgba(255, 255, 255, 0.04) 60%
+    );
+    background-size: 220% 100%;
+    animation: shimmer 1.5s infinite linear;
+  }
+
+  .ring-accent {
+    box-shadow:
+      0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent),
+      0 0 34px -8px var(--glow);
+  }
+
+  /*
+   * Cursor-tracked tilt. --rx/--ry are set on the card (-0.5..0.5) from
+   * mousemove; the artwork shifts against the rotation so it reads as depth
+   * rather than a flat rotate, and the sheen tracks the pointer.
+   */
+  .tilt {
+    perspective: 900px;
+  }
+
+  .tilt-inner {
+    transform: rotateY(calc(var(--rx, 0) * 10deg)) rotateX(calc(var(--ry, 0) * -10deg));
+    transition:
+      transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 0.3s;
+    will-change: transform;
+  }
+
+  .group:hover .tilt-img img {
+    transform: scale(1.1) translate3d(calc(var(--rx, 0) * -14px), calc(var(--ry, 0) * -14px), 0);
+  }
+
+  .sheen {
+    background: radial-gradient(
+      42% 42% at calc(50% + var(--rx, 0) * 90%) calc(50% + var(--ry, 0) * 90%),
+      rgba(255, 255, 255, 0.28),
+      transparent 70%
+    );
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .group:hover .sheen {
+    opacity: 1;
+  }
+
+  .clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+@keyframes drift-a {
+  0%,
+  100% {
+    transform: translate3d(-6%, -4%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(8%, 6%, 0) scale(1.18);
+  }
+}
+
+@keyframes drift-b {
+  0%,
+  100% {
+    transform: translate3d(6%, 8%, 0) scale(1.1);
+  }
+  50% {
+    transform: translate3d(-8%, -6%, 0) scale(0.92);
+  }
+}
+
+@keyframes drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 4%, 0) scale(0.95);
+  }
+  50% {
+    transform: translate3d(4%, -8%, 0) scale(1.15);
+  }
+}
+
+@keyframes sweep {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(220%);
+  }
+}
+
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ══════════════════════════════════════════════════ DISPOSITIONS
+   Independent of the colour theme: these move the navigation and recompose the
+   pages. `--grid-min` drives poster density, `.page-flow` the home stacking. */
+
+/* Rail compact : icônes seules, grilles serrées, marges réduites. */
+:root[data-layout='rail'] {
+  --grid-min: 128px;
+  --gutter: 1.25rem;
+}
+:root[data-layout='rail'] .nav-label,
+:root[data-layout='rail'] .nav-widget {
+  display: none;
+}
+:root[data-layout='rail'] .nav-shell {
+  width: 68px;
+  padding-inline: 0.6rem;
+  align-items: center;
+}
+:root[data-layout='rail'] .nav-item {
+  justify-content: center;
+  padding-inline: 0;
+  width: 44px;
+}
+
+/* Barre haute : plus de menu latéral, navigation dans l'en-tête. */
+:root[data-layout='topbar'] {
+  --page-max: 1240px;
+}
+:root[data-layout='topbar'] .nav-shell {
+  display: none;
+}
+:root[data-layout='topbar'] .top-nav {
+  display: flex;
+}
+
+/* Tableau de bord : l'accueil passe en tuiles côte à côte, et le grand visuel
+   se réduit à une bannière — un dashboard ne doit pas être dominé par un héros. */
+:root[data-layout='dashboard'] .page-flow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(390px, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+:root[data-layout='dashboard'] .page-flow > section {
+  margin-bottom: 0;
+}
+:root[data-layout='dashboard'] .page-flow > .span-all {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+/* Tiles read as panels rather than bare sections. */
+:root[data-layout='dashboard'] .page-flow > section:not(.span-all) {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 0.9rem 0.9rem 0.5rem;
+  box-shadow: inset 0 1px 0 var(--inset-hi);
+}
+:root[data-layout='dashboard'] .page-flow > section:not(.span-all) > header {
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--line);
+}
+:root[data-layout='dashboard'] .page-flow > section:not(.span-all) h2 {
+  font-size: 1rem;
+}
+/* Compact banner: no poster, smaller title, tighter padding. */
+:root[data-layout='dashboard'] .spotlight .sp-poster {
+  display: none;
+}
+:root[data-layout='dashboard'] .spotlight h1 {
+  font-size: 1.55rem;
+}
+:root[data-layout='dashboard'] .spotlight > div:last-child {
+  padding: 1.1rem 1.25rem;
+}
+:root[data-layout='dashboard'] .spotlight p {
+  font-size: 0.78rem;
+}
+
+/* Background effect layers, off unless a theme opts in. */
+.fx-scanlines,
+.fx-grid {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════ PAPIER
+   Light and editorial: paper-white ground, serif headings, hairline rules,
+   no glass, no glow. Flat cards with a soft ink shadow instead. */
+:root[data-theme='paper'] {
+  --bg: #f6f4ef;
+  --chrome: #ffffff;
+  --scrim: rgba(246, 244, 239, 0.92);
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-2: #ffffff;
+  --line: rgba(28, 26, 23, 0.13);
+  --line-2: rgba(28, 26, 23, 0.26);
+  --inset-hi: transparent;
+  --color-ink: #1c1a17;
+  --color-muted: #55504a;
+  --color-faint: #8b847b;
+  --font-sans: 'Segoe UI', system-ui, sans-serif;
+  --font-display: Georgia, 'Times New Roman', serif;
+  --radius-ctl: 8px;
+  --blur: 0px;
+  --num-hi: #1c1a17;
+  --on-accent: #ffffff;
+  --on-accent-ink: #ffffff;
+  --aurora: 0.3;
+  --noise: 0;
+  --thumb: rgba(28, 26, 23, 0.16);
+  --thumb-hover: rgba(28, 26, 23, 0.34);
+  color-scheme: light;
+}
+:root[data-theme='paper'] [class*='rounded-['] {
+  border-radius: 10px !important;
+}
+:root[data-theme='paper'] .glass {
+  box-shadow:
+    0 1px 2px rgba(28, 26, 23, 0.06),
+    0 8px 24px -18px rgba(28, 26, 23, 0.4);
+}
+:root[data-theme='paper'] .btn-primary,
+:root[data-theme='paper'] .ring-accent {
+  box-shadow: none;
+}
+:root[data-theme='paper'] .title-xl {
+  letter-spacing: -0.012em;
+}
+:root[data-theme='paper'] .label {
+  letter-spacing: 0.14em;
+}
+/* Posters keep their own contrast; everything else loses the neon halo. */
+:root[data-theme='paper'] .tilt-inner {
+  box-shadow: 0 10px 30px -18px rgba(28, 26, 23, 0.55) !important;
+}
+
+/* ══════════════════════════════════════════════════ TERMINAL
+   Brutalist: monospace everywhere, 2px corners, crisp 1px rules, scanlines,
+   no blur, no shadows, no aurora. */
+:root[data-theme='terminal'] {
+  --accent-2: color-mix(in oklab, var(--accent) 70%, #ffffff);
+  --bg: #05070a;
+  --chrome: #080b10;
+  --scrim: rgba(5, 7, 10, 0.93);
+  --panel: rgba(255, 255, 255, 0.028);
+  --panel-2: rgba(255, 255, 255, 0.075);
+  --line: rgba(255, 255, 255, 0.16);
+  --line-2: rgba(255, 255, 255, 0.34);
+  --inset-hi: transparent;
+  --color-ink: #dce7e1;
+  --color-muted: #92a49b;
+  --color-faint: #616f68;
+  --font-sans: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --font-display: 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  --radius-ctl: 2px;
+  --blur: 0px;
+  --num-hi: #eafff4;
+  --aurora: 0;
+  --noise: 0.05;
+  --thumb: rgba(255, 255, 255, 0.14);
+}
+:root[data-theme='terminal'] [class*='rounded-['] {
+  border-radius: 2px !important;
+}
+:root[data-theme='terminal'] .glass,
+:root[data-theme='terminal'] .glass-blur {
+  box-shadow: none;
+}
+:root[data-theme='terminal'] .tilt-inner,
+:root[data-theme='terminal'] .btn-primary,
+:root[data-theme='terminal'] .ring-accent {
+  box-shadow: none !important;
+}
+:root[data-theme='terminal'] .title-xl,
+:root[data-theme='terminal'] .stat-num {
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+}
+:root[data-theme='terminal'] .btn,
+:root[data-theme='terminal'] .chip {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.74rem;
+}
+:root[data-theme='terminal'] .fx-scanlines {
+  display: block;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px);
+}
+/* Tilt is out of character here — keep the lift, drop the 3D. */
+:root[data-theme='terminal'] .tilt-inner {
+  transform: none !important;
+}
+
+/* ══════════════════════════════════════════════════ SYNTHWAVE
+   Saturated violet ground, pill controls, oversized radii, heavy neon bloom
+   and a perspective grid on the horizon. */
+:root[data-theme='synth'] {
+  --bg: #140725;
+  --chrome: #210d3a;
+  --scrim: rgba(18, 6, 36, 0.7);
+  --panel: rgba(255, 255, 255, 0.062);
+  --panel-2: rgba(255, 255, 255, 0.115);
+  --line: color-mix(in oklab, var(--accent) 26%, transparent);
+  --line-2: color-mix(in oklab, var(--accent) 52%, transparent);
+  --inset-hi: rgba(255, 255, 255, 0.12);
+  --color-ink: #ffeaf8;
+  --color-muted: #c9a4dc;
+  --color-faint: #9573ad;
+  --radius-ctl: 999px;
+  --blur: 22px;
+  --aurora: 1.7;
+  --noise: 0.02;
+  --thumb: color-mix(in oklab, var(--accent) 40%, transparent);
+}
+:root[data-theme='synth'] [class*='rounded-['] {
+  border-radius: 24px !important;
+}
+:root[data-theme='synth'] .glass {
+  box-shadow:
+    inset 0 1px 0 var(--inset-hi),
+    0 22px 60px -34px var(--glow);
+}
+:root[data-theme='synth'] .title-xl,
+:root[data-theme='synth'] .stat-num {
+  text-shadow: 0 0 28px color-mix(in oklab, var(--accent) 45%, transparent);
+}
+:root[data-theme='synth'] .fx-grid {
+  display: block;
+  bottom: 0;
+  top: 55%;
+  background-image:
+    repeating-linear-gradient(
+      to right,
+      color-mix(in oklab, var(--accent) 34%, transparent) 0 1px,
+      transparent 1px 62px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--accent-2) 26%, transparent) 0 1px,
+      transparent 1px 44px
+    );
+  transform: perspective(340px) rotateX(66deg);
+  transform-origin: bottom center;
+  opacity: 0.5;
+  mask-image: linear-gradient(to bottom, transparent, black 55%);
+}

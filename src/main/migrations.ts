@@ -1,0 +1,118 @@
+/**
+ * Schema migrations for the on-disk store.
+ *
+ * Deliberately pure and free of `electron`/`fs` imports so it can be unit
+ * tested: this is the one piece of code that rewrites the user's data, and a
+ * mistake here is unrecoverable without a backup.
+ *
+ * Adding a migration:
+ *   1. bump SCHEMA_VERSION
+ *   2. append an entry to `migrations` with the matching `to`
+ *   3. cover it in migrations.test.ts
+ * Never edit a released migration — write a new one on top.
+ */
+
+export const SCHEMA_VERSION = 3
+
+/** The raw file shape. Fields are `unknown` because old files are untrusted. */
+export interface StoredDb {
+  version?: number
+  media: Record<string, Record<string, unknown>>
+  entries: Record<string, Record<string, unknown>>
+  history: Record<string, unknown>[]
+  prefs: Record<string, unknown>
+}
+
+export interface MigrationReport {
+  from: number
+  to: number
+  applied: string[]
+  /** The file was written by a newer build: writing to it would lose data. */
+  ahead: boolean
+}
+
+interface Migration {
+  to: number
+  describe: string
+  run: (db: StoredDb) => void
+}
+
+const DEFAULT_RUNTIME = 24
+
+const migrations: Migration[] = [
+  {
+    to: 2,
+    describe: 'Complète les champs absents des entrées et de l’historique',
+    run(db) {
+      const now = Date.now()
+
+      for (const [id, entry] of Object.entries(db.entries)) {
+        // Fields added after the first release; filling them here is what lets
+        // the reading code stop guarding every access.
+        entry.animeId ??= Number(id)
+        entry.status ??= 'planned'
+        entry.addedAt ??= now
+        entry.updatedAt ??= now
+        entry.favorite ??= false
+        entry.notes ??= ''
+        entry.rewatches ??= 0
+        if (!('score' in entry)) entry.score = null
+        if (!('startedAt' in entry)) entry.startedAt = null
+        if (!('finishedAt' in entry)) entry.finishedAt = null
+        if (!Array.isArray(entry.emotions)) entry.emotions = []
+      }
+
+      // Rows without an anime or an episode number cannot be shown or counted,
+      // so they are dropped rather than carried forward forever.
+      db.history = db.history.filter(
+        (row) => row && typeof row.animeId === 'number' && typeof row.episode === 'number' && row.episode > 0
+      )
+
+      for (const row of db.history) {
+        if (typeof row.at !== 'number' || !Number.isFinite(row.at)) row.at = now
+        if (typeof row.minutes !== 'number' || row.minutes <= 0) row.minutes = DEFAULT_RUNTIME
+      }
+    }
+  },
+  {
+    to: 3,
+    describe: 'Purge les fiches en cache qui ne sont plus référencées',
+    run(db) {
+      // Media is a cache: anything not backing an entry or a watched episode can
+      // be refetched from AniList, so it is safe to drop.
+      const referenced = new Set(Object.keys(db.entries))
+      for (const row of db.history) referenced.add(String(row.animeId))
+
+      for (const id of Object.keys(db.media)) {
+        if (!referenced.has(id)) delete db.media[id]
+      }
+    }
+  }
+]
+
+/**
+ * Brings `db` up to SCHEMA_VERSION in place. A file from a newer build is left
+ * untouched and flagged, so the caller can refuse to write to it.
+ */
+export function migrate(db: StoredDb): MigrationReport {
+  const from = typeof db.version === 'number' && db.version > 0 ? db.version : 1
+
+  if (from > SCHEMA_VERSION) {
+    return { from, to: from, applied: [], ahead: true }
+  }
+
+  const applied: string[] = []
+  for (const migration of migrations) {
+    if (migration.to <= from) continue
+    migration.run(db)
+    db.version = migration.to
+    applied.push(`v${migration.to} — ${migration.describe}`)
+  }
+
+  db.version = SCHEMA_VERSION
+  return { from, to: SCHEMA_VERSION, applied, ahead: false }
+}
+
+export function pendingMigrations(version: number): number {
+  return migrations.filter((m) => m.to > version).length
+}

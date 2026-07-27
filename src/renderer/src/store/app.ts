@@ -1,0 +1,196 @@
+import { create } from 'zustand'
+import {
+  DEFAULT_PREFS,
+  type Entry,
+  type EntryPatch,
+  type Media,
+  type Prefs,
+  type Snapshot,
+  type WatchEvent
+} from '@shared/types'
+import { secondaryFor } from '@/lib/color'
+
+export type Route =
+  | { name: 'home' }
+  | { name: 'discover'; search?: string }
+  | { name: 'library'; genre?: string }
+  | { name: 'calendar' }
+  | { name: 'stats' }
+  | { name: 'settings' }
+  | { name: 'anime'; id: number }
+  | { name: 'studio'; studio: string }
+
+export interface Toast {
+  id: number
+  message: string
+  kind: 'ok' | 'error' | 'info'
+}
+
+interface AppState {
+  ready: boolean
+  route: Route
+  stack: Route[]
+  prefs: Prefs
+  entries: Map<number, Entry>
+  media: Map<number, Media>
+  watched: Map<number, Set<number>>
+  events: WatchEvent[]
+  toasts: Toast[]
+  paletteOpen: boolean
+
+  init: () => Promise<void>
+  navigate: (route: Route) => void
+  back: () => void
+  setPrefs: (patch: Partial<Prefs>) => Promise<void>
+  setPalette: (open: boolean) => void
+  toast: (message: string, kind?: Toast['kind']) => void
+  dismissToast: (id: number) => void
+
+  saveEntry: (animeId: number, patch: EntryPatch, media?: Media) => Promise<void>
+  removeEntry: (animeId: number) => Promise<void>
+  toggleEpisode: (animeId: number, episode: number) => Promise<void>
+  markUpTo: (animeId: number, episode: number) => Promise<void>
+  clearProgress: (animeId: number) => Promise<void>
+}
+
+function applyTheme(prefs: Prefs): void {
+  const root = document.documentElement
+  root.dataset.theme = prefs.theme
+  root.dataset.layout = prefs.layout
+  root.style.setProperty('--accent', prefs.accent)
+  root.style.setProperty('--accent-2', secondaryFor(prefs.accent))
+  document.body.classList.toggle('mica', prefs.mica)
+  document.body.classList.toggle('reduce-motion', prefs.reduceMotion)
+}
+
+function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' | 'watched' | 'events'> {
+  const watched = new Map<number, Set<number>>()
+  for (const ev of snapshot.history) {
+    let set = watched.get(ev.animeId)
+    if (!set) watched.set(ev.animeId, (set = new Set()))
+    set.add(ev.episode)
+  }
+  return {
+    entries: new Map(snapshot.entries.map((e) => [e.animeId, e])),
+    media: new Map(snapshot.media.map((m) => [m.id, m])),
+    watched,
+    events: snapshot.history
+  }
+}
+
+let toastSeq = 0
+let refreshTimer: ReturnType<typeof setTimeout> | null = null
+
+export const useApp = create<AppState>((set, get) => ({
+  ready: false,
+  route: { name: 'home' },
+  stack: [],
+  prefs: DEFAULT_PREFS,
+  entries: new Map(),
+  media: new Map(),
+  watched: new Map(),
+  events: [],
+  toasts: [],
+  paletteOpen: false,
+
+  init: async () => {
+    const [snapshot, prefs] = await Promise.all([window.api.library.snapshot(), window.api.prefs.get()])
+    applyTheme(prefs)
+    set({ ...indexSnapshot(snapshot), prefs, ready: true })
+
+    // The main process owns the data; every mutation echoes back here.
+    window.api.library.onChange(() => {
+      if (refreshTimer) clearTimeout(refreshTimer)
+      refreshTimer = setTimeout(async () => {
+        refreshTimer = null
+        set(indexSnapshot(await window.api.library.snapshot()))
+      }, 120)
+    })
+
+    window.api.app.onOpenAnime((id) => get().navigate({ name: 'anime', id }))
+  },
+
+  navigate: (route) => {
+    const current = get().route
+    if (current.name === route.name && JSON.stringify(current) === JSON.stringify(route)) return
+    set({ route, stack: [...get().stack, current].slice(-30), paletteOpen: false })
+  },
+
+  back: () => {
+    const stack = get().stack
+    if (!stack.length) return set({ route: { name: 'home' } })
+    set({ route: stack[stack.length - 1], stack: stack.slice(0, -1) })
+  },
+
+  setPrefs: async (patch) => {
+    const prefs = await window.api.prefs.set(patch)
+    applyTheme(prefs)
+    set({ prefs })
+  },
+
+  setPalette: (paletteOpen) => set({ paletteOpen }),
+
+  toast: (message, kind = 'ok') => {
+    const id = (toastSeq += 1)
+    set({ toasts: [...get().toasts, { id, message, kind }] })
+    setTimeout(() => get().dismissToast(id), 4200)
+  },
+
+  dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
+
+  saveEntry: async (animeId, patch, media) => {
+    await window.api.library.setEntry(animeId, patch, media)
+  },
+
+  removeEntry: async (animeId) => {
+    await window.api.library.removeEntry(animeId)
+  },
+
+  // Optimistic: ticking an episode must feel instant, the echo reconciles it.
+  toggleEpisode: async (animeId, episode) => {
+    const watched = new Map(get().watched)
+    const set0 = new Set(watched.get(animeId) ?? [])
+    const next = !set0.has(episode)
+    if (next) set0.add(episode)
+    else set0.delete(episode)
+    watched.set(animeId, set0)
+    set({ watched })
+    await window.api.library.setWatched(animeId, episode, next)
+  },
+
+  markUpTo: async (animeId, episode) => {
+    const watched = new Map(get().watched)
+    const set0 = new Set(watched.get(animeId) ?? [])
+    for (let ep = 1; ep <= episode; ep += 1) set0.add(ep)
+    watched.set(animeId, set0)
+    set({ watched })
+    await window.api.library.setWatchedUpTo(animeId, episode)
+  },
+
+  clearProgress: async (animeId) => {
+    const watched = new Map(get().watched)
+    watched.set(animeId, new Set())
+    set({ watched })
+    await window.api.library.clearWatched(animeId)
+  }
+}))
+
+// ---------------------------------------------------------------- selectors
+
+export function progressOf(state: AppState, animeId: number): number {
+  return state.watched.get(animeId)?.size ?? 0
+}
+
+/** First unseen episode, capped at the known episode count (null when finished). */
+export function nextEpisodeOf(state: AppState, animeId: number, total: number | null): number | null {
+  const seen = state.watched.get(animeId)
+  const limit = total ?? Number.MAX_SAFE_INTEGER
+  for (let ep = 1; ep <= limit; ep += 1) {
+    if (!seen?.has(ep)) return ep
+  }
+  return null
+}
+
+export function isTracked(state: AppState, animeId: number): boolean {
+  return state.entries.has(animeId)
+}

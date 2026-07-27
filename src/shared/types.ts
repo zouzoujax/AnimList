@@ -1,0 +1,303 @@
+export type MediaFormat = 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC'
+export type MediaStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS'
+export type SeasonName = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
+export type LibraryStatus = 'watching' | 'planned' | 'completed' | 'paused' | 'dropped'
+export type EmotionId = 'love' | 'hype' | 'cry' | 'laugh' | 'mind' | 'chill' | 'scared' | 'bored'
+export type TitleLang = 'romaji' | 'english' | 'native'
+export type ThemeId = 'nebula' | 'paper' | 'terminal' | 'synth'
+
+export interface ThemeDef {
+  id: ThemeId
+  name: string
+  hint: string
+  swatch: [string, string]
+  /** Native Windows caption buttons have to match the active theme. */
+  titlebar: { color: string; symbolColor: string }
+}
+
+export const THEMES: ThemeDef[] = [
+  {
+    id: 'nebula',
+    name: 'Nébuleuse',
+    hint: 'Verre dépoli, aurore, néons doux',
+    swatch: ['#0a0c18', '#7c5cff'],
+    titlebar: { color: '#0B0E1A', symbolColor: '#C9D0EA' }
+  },
+  {
+    id: 'paper',
+    name: 'Papier',
+    hint: 'Clair, éditorial, sans effets',
+    swatch: ['#f6f4ef', '#1c1a17'],
+    titlebar: { color: '#FFFFFF', symbolColor: '#3A362F' }
+  },
+  {
+    id: 'terminal',
+    name: 'Terminal',
+    hint: 'Monospace, angles vifs, contraste',
+    swatch: ['#05070a', '#2bff88'],
+    titlebar: { color: '#080B10', symbolColor: '#92A49B' }
+  },
+  {
+    id: 'synth',
+    name: 'Synthwave',
+    hint: 'Saturé, arrondi, néon assumé',
+    swatch: ['#1a0b2e', '#ff2e97'],
+    titlebar: { color: '#210D3A', symbolColor: '#C9A4DC' }
+  }
+]
+
+export function chromeFor(theme: ThemeId): { color: string; symbolColor: string } {
+  return (THEMES.find((t) => t.id === theme) ?? THEMES[0]).titlebar
+}
+
+/** Where the navigation lives and how densely pages are composed. */
+export type LayoutId = 'classic' | 'rail' | 'topbar' | 'dashboard'
+
+export const LAYOUTS: { id: LayoutId; name: string; hint: string }[] = [
+  { id: 'classic', name: 'Classique', hint: 'Menu latéral libellé, sections empilées' },
+  { id: 'rail', name: 'Rail compact', hint: 'Menu en icônes, grilles denses' },
+  { id: 'topbar', name: 'Barre haute', hint: 'Navigation dans l’en-tête, pleine largeur' },
+  { id: 'dashboard', name: 'Tableau de bord', hint: 'Accueil en tuiles côte à côte' }
+]
+
+export interface Media {
+  id: number
+  idMal: number | null
+  title: { romaji: string; english: string | null; native: string | null }
+  cover: { large: string; xl: string; color: string | null }
+  banner: string | null
+  format: MediaFormat | null
+  status: MediaStatus | null
+  episodes: number | null
+  duration: number | null
+  season: SeasonName | null
+  seasonYear: number | null
+  /** Absent on rows cached before this field existed — always guard it. */
+  startDate?: { year: number | null; month: number | null; day: number | null } | null
+  genres: string[]
+  studios: string[]
+  averageScore: number | null
+  popularity: number
+  description: string | null
+  nextAiring: { episode: number; airingAt: number } | null
+  trailer: { id: string; site: string } | null
+  cachedAt: number
+}
+
+export interface CharacterRef {
+  id: number
+  name: string
+  image: string | null
+  role: string
+  va: string | null
+  vaImage: string | null
+}
+
+export interface MediaRef {
+  id: number
+  title: string
+  cover: string
+  format: string | null
+  extra: string | null
+}
+
+export interface EpisodeMeta {
+  number: number
+  title: string | null
+  thumbnail: string | null
+  url: string | null
+}
+
+export interface MediaDetail extends Media {
+  tags: string[]
+  links: { site: string; url: string }[]
+  characters: CharacterRef[]
+  relations: MediaRef[]
+  recommendations: MediaRef[]
+  episodeMeta: EpisodeMeta[]
+}
+
+export interface Entry {
+  animeId: number
+  status: LibraryStatus
+  addedAt: number
+  updatedAt: number
+  score: number | null
+  emotions: EmotionId[]
+  favorite: boolean
+  notes: string
+  rewatches: number
+  startedAt: number | null
+  finishedAt: number | null
+}
+
+export type EntryPatch = Partial<Omit<Entry, 'animeId' | 'addedAt' | 'updatedAt'>>
+
+export interface WatchEvent {
+  animeId: number
+  episode: number
+  at: number
+  minutes: number
+  /**
+   * Set when the episode came from an import. Such rows carry the date the
+   * episode was *ticked* in the source app, not when it was watched, so they
+   * must stay out of day-based stats (best day, streaks, heatmap, monthly).
+   */
+  imported?: boolean
+}
+
+export interface Prefs {
+  titleLang: TitleLang
+  theme: ThemeId
+  layout: LayoutId
+  accent: string
+  mica: boolean
+  notifications: boolean
+  reduceMotion: boolean
+  defaultRuntime: number
+  showAdult: boolean
+  weekStart: 0 | 1
+  lastAiringCheck: number
+}
+
+export interface Snapshot {
+  version: number
+  entries: Entry[]
+  media: Media[]
+  history: WatchEvent[]
+  prefs: Prefs
+}
+
+export interface PageInfo {
+  currentPage: number
+  hasNextPage: boolean
+  total: number
+}
+
+export interface Paged<T> {
+  items: T[]
+  pageInfo: PageInfo
+  stale: boolean
+}
+
+export interface StudioWorks extends Paged<Media> {
+  studio: string
+}
+
+export type BrowseKind = 'trending' | 'popular' | 'top' | 'season' | 'upcoming' | 'search'
+
+export interface BrowseQuery {
+  kind: BrowseKind
+  page?: number
+  perPage?: number
+  search?: string
+  genre?: string
+  format?: MediaFormat
+  season?: SeasonName
+  seasonYear?: number
+}
+
+export interface AiringItem {
+  mediaId: number
+  episode: number
+  airingAt: number
+}
+
+/** An airing slot that carries its own media, for shows outside the library. */
+export interface AiringEntry extends AiringItem {
+  media: Media
+}
+
+export interface ImportReport {
+  ok: boolean
+  message: string
+  added: number
+  updated: number
+  episodes: number
+  skipped: number
+}
+
+export const EMOTIONS: { id: EmotionId; emoji: string; label: string }[] = [
+  { id: 'love', emoji: '💜', label: 'Coup de cœur' },
+  { id: 'hype', emoji: '🔥', label: 'Hype' },
+  { id: 'cry', emoji: '😭', label: 'Larmes' },
+  { id: 'laugh', emoji: '😂', label: 'Fou rire' },
+  { id: 'mind', emoji: '🤯', label: 'Claque' },
+  { id: 'chill', emoji: '🍵', label: 'Cosy' },
+  { id: 'scared', emoji: '😱', label: 'Flippant' },
+  { id: 'bored', emoji: '🥱', label: 'Longuet' }
+]
+
+export const STATUS_LABELS: Record<LibraryStatus, string> = {
+  watching: 'En cours',
+  planned: 'À voir',
+  completed: 'Terminé',
+  paused: 'En pause',
+  dropped: 'Abandonné'
+}
+
+export const FORMAT_LABELS: Record<string, string> = {
+  TV: 'Série TV',
+  TV_SHORT: 'Format court',
+  MOVIE: 'Film',
+  SPECIAL: 'Spécial',
+  OVA: 'OAV',
+  ONA: 'ONA',
+  MUSIC: 'Clip'
+}
+
+export const GENRES = [
+  'Action',
+  'Adventure',
+  'Comedy',
+  'Drama',
+  'Ecchi',
+  'Fantasy',
+  'Horror',
+  'Mahou Shoujo',
+  'Mecha',
+  'Music',
+  'Mystery',
+  'Psychological',
+  'Romance',
+  'Sci-Fi',
+  'Slice of Life',
+  'Sports',
+  'Supernatural',
+  'Thriller'
+] as const
+
+export const GENRE_LABELS: Record<string, string> = {
+  Action: 'Action',
+  Adventure: 'Aventure',
+  Comedy: 'Comédie',
+  Drama: 'Drame',
+  Ecchi: 'Ecchi',
+  Fantasy: 'Fantasy',
+  Horror: 'Horreur',
+  'Mahou Shoujo': 'Magical girl',
+  Mecha: 'Mecha',
+  Music: 'Musique',
+  Mystery: 'Mystère',
+  Psychological: 'Psychologique',
+  Romance: 'Romance',
+  'Sci-Fi': 'Science-fiction',
+  'Slice of Life': 'Tranche de vie',
+  Sports: 'Sport',
+  Supernatural: 'Surnaturel',
+  Thriller: 'Thriller'
+}
+
+export const DEFAULT_PREFS: Prefs = {
+  titleLang: 'romaji',
+  theme: 'nebula',
+  layout: 'classic',
+  accent: '#7C5CFF',
+  mica: true,
+  notifications: true,
+  reduceMotion: false,
+  defaultRuntime: 24,
+  showAdult: false,
+  weekStart: 1,
+  lastAiringCheck: 0
+}
