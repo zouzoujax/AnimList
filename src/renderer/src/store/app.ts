@@ -135,6 +135,7 @@ export const useApp = create<AppState>((set, get) => ({
     })
 
     window.api.app.onOpenAnime((id) => get().navigate({ name: 'anime', id }))
+    window.api.app.onGoto((route) => get().navigate(route as Route))
   },
 
   navigate: (route) => {

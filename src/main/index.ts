@@ -7,6 +7,7 @@ import { initAnimeSama } from './animesama'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { scheduleStartupCheck } from './updater'
+import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore } from './store'
 
 const isDev = !app.isPackaged
@@ -109,6 +110,18 @@ void app.whenReady().then(() => {
   }
 
   mainWindow = createWindow()
+
+  // A screenshot run drives the window itself and quits; the airing sweep and
+  // the update check would only add noise and network traffic to it.
+  const shots = screenshotRun()
+  if (shots) {
+    void captureAll(mainWindow, shots.outDir, shots.plan).catch((err) => {
+      console.error('[screenshots]', err)
+      app.exit(1)
+    })
+    return
+  }
+
   stopWatcher = startAiringWatcher(mainWindow)
   stopUpdateCheck = scheduleStartupCheck()
 

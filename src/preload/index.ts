@@ -126,6 +126,15 @@ const api = {
       const handler = (_e: unknown, id: number): void => cb(id)
       ipcRenderer.on('nav:open-anime', handler)
       return () => ipcRenderer.off('nav:open-anime', handler)
+    },
+    /**
+     * Lets the main process drive navigation to any route, not just a series.
+     * Used by the screenshot run to walk the app page by page.
+     */
+    onGoto: (cb: (route: unknown) => void): (() => void) => {
+      const handler = (_e: unknown, route: unknown): void => cb(route)
+      ipcRenderer.on('nav:goto', handler)
+      return () => ipcRenderer.off('nav:goto', handler)
     }
   }
 }

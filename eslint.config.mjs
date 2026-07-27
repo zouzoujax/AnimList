@@ -95,7 +95,8 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: { projectService: false, project: false, program: null },
       // Without the TS parser these files lose their ambient Node globals.
-      globals: { console: 'readonly', process: 'readonly' }
+      // `fetch` is one of them since Node 18, and the screenshot script uses it.
+      globals: { console: 'readonly', process: 'readonly', fetch: 'readonly' }
     },
     rules: {
       ...tseslint.configs.disableTypeChecked.rules,

@@ -19,6 +19,33 @@ Auteur : **Zaidal**
 
 Inspiré des fonctionnalités d'*OpenTV: TV & Movie Tracker*, transposées à l'anime.
 
+![Accueil](docs/screenshots/accueil.jpg)
+
+<sub>Les captures sont générées par `npm run screenshots` sur une bibliothèque de démonstration :
+les fiches viennent du catalogue public AniList, la progression et les dates sont inventées. La
+vraie bibliothèque n'est jamais lue — ce dépôt est public et un historique de visionnage est
+personnel.</sub>
+
+<table>
+<tr>
+<td width="50%"><a href="docs/screenshots/episodes.jpg"><img src="docs/screenshots/episodes.jpg" alt="Grille d'épisodes et liens de visionnage"></a><br><sub><b>Grille d'épisodes.</b> Clic pour cocher, <code>Maj+clic</code> jusque-là, clic droit pour éditer date, durée, ressenti et note. À droite, les liens de visionnage indiquent s'ils mènent à l'anime ou à une recherche.</sub></td>
+<td width="50%"><a href="docs/screenshots/fiche.jpg"><img src="docs/screenshots/fiche.jpg" alt="Fiche d'un anime"></a><br><sub><b>Fiche.</b> Bannière, statut, progression, note par demi-point, ressentis, bande-annonce, casting, relations et recommandations.</sub></td>
+</tr>
+<tr>
+<td><a href="docs/screenshots/bibliotheque.jpg"><img src="docs/screenshots/bibliotheque.jpg" alt="Bibliothèque"></a><br><sub><b>Bibliothèque.</b> Cinq statuts, favoris, filtres par genre et format, listes personnalisées, mode sélection et actions groupées.</sub></td>
+<td><a href="docs/screenshots/statistiques.jpg"><img src="docs/screenshots/statistiques.jpg" alt="Statistiques"></a><br><sub><b>Statistiques.</b> Temps total, séries de jours, heatmap annuelle, graphique mensuel, top genres et studios, badges.</sub></td>
+</tr>
+<tr>
+<td><a href="docs/screenshots/decouvrir.jpg"><img src="docs/screenshots/decouvrir.jpg" alt="Découvrir"></a><br><sub><b>Découvrir.</b> Tendances, saison en cours, populaires, mieux notés, à venir, recherche instantanée.</sub></td>
+<td><a href="docs/screenshots/calendrier.jpg"><img src="docs/screenshots/calendrier.jpg" alt="Calendrier"></a><br><sub><b>Calendrier.</b> Les prochains épisodes de tes séries, semaine par semaine, ou tout ce qui sort.</sub></td>
+</tr>
+</table>
+
+<div align="center">
+<a href="docs/screenshots/reglages.jpg"><img src="docs/screenshots/reglages.jpg" width="80%" alt="Réglages"></a><br>
+<sub><b>Réglages.</b> Quatre thèmes et quatre dispositions, combinables librement.</sub>
+</div>
+
 ## Ce que ça fait
 
 - **Suivi épisode par épisode** — grille cliquable, `Maj+clic` pour cocher jusqu'à un épisode,
@@ -60,6 +87,7 @@ npm start        # lance la version buildée
 npm run build    # typecheck + bundles de production dans out/
 npm run dist     # installeur Windows (NSIS) dans release/
 npm run release  # build + publication sur les Releases GitHub (voir plus bas)
+npm run screenshots  # régénère docs/screenshots/ (voir plus bas)
 ```
 
 Développé et vérifié sur **Node 24.18.0 / npm 11.16.0**.
@@ -218,8 +246,34 @@ Deux mécanismes méritent d'être signalés :
 - [x] Accessibilité et découpage du bundle
 - [x] Écriture incrémentale du store
 - [x] Mise à jour automatique
-- [ ] Captures d'écran générées (`npm run screenshots`, jeu de démo)
+- [x] Captures d'écran générées (`npm run screenshots`, jeu de démo)
 - [ ] Cinquième thème
+
+## Régénérer les captures
+
+```bash
+npm run screenshots           # écrit dans docs/screenshots/
+npm run screenshots docs/tmp  # ou ailleurs
+```
+
+Le script construit une bibliothèque de démonstration, l'écrit dans un dossier de données
+jetable, puis lance l'app dessus avec `--screenshots` : elle parcourt ses propres pages et
+capture chacune via `webContents.capturePage()`. Une capture d'écran système ne conviendrait pas
+— il faut naviguer, et seule l'app peut le faire — et elle embarquerait la barre des tâches.
+
+Trois choix qui expliquent le résultat :
+
+- **La vraie bibliothèque n'est jamais lue.** Le dossier de données est temporaire et supprimé
+  après coup. Les fiches sont publiques, la progression est inventée.
+- **L'historique est inventé par grappes, et va jusqu'à aujourd'hui.** Un étalement régulier
+  donne une heatmap grise, une série de jours à zéro et « ces 7 jours : 0 épisode ». Les épisodes
+  sont donc posés à rebours depuis un jour de fin, en séances de trois à cinq.
+- **Le casting est fixe, sauf les séries en diffusion.** Celles-là sont demandées à AniList au
+  moment du tir, sinon le calendrier serait vide. Deux captures successives ne sont donc pas
+  strictement identiques.
+
+Les images sont en JPEG et non en PNG : ce sont surtout des jaquettes, que PNG stocke mal — les
+mêmes huit pages pesaient 8,7 Mo en PNG contre 1,7 Mo ici.
 
 ## Publier une mise à jour
 
