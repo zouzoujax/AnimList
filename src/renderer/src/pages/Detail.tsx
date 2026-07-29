@@ -116,13 +116,23 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
   const filler = new Set([...(fillerInfo?.filler ?? []), ...(fillerInfo?.recap ?? [])])
   const shown = hideFiller ? episodes.filter((ep) => !filler.has(ep.number)) : episodes
 
+  /**
+   * Last episode already broadcast. `nextAiring.episode` is the one still to
+   * come, so everything from it onwards cannot have been watched.
+   */
+  const lastAired = detail.nextAiring ? detail.nextAiring.episode - 1 : episodes.length
+  const unaired = (n: number): boolean => n > lastAired
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
+        {/* Stops at the last broadcast episode: marking one that has not aired
+            would invent a viewing. */}
         <button
           className="btn !h-8"
-          onClick={() => markUpTo(detail.id, episodes.length)}
-          disabled={count === episodes.length}
+          onClick={() => markUpTo(detail.id, Math.min(episodes.length, lastAired))}
+          disabled={count >= Math.min(episodes.length, lastAired)}
+          title={lastAired < episodes.length ? `Jusqu'à l'épisode ${lastAired}, le dernier diffusé` : undefined}
         >
           <CheckCheck size={14} />
           Tout marquer
@@ -214,41 +224,54 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
           const watched = seen?.has(ep.number) ?? false
           const isNext = ep.number === next
           const isFiller = filler.has(ep.number)
+          const notOut = unaired(ep.number)
           const label = ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`
+          const note = notOut ? ' · pas encore diffusé' : isFiller ? ' · hors intrigue' : ''
           return (
             <button
               key={ep.number}
+              disabled={notOut}
               onMouseEnter={() => setHovered(ep.number)}
               onMouseLeave={() => setHovered(null)}
               onClick={(e) => (e.shiftKey ? markUpTo(detail.id, ep.number) : toggleEpisode(detail.id, ep.number))}
               onContextMenu={(e) => {
                 e.preventDefault()
-                setEditing(ep.number)
+                if (!notOut) setEditing(ep.number)
               }}
-              title={isFiller ? `${label} · hors intrigue` : label}
-              className="relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 hover:scale-110"
+              title={`${label}${note}`}
+              className={`relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 ${
+                notOut ? 'cursor-not-allowed' : 'hover:scale-110'
+              }`}
               style={
                 watched
                   ? { background: `linear-gradient(140deg, ${glow}, var(--accent-2))`, color: '#07080f' }
-                  : isNext
+                  : notOut
                     ? {
-                        background: 'rgba(255,255,255,.05)',
-                        border: `1.5px solid ${rgba(glow, 0.85)}`,
-                        color: '#fff',
-                        boxShadow: `0 0 18px -4px ${rgba(glow, 0.9)}`
+                        // Not a disabled control so much as a date not yet reached.
+                        background: 'transparent',
+                        border: '1px solid var(--line)',
+                        color: 'var(--color-faint)',
+                        opacity: 0.45
                       }
-                    : isFiller
+                    : isNext
                       ? {
-                          // Dashed and dimmed: skippable, not unavailable.
-                          background: 'transparent',
-                          border: '1px dashed var(--line-2)',
-                          color: 'var(--color-faint)'
+                          background: 'rgba(255,255,255,.05)',
+                          border: `1.5px solid ${rgba(glow, 0.85)}`,
+                          color: '#fff',
+                          boxShadow: `0 0 18px -4px ${rgba(glow, 0.9)}`
                         }
-                      : {
-                          background: 'rgba(255,255,255,.045)',
-                          border: '1px solid var(--line)',
-                          color: 'var(--color-muted)'
-                        }
+                      : isFiller
+                        ? {
+                            // Dashed and dimmed: skippable, not unavailable.
+                            background: 'transparent',
+                            border: '1px dashed var(--line-2)',
+                            color: 'var(--color-faint)'
+                          }
+                        : {
+                            background: 'rgba(255,255,255,.045)',
+                            border: '1px solid var(--line)',
+                            color: 'var(--color-muted)'
+                          }
               }
             >
               {watched ? <Check size={14} strokeWidth={3} /> : ep.number}

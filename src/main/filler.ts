@@ -68,19 +68,41 @@ function persist(): void {
   }, 800)
 }
 
-async function fetchPage(malId: number, page: number): Promise<{ episodes: JikanEpisode[]; more: boolean }> {
-  // `?page=1` answers 200 with an empty list — reproducible on several series,
-  // while the same URL without the parameter returns the first hundred. Pages 2
-  // and up behave normally, so the parameter is only added from the second.
-  const url = page <= 1 ? `${ENDPOINT}/anime/${malId}/episodes` : `${ENDPOINT}/anime/${malId}/episodes?page=${page}`
-  const res = await fetch(url, { headers: { Accept: 'application/json' } })
-  if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`)
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
-  const body = (await res.json()) as {
-    data?: JikanEpisode[]
-    pagination?: { has_next_page?: boolean }
-  }
-  return { episodes: body.data ?? [], more: body.pagination?.has_next_page === true }
+/**
+ * One page of episodes.
+ *
+ * Each page is its own queued job, so the queue's gap applies *between pages*.
+ * Running the whole pagination inside a single job put five requests back to
+ * back and Jikan refused them: a 500-episode series came back empty while a
+ * 220-episode one squeaked through.
+ */
+function fetchPage(malId: number, page: number): Promise<{ episodes: JikanEpisode[]; more: boolean }> {
+  return gate.run('background', `filler:${malId}:${page}`, async () => {
+    // `?page=1` answers 200 with an empty list — reproducible on several series,
+    // while the same URL without the parameter returns the first hundred. Pages
+    // 2 and up behave normally, so the parameter starts at the second.
+    const url = page <= 1 ? `${ENDPOINT}/anime/${malId}/episodes` : `${ENDPOINT}/anime/${malId}/episodes?page=${page}`
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
+
+      if (res.status === 429) {
+        const retryAfter = Number(res.headers.get('retry-after')) || 2
+        await sleep(Math.min(retryAfter, 10) * 1000)
+        continue
+      }
+      if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`)
+
+      const body = (await res.json()) as {
+        data?: JikanEpisode[]
+        pagination?: { has_next_page?: boolean }
+      }
+      return { episodes: body.data ?? [], more: body.pagination?.has_next_page === true }
+    }
+    throw new Error('Jikan : trop de requêtes')
+  })
 }
 
 /**
@@ -97,25 +119,26 @@ export async function fillerFor(malId: number | null): Promise<FillerInfo | null
   if (hit && Date.now() - hit.at < TTL) return { filler: hit.filler, recap: hit.recap, total: hit.total }
 
   try {
-    const info = await gate.run('background', `filler:${malId}`, async () => {
-      const filler: number[] = []
-      const recap: number[] = []
-      let total = 0
+    // Deliberately *not* wrapped in a queue job: each page already takes one,
+    // and an outer job would hold the serial queue while its own pages waited
+    // in it — a deadlock.
+    const filler: number[] = []
+    const recap: number[] = []
+    let total = 0
 
-      for (let page = 1; page <= MAX_PAGES; page += 1) {
-        const { episodes, more } = await fetchPage(malId, page)
-        for (const episode of episodes) {
-          const number = episode.mal_id
-          if (typeof number !== 'number' || number <= 0) continue
-          total += 1
-          if (episode.filler) filler.push(number)
-          if (episode.recap) recap.push(number)
-        }
-        if (!more || !episodes.length) break
+    for (let page = 1; page <= MAX_PAGES; page += 1) {
+      const { episodes, more } = await fetchPage(malId, page)
+      for (const episode of episodes) {
+        const number = episode.mal_id
+        if (typeof number !== 'number' || number <= 0) continue
+        total += 1
+        if (episode.filler) filler.push(number)
+        if (episode.recap) recap.push(number)
       }
+      if (!more || !episodes.length) break
+    }
 
-      return { filler, recap, total }
-    })
+    const info: FillerInfo = { filler, recap, total }
 
     // An empty answer is still an answer: caching it stops a pointless refetch
     // on every visit to a series MyAnimeList does not label.
