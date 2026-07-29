@@ -72,6 +72,9 @@ query Detail($id: Int) {
     tags { name rank isGeneralSpoiler }
     externalLinks { site url type }
     streamingEpisodes { title thumbnail url site }
+    # Le calendrier connaît parfois toute la saison alors que « episodes » est
+    # vide : c'est le seul moyen de savoir qu'elle en compte 24 et pas 17.
+    airingSchedule(perPage: 50) { nodes { episode } }
     characters(sort: [ROLE, RELEVANCE], perPage: 14) {
       edges {
         role
@@ -360,6 +363,7 @@ interface RawDetail extends RawMedia {
   tags: { name: string; rank: number; isGeneralSpoiler: boolean }[] | null
   externalLinks: { site: string; url: string; type: string | null }[] | null
   streamingEpisodes: { title: string | null; thumbnail: string | null; url: string | null }[] | null
+  airingSchedule: { nodes: { episode: number }[] } | null
   characters: {
     edges: {
       role: string
@@ -416,8 +420,10 @@ function buildEpisodeMeta(m: RawDetail): MediaDetail['episodeMeta'] {
   // ce qui donnait une grille d'un épisode pour une saison déjà bien avancée.
   //
   // L'épisode programmé compte : il existe, la fiche l'annonce en haut, et la
-  // grille l'affiche grisé comme celle d'une saison au total connu.
-  const known = m.nextAiringEpisode?.episode ?? 0
+  // grille l'affiche grisé comme celle d'une saison au total connu. Le
+  // calendrier va souvent plus loin encore et couvre la saison entière.
+  const scheduled = (m.airingSchedule?.nodes ?? []).reduce((max, node) => Math.max(max, node.episode), 0)
+  const known = Math.max(m.nextAiringEpisode?.episode ?? 0, scheduled)
   const total = m.episodes ?? Math.max(listed.length, known)
   const out: MediaDetail['episodeMeta'] = []
   for (let n = 1; n <= total; n += 1) {
