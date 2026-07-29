@@ -108,3 +108,36 @@ export function similarity(a: string, b: string): number {
   }
   return 1 - row[b.length] / Math.max(a.length, b.length)
 }
+
+/** « … Part 2 » en fin de titre : un cour, pas une saison de plus. */
+const PART = /[\s:,-]+part\s*(\d+)\s*$/i
+
+/**
+ * Numérote une suite de saisons comme un spectateur les compte.
+ *
+ * La position dans la liste ne suffit pas : AniList range les cours d'une saison
+ * scindée comme des entrées à part, si bien que « Slime 4th Season » arrivait
+ * cinquième. Le titre sait mieux quand il porte un numéro ; « Final Season »
+ * n'en porte aucun et prend simplement le suivant, et « Part 2 » prolonge la
+ * saison précédente au lieu d'en ouvrir une.
+ *
+ * Les titres doivent arriver dans l'ordre de diffusion.
+ */
+export function seasonNumbers(titles: string[]): { number: number; part: number | null }[] {
+  const out: { number: number; part: number | null }[] = []
+  let n = 0
+
+  for (const title of titles) {
+    const part = PART.exec(title)
+    const claimed = baseAndSeason(title).season
+
+    if (part && n > 0) {
+      // Le numéro ne bouge pas : c'est la suite de la même saison.
+    } else if (claimed > n) n = claimed
+    else n += 1
+
+    out.push({ number: n, part: part ? Number(part[1]) : null })
+  }
+
+  return out
+}

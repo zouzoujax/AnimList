@@ -292,6 +292,10 @@ export interface FillerInfo {
 /** One season of a franchise, as a position in its prequel/sequel chain. */
 export interface SeasonEntry {
   id: number
+  /** Numéro tel qu'un spectateur le compte, pas la position dans la chaîne. */
+  number: number
+  /** Cour d'une saison scindée : 2 pour « Part 2 », sinon null. */
+  part: number | null
   title: string
   format: string | null
   status: string | null

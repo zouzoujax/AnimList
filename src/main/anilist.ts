@@ -2,7 +2,7 @@ import { app } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { baseAndSeason, compact } from '@shared/titles'
+import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
 import { createQueue, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -20,7 +20,14 @@ import type {
 
 const ENDPOINT = 'https://graphql.anilist.co'
 const MIN_GAP_MS = 700
-const TTL = { list: 45 * 60_000, detail: 24 * 60_000 * 60, search: 10 * 60_000, airing: 30 * 60_000 }
+const TTL = {
+  list: 45 * 60_000,
+  detail: 24 * 60_000 * 60,
+  search: 10 * 60_000,
+  airing: 30 * 60_000,
+  /** Une franchise ne gagne pas une saison dans la journée. */
+  chain: 12 * 3600_000
+}
 const MAX_CACHE_ENTRIES = 600
 
 const MEDIA_FIELDS = `
@@ -734,32 +741,60 @@ interface RawChainNode {
 /** Only formats that air as a season belong in a season strip. */
 const CHAIN_FORMATS = new Set(['TV', 'ONA', 'TV_SHORT'])
 
-/** Long enough for the longest franchise, short enough to bound the walk. */
-const CHAIN_MAX = 14
+/**
+ * Long enough for the longest franchise, short enough to bound the walk. Compte
+ * aussi les OVA et films traversés en chemin, qui n'apparaîtront pas dans la
+ * bande mais consomment un pas.
+ */
+const CHAIN_MAX = 24
 
 async function chainNode(id: number): Promise<RawChainNode | null> {
   try {
-    const data = await request<{ Media: RawChainNode | null }>(CHAIN_QUERY, { id }, 'background', `chain:${id}`)
+    const { data } = await cached(`chain-node:${id}`, TTL.chain, () =>
+      request<{ Media: RawChainNode | null }>(CHAIN_QUERY, { id }, 'background', `chain:${id}`)
+    )
     return data.Media
   } catch {
     return null
   }
 }
 
-const neighbour = (node: RawChainNode, kind: 'PREQUEL' | 'SEQUEL'): number | null =>
-  (node.relations?.edges ?? []).find(
-    (e) => e.relationType === kind && e.node?.type === 'ANIME' && CHAIN_FORMATS.has(e.node.format ?? '')
-  )?.node?.id ?? null
+/**
+ * Le voisin dans la chaîne, en préférant une saison.
+ *
+ * AniList ne relie pas toujours deux saisons entre elles : de la saison 2 de
+ * Slime, la seule arête PREQUEL mène à un OVA, et c'est cet OVA qui pointe vers
+ * la saison 1. Refuser les autres formats coupait donc la chaîne — la bande
+ * commençait à « S1 Tensei Shitara Slime Datta Ken 2nd Season ». La marche
+ * traverse n'importe quel anime ; seule la collecte reste réservée aux saisons.
+ */
+const neighbour = (node: RawChainNode, kind: 'PREQUEL' | 'SEQUEL'): number | null => {
+  const edges = (node.relations?.edges ?? []).filter((e) => e.relationType === kind && e.node?.type === 'ANIME')
+  const season = edges.find((e) => CHAIN_FORMATS.has(e.node?.format ?? ''))
+  return (season ?? edges[0])?.node?.id ?? null
+}
 
-const toSeason = (node: RawChainNode): SeasonEntry => ({
-  id: node.id,
-  title: node.title.romaji ?? node.title.english ?? `#${node.id}`,
-  format: node.format,
-  status: node.status,
-  episodes: node.episodes,
-  year: node.startDate?.year ?? null,
-  cover: node.coverImage?.large ?? null
-})
+/** Seuls ces formats méritent un numéro de saison. */
+const isSeason = (node: RawChainNode): boolean => CHAIN_FORMATS.has(node.format ?? '')
+
+const titleOfNode = (node: RawChainNode): string => node.title.romaji ?? node.title.english ?? `#${node.id}`
+
+/** Habille la chaîne des numéros qu'un spectateur lui donnerait. */
+function numberSeasons(nodes: RawChainNode[]): SeasonEntry[] {
+  const titles = nodes.map(titleOfNode)
+
+  return seasonNumbers(titles).map((rank, i) => ({
+    id: nodes[i].id,
+    number: rank.number,
+    part: rank.part,
+    title: titles[i],
+    format: nodes[i].format,
+    status: nodes[i].status,
+    episodes: nodes[i].episodes,
+    year: nodes[i].startDate?.year ?? null,
+    cover: nodes[i].coverImage?.large ?? null
+  }))
+}
 
 /**
  * Every season of the franchise this anime belongs to, in broadcast order.
@@ -770,10 +805,34 @@ const toSeason = (node: RawChainNode): SeasonEntry => ({
  * "season 3" means to a viewer even when the entry is titled "Part 2".
  *
  * Returns an empty array rather than failing: a missing strip is cosmetic.
+ *
+ * Le résultat est rangé sous chaque membre de la chaîne, pas seulement sous
+ * l'anime demandé : tous partagent la même bande, donc ouvrir la saison 4 après
+ * la saison 1 ne doit rien coûter. Sans ça la marche repartait du réseau à
+ * chaque ouverture de fiche, et la bande mettait plusieurs secondes à paraître.
  */
 export async function seasonChain(id: number): Promise<SeasonEntry[]> {
+  const hit = cache.get(`chain:${id}`)
+  if (hit && Date.now() - hit.at < TTL.chain) return hit.data as SeasonEntry[]
+
+  const chain = await walkChain(id)
+  // Une panne réseau ne doit pas se figer douze heures en « pas de saisons » :
+  // faute de réponse on ne retient rien et on retentera à la prochaine ouverture.
+  if (!chain) return []
+
+  const at = Date.now()
+  for (const season of chain) cache.set(`chain:${season.id}`, { at, data: chain })
+  // Une chaîne vide n'a qu'une clé à retenir, sinon on remarcherait pour rien.
+  if (!chain.length) cache.set(`chain:${id}`, { at, data: chain })
+  persistCache()
+
+  return chain
+}
+
+/** `null` veut dire « pas de réponse », à distinguer d'une série sans suite. */
+async function walkChain(id: number): Promise<SeasonEntry[] | null> {
   const start = await chainNode(id)
-  if (!start) return []
+  if (!start) return null
 
   // Back to the first entry.
   let root = start
@@ -787,8 +846,8 @@ export async function seasonChain(id: number): Promise<SeasonEntry[]> {
     root = node
   }
 
-  // Then forward, collecting.
-  const chain: SeasonEntry[] = [toSeason(root)]
+  // Then forward, collecting the seasons and stepping over the rest.
+  const found: RawChainNode[] = isSeason(root) ? [root] : []
   const seen = new Set([root.id])
   let current = root
   for (let i = 0; i < CHAIN_MAX; i += 1) {
@@ -797,12 +856,12 @@ export async function seasonChain(id: number): Promise<SeasonEntry[]> {
     const node = await chainNode(next)
     if (!node) break
     seen.add(node.id)
-    chain.push(toSeason(node))
+    if (isSeason(node)) found.push(node)
     current = node
   }
 
   // A single entry is not a season strip.
-  return chain.length > 1 ? chain : []
+  return found.length > 1 ? numberSeasons(found) : []
 }
 
 // ---------------------------------------------------------------- sequels

@@ -95,7 +95,7 @@ function SeasonStrip({ animeId }: { animeId: number }): React.JSX.Element | null
   return (
     <div className="mb-3 flex flex-wrap items-center gap-1.5">
       <span className="label mr-0.5">Saisons</span>
-      {seasons.map((season, index) => {
+      {seasons.map((season) => {
         const current = season.id === animeId
         const seen = watched.get(season.id)?.size ?? 0
         const done = season.episodes ? seen >= season.episodes : false
@@ -112,7 +112,10 @@ function SeasonStrip({ animeId }: { animeId: number }): React.JSX.Element | null
               season.episodes ? ` · ${season.episodes} ép.` : ''
             }${tracked ? ` · ${seen} vus` : ' · pas dans ta bibliothèque'}`}
           >
-            S{index + 1}
+            S{season.number}
+            {/* Deux cours partagent un numéro : sans ça la bande afficherait
+                « S2 S2 » sans dire lequel est lequel. */}
+            {season.part !== null && <span className="opacity-60">P{season.part}</span>}
             {/* A dot rather than a colour alone, so the state is not carried by
                 hue only. */}
             {tracked && (
