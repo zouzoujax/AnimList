@@ -6,6 +6,7 @@ import type {
   CustomList,
   Entry,
   EntryPatch,
+  FillerInfo,
   ImportReport,
   Media,
   MediaDetail,
@@ -68,7 +69,9 @@ const api = {
     currentSeason: (): Promise<{ season: SeasonName; year: number }> => ipcRenderer.invoke('anime:season'),
     returning: (): Promise<Media[]> => ipcRenderer.invoke('anime:returning'),
     films: (title: string): Promise<Media[]> => ipcRenderer.invoke('anime:films', title),
-    studio: (name: string, page: number): Promise<StudioWorks> => ipcRenderer.invoke('anime:studio', name, page)
+    studio: (name: string, page: number): Promise<StudioWorks> => ipcRenderer.invoke('anime:studio', name, page),
+    /** Filler and recap episodes from MyAnimeList; null when it has no list. */
+    filler: (malId: number | null): Promise<FillerInfo | null> => ipcRenderer.invoke('anime:filler', malId)
   },
   watch: {
     animeSama: (animeId: number, titles: string[]): Promise<{ url: string; direct: boolean; absent?: boolean }> =>

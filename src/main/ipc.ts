@@ -8,6 +8,7 @@ import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
+import { fillerFor } from './filler'
 import {
   cacheMedia,
   cancelRewatch,
@@ -119,6 +120,7 @@ export function registerIpc(): void {
   ipcMain.handle('anime:films', (_e, title: string) => anilist.franchiseFilms(title, getPrefs().showAdult))
   ipcMain.handle('anime:studio', (_e, name: string, page: number) => anilist.studioWorks(name, page))
   ipcMain.handle('watch:anime-sama', (_e, animeId: number, titles: string[]) => resolveAnimeSama(animeId, titles))
+  ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
 
   // ---- data ----------------------------------------------------------
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))

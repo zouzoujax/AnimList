@@ -259,6 +259,17 @@ export interface AiringEntry extends AiringItem {
   media: Media
 }
 
+/**
+ * Episodes that do not advance the source material, from MyAnimeList.
+ * Numbers are episode numbers, not indices.
+ */
+export interface FillerInfo {
+  filler: number[]
+  recap: number[]
+  /** Episodes MyAnimeList knows about; 0 means it has no list for this series. */
+  total: number
+}
+
 export interface ImportReport {
   ok: boolean
   message: string

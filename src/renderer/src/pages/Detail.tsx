@@ -4,6 +4,8 @@ import {
   Bookmark,
   Check,
   CheckCheck,
+  Eye,
+  EyeOff,
   ExternalLink,
   Heart,
   Maximize2,
@@ -30,7 +32,7 @@ import EpisodeEditor from '@/components/EpisodeEditor'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
-import { useAnimeSama, useDetail, useFranchiseFilms } from '@/lib/hooks'
+import { useAnimeSama, useDetail, useFiller, useFranchiseFilms } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
@@ -88,6 +90,8 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
   const toast = useApp((s) => s.toast)
   const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
+  const [hideFiller, setHideFiller] = useState(false)
+  const fillerInfo = useFiller(detail.idMal)
 
   const episodes = detail.episodeMeta
   if (!episodes.length) {
@@ -108,6 +112,10 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
     events.filter((e) => e.animeId === detail.id && (e.note || e.emotions?.length)).map((e) => e.episode)
   )
 
+  // Recaps are filler for the purpose of skipping: neither advances the story.
+  const filler = new Set([...(fillerInfo?.filler ?? []), ...(fillerInfo?.recap ?? [])])
+  const shown = hideFiller ? episodes.filter((ep) => !filler.has(ep.number)) : episodes
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -123,6 +131,27 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
           <RotateCcw size={14} />
           Réinitialiser
         </button>
+
+        {/* Only offered when MyAnimeList actually labelled something: a switch
+            that never changes anything is worse than no switch. */}
+        {filler.size > 0 && (
+          <button
+            className="btn !h-8"
+            data-on={hideFiller}
+            onClick={() => setHideFiller((v) => !v)}
+            aria-pressed={hideFiller}
+            title={
+              hideFiller
+                ? 'Réafficher les épisodes hors intrigue'
+                : `${filler.size} épisode${filler.size > 1 ? 's' : ''} hors intrigue (filler ou résumé)`
+            }
+            style={hideFiller ? { borderColor: 'var(--accent)' } : undefined}
+          >
+            {hideFiller ? <Eye size={14} /> : <EyeOff size={14} />}
+            {hideFiller ? 'Tout afficher' : 'Sans filler'}
+            <span className="tabular-nums opacity-60">{filler.size}</span>
+          </button>
+        )}
 
         {entry && finished && (
           <button
@@ -164,7 +193,11 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
               {hoveredMeta.title}
             </span>
           ) : (
-            <span className="text-faint">Clic pour cocher · Maj+clic jusque-là · Clic droit pour éditer</span>
+            <span className="text-faint">
+              {hideFiller
+                ? `${episodes.length - shown.length} épisode${episodes.length - shown.length > 1 ? 's' : ''} hors intrigue masqué${episodes.length - shown.length > 1 ? 's' : ''}`
+                : 'Clic pour cocher · Maj+clic jusque-là · Clic droit pour éditer'}
+            </span>
           )}
         </p>
       </div>
@@ -177,9 +210,11 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
       />
 
       <div className="flex flex-wrap gap-1.5">
-        {episodes.map((ep) => {
+        {shown.map((ep) => {
           const watched = seen?.has(ep.number) ?? false
           const isNext = ep.number === next
+          const isFiller = filler.has(ep.number)
+          const label = ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`
           return (
             <button
               key={ep.number}
@@ -190,7 +225,7 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
                 e.preventDefault()
                 setEditing(ep.number)
               }}
-              title={ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`}
+              title={isFiller ? `${label} · hors intrigue` : label}
               className="relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 hover:scale-110"
               style={
                 watched
@@ -202,11 +237,18 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
                         color: '#fff',
                         boxShadow: `0 0 18px -4px ${rgba(glow, 0.9)}`
                       }
-                    : {
-                        background: 'rgba(255,255,255,.045)',
-                        border: '1px solid var(--line)',
-                        color: 'var(--color-muted)'
-                      }
+                    : isFiller
+                      ? {
+                          // Dashed and dimmed: skippable, not unavailable.
+                          background: 'transparent',
+                          border: '1px dashed var(--line-2)',
+                          color: 'var(--color-faint)'
+                        }
+                      : {
+                          background: 'rgba(255,255,255,.045)',
+                          border: '1px solid var(--line)',
+                          color: 'var(--color-muted)'
+                        }
               }
             >
               {watched ? <Check size={14} strokeWidth={3} /> : ep.number}

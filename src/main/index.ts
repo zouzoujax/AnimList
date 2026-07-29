@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { initAniList } from './anilist'
 import { initAnimeSama } from './animesama'
+import { initFiller } from './filler'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { scheduleStartupCheck } from './updater'
@@ -103,6 +104,7 @@ void app.whenReady().then(() => {
   initStore()
   initAniList()
   initAnimeSama()
+  initFiller()
   registerIpc()
 
   if (!isDev) {

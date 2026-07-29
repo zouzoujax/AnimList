@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { BrowseQuery, Media, MediaDetail } from '@shared/types'
+import type { BrowseQuery, FillerInfo, Media, MediaDetail } from '@shared/types'
 import { searchTitles, type AnimeSamaTarget } from '@/lib/watch'
 
 /**
@@ -190,6 +190,32 @@ export function useFranchiseFilms(media: Media | null): Media[] {
   }, [title])
 
   return films
+}
+
+/**
+ * Filler and recap episodes for a series, from MyAnimeList.
+ *
+ * Returns null until the answer arrives, and stays null for a series MAL has no
+ * episode list for — the caller must render the grid regardless.
+ */
+export function useFiller(malId: number | null | undefined): FillerInfo | null {
+  const [info, setInfo] = useState<FillerInfo | null>(null)
+  const id = malId ?? null
+
+  useEffect(() => {
+    setInfo(null)
+    if (!id) return
+    let alive = true
+    window.api.anime
+      .filler(id)
+      .then((res) => alive && setInfo(res))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [id])
+
+  return info
 }
 
 export function useNow(intervalMs = 60_000): number {
