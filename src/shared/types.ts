@@ -191,6 +191,14 @@ export interface Prefs {
   showAdult: boolean
   weekStart: 0 | 1
   lastAiringCheck: number
+  /** Add a series' sequels to the library on their own, once they have aired. */
+  autoSequels: boolean
+  /**
+   * Sequels already offered. Kept even after the user removes one, so a series
+   * they deliberately deleted is never silently put back.
+   */
+  sequelsAdded: number[]
+  lastSequelSweep: number
   /** Hand corrections for the TV Time importer, keyed by source series id. */
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
@@ -420,6 +428,9 @@ export const DEFAULT_PREFS: Prefs = {
   showAdult: false,
   weekStart: 1,
   lastAiringCheck: 0,
+  autoSequels: true,
+  sequelsAdded: [],
+  lastSequelSweep: 0,
   tvtimeOverrides: {},
   tvtimeFolder: null
 }

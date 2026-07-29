@@ -9,6 +9,7 @@ import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
+import { sweepSequels } from './sequels'
 import {
   cacheMedia,
   cancelRewatch,
@@ -121,6 +122,7 @@ export function registerIpc(): void {
   ipcMain.handle('anime:studio', (_e, name: string, page: number) => anilist.studioWorks(name, page))
   ipcMain.handle('watch:anime-sama', (_e, animeId: number, titles: string[]) => resolveAnimeSama(animeId, titles))
   ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
+  ipcMain.handle('anime:sweep-sequels', (e) => sweepSequels(ownerOf(e)))
 
   // ---- data ----------------------------------------------------------
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))

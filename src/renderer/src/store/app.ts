@@ -134,6 +134,17 @@ export const useApp = create<AppState>((set, get) => ({
 
     window.api.app.onOpenAnime((id) => get().navigate({ name: 'anime', id }))
     window.api.app.onGoto((route) => get().navigate(route as Route))
+
+    // The sweep runs unattended, so it has to say what it did.
+    window.api.anime.onSequelsAdded((added) => {
+      if (!added.length) return
+      get().toast(
+        added.length === 1
+          ? `Nouvelle saison ajoutée : ${added[0].title.romaji}`
+          : `${added.length} nouvelles saisons ajoutées à ta bibliothèque`,
+        'ok'
+      )
+    })
   },
 
   navigate: (route) => {

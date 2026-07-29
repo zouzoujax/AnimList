@@ -6,6 +6,7 @@ import {
   FolderOpen,
   HardDrive,
   Languages,
+  Layers,
   Palette,
   Sparkles,
   Trash2,
@@ -350,6 +351,50 @@ export default function SettingsPage(): React.JSX.Element {
 
         <Row label="Séries en silence" hint={mutedNames || 'Aucune série coupée pour l’instant.'}>
           <span className="text-[0.8rem] tabular-nums text-muted">{muted.length}</span>
+        </Row>
+      </Card>
+
+      <Card title="Suites" icon={<Layers size={17} />}>
+        <Row
+          label="Ajouter les nouvelles saisons"
+          hint="Quand une suite d'une série que tu as regardée sort, elle rejoint ta bibliothèque en « À voir ». Une suite que tu retires n'est jamais remise."
+        >
+          <Toggle on={prefs.autoSequels} onChange={(autoSequels) => setPrefs({ autoSequels })} />
+        </Row>
+
+        <Row
+          label="Chercher maintenant"
+          hint={
+            prefs.lastSequelSweep
+              ? `Dernière recherche : ${new Date(prefs.lastSequelSweep).toLocaleString('fr-FR')}`
+              : 'Jamais lancée. La recherche automatique tourne une fois par jour.'
+          }
+        >
+          <button
+            className="btn"
+            disabled={busy === 'sequels'}
+            onClick={() =>
+              void (async () => {
+                setBusy('sequels')
+                try {
+                  const res = await window.api.anime.sweepSequels()
+                  toast(
+                    res.added.length
+                      ? `${res.added.length} suite${res.added.length > 1 ? 's' : ''} ajoutée${res.added.length > 1 ? 's' : ''} à ta bibliothèque.`
+                      : `Aucune nouvelle suite parmi tes ${res.checked} séries suivies.`,
+                    'ok'
+                  )
+                } catch (err) {
+                  toast((err as Error).message, 'error')
+                } finally {
+                  setBusy(null)
+                }
+              })()
+            }
+          >
+            <Layers size={14} />
+            {busy === 'sequels' ? 'Recherche…' : 'Chercher'}
+          </button>
         </Row>
       </Card>
 

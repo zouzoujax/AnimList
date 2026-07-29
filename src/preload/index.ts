@@ -71,7 +71,14 @@ const api = {
     films: (title: string): Promise<Media[]> => ipcRenderer.invoke('anime:films', title),
     studio: (name: string, page: number): Promise<StudioWorks> => ipcRenderer.invoke('anime:studio', name, page),
     /** Filler and recap episodes from MyAnimeList; null when it has no list. */
-    filler: (malId: number | null): Promise<FillerInfo | null> => ipcRenderer.invoke('anime:filler', malId)
+    filler: (malId: number | null): Promise<FillerInfo | null> => ipcRenderer.invoke('anime:filler', malId),
+    /** Looks for aired sequels of followed series and adds the new ones. */
+    sweepSequels: (): Promise<{ added: Media[]; checked: number }> => ipcRenderer.invoke('anime:sweep-sequels'),
+    onSequelsAdded: (cb: (added: Media[]) => void): (() => void) => {
+      const handler = (_e: unknown, added: Media[]): void => cb(added)
+      ipcRenderer.on('sequels:added', handler)
+      return () => ipcRenderer.off('sequels:added', handler)
+    }
   },
   watch: {
     animeSama: (animeId: number, titles: string[]): Promise<{ url: string; direct: boolean; absent?: boolean }> =>

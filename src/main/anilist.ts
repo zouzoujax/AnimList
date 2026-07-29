@@ -692,6 +692,59 @@ export async function importById(id: number): Promise<ImportCandidate | null> {
   }
 }
 
+// ---------------------------------------------------------------- sequels
+
+const SEQUELS_QUERY = `
+query Sequels($ids: [Int]) {
+  Page(perPage: 50) {
+    media(id_in: $ids, type: ANIME) {
+      id
+      relations {
+        edges {
+          relationType(version: 2)
+          node { type ${MEDIA_FIELDS} }
+        }
+      }
+    }
+  }
+}`
+
+interface RawRelations {
+  edges: { relationType: string | null; node: (RawMedia & { type?: string }) | null }[]
+}
+
+/**
+ * Sequels of the given series, keyed by the series they follow.
+ *
+ * Batched fifty at a time: asking per series would be one request each, and a
+ * library of a hundred would take a minute of queue time for a check that runs
+ * in the background.
+ */
+export async function sequelsOf(ids: number[]): Promise<Map<number, Media[]>> {
+  const out = new Map<number, Media[]>()
+
+  for (let i = 0; i < ids.length; i += 50) {
+    const slice = ids.slice(i, i + 50)
+    const data = await request<{ Page: { media: { id: number; relations: RawRelations | null }[] } }>(
+      SEQUELS_QUERY,
+      { ids: slice },
+      'background',
+      `sequels:${slice.join(',')}`
+    )
+
+    for (const row of data.Page.media) {
+      const sequels = (row.relations?.edges ?? [])
+        .filter((e) => e.relationType === 'SEQUEL' && e.node?.type === 'ANIME')
+        .map((e) => e.node)
+        .filter((node): node is RawMedia & { type?: string } => node !== null)
+        .map(toMedia)
+      if (sequels.length) out.set(row.id, sequels)
+    }
+  }
+
+  return out
+}
+
 export async function mediaByMalIds(malIds: number[]): Promise<Map<number, Media>> {
   const found = new Map<number, Media>()
   for (let i = 0; i < malIds.length; i += 50) {

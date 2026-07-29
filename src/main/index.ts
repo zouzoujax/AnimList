@@ -8,6 +8,7 @@ import { initFiller } from './filler'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { scheduleStartupCheck } from './updater'
+import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore } from './store'
 
@@ -22,6 +23,7 @@ app.setAppUserModelId('dev.willi.animelist')
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
 let stopUpdateCheck: (() => void) | null = null
+let stopSequelWatcher: (() => void) | null = null
 
 const CSP = [
   "default-src 'self'",
@@ -135,6 +137,7 @@ void app.whenReady().then(() => {
 
   stopWatcher = startAiringWatcher(mainWindow)
   stopUpdateCheck = scheduleStartupCheck()
+  stopSequelWatcher = startSequelWatcher(mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
@@ -156,6 +159,8 @@ app.on('before-quit', async (event) => {
   stopWatcher = null
   stopUpdateCheck?.()
   stopUpdateCheck = null
+  stopSequelWatcher?.()
+  stopSequelWatcher = null
   event.preventDefault()
   await flush()
   app.exit(0)
