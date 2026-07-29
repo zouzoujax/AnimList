@@ -110,9 +110,15 @@ const api = {
       schema: { version: number; expected: number; readOnly: boolean; applied: string[] }
     }> => ipcRenderer.invoke('app:info'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:open-external', url),
-    /** Opens the trailer in its own window. Resolves false when the id is unusable. */
-    openTrailer: (videoId: string, title: string): Promise<boolean> =>
-      ipcRenderer.invoke('trailer:open', videoId, title),
+    /**
+     * Loopback URL to put in an iframe, or null when the trailer cannot be
+     * served. See src/main/trailer.ts for why an iframe on file:// needs this.
+     */
+    trailerUrl: (videoId: string, title: string): Promise<string | null> =>
+      ipcRenderer.invoke('trailer:url', videoId, title),
+    /** Same player, in its own window, for a bigger view. */
+    popoutTrailer: (videoId: string, title: string): Promise<boolean> =>
+      ipcRenderer.invoke('trailer:popout', videoId, title),
     closeTrailer: (): Promise<void> => ipcRenderer.invoke('trailer:close'),
     updateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
     checkUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),

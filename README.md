@@ -41,10 +41,12 @@ personnel.</sub>
 </tr>
 </table>
 
-<div align="center">
-<a href="docs/screenshots/reglages.jpg"><img src="docs/screenshots/reglages.jpg" width="80%" alt="Réglages"></a><br>
-<sub><b>Réglages.</b> Quatre thèmes et quatre dispositions, combinables librement.</sub>
-</div>
+<table>
+<tr>
+<td width="50%"><a href="docs/screenshots/bande-annonce.jpg"><img src="docs/screenshots/bande-annonce.jpg" alt="Bande-annonce jouée dans la fiche"></a><br><sub><b>Bande-annonce.</b> Elle se lance à la place de la vignette, dans la page. Pas de fenêtre, pas d'habillage YouTube.</sub></td>
+<td width="50%"><a href="docs/screenshots/reglages.jpg"><img src="docs/screenshots/reglages.jpg" alt="Réglages"></a><br><sub><b>Réglages.</b> Quatre thèmes et quatre dispositions, combinables librement.</sub></td>
+</tr>
+</table>
 
 ## Ce que ça fait
 
@@ -60,9 +62,9 @@ personnel.</sub>
   Une date corrigée à la main rejoint les statistiques par jour, dont les imports sont exclus
 - **Découverte** — tendances, saison en cours, populaires, mieux notés, à venir, recherche
   instantanée, casting, relations, recommandations
-- **Bandes-annonces dans l'app**, dans une fenêtre dédiée, sans quitter l'application. Voir la
-  note technique plus bas : le lecteur intégré de YouTube refuse de démarrer sur une page
-  `file://`, ce qui demande un détour
+- **Bandes-annonces dans la page**, à la place de la vignette, avec un bouton pour agrandir dans
+  une fenêtre. Voir la note technique plus bas : le lecteur intégré de YouTube refuse de démarrer
+  sur une page `file://`, ce qui demande un détour
 - **Calendrier** — grille hebdomadaire des prochains épisodes de tes séries
 - **Où regarder** — chaque fiche propose Crunchyroll, Anime-Sama et ADN, en indiquant
   si le lien mène à l'anime lui-même ou à une recherche. Les slugs Anime-Sama étant
@@ -114,24 +116,29 @@ géométrie que le logo affiché dans l'app, à relancer si tu changes la marque
 > esbuild passe par ses paquets de binaires optionnels, et `electron-winstaller` ne sert qu'à la
 > cible Squirrel, alors qu'on package en NSIS.
 
-> **Pourquoi la bande-annonce ouvre une fenêtre.** Le lecteur intégré de YouTube refuse de
-> démarrer quand la page qui l'intègre n'envoie pas d'en-tête `Referer` : il répond *erreur 153*.
-> Le renderer packagé est chargé depuis `file://`, qui n'en envoie aucun — un `<iframe>` sur la
-> fiche est donc impossible. Mesuré et non supposé : charger l'URL d'intégration comme page
-> principale échoue pareil, elle n'envoie pas de referrer non plus.
+> **Pourquoi la bande-annonce passe par un serveur local.** Le lecteur intégré de YouTube refuse
+> de démarrer quand la page qui l'intègre n'envoie pas d'en-tête `Referer` : il répond
+> *erreur 153*. Le renderer packagé est chargé depuis `file://`, qui n'en envoie aucun. Mesuré et
+> non supposé : charger l'URL d'intégration comme page principale échoue pareil, elle n'envoie pas
+> de referrer non plus.
 >
-> La bande-annonce s'ouvre donc dans sa propre fenêtre, dont le document est servi depuis
-> `http://127.0.0.1:<port>`. Cette page contient l'iframe, le navigateur envoie un `Referer`
-> véridique pour une page qui intègre réellement la vidéo, et le lecteur démarre. Rien n'est
-> falsifié — l'autre solution, forcer un `httpReferrer` de `youtube.com`, consisterait à
-> revendiquer une origine qui n'est pas la nôtre.
+> Le lecteur est donc enveloppé dans une page servie depuis `http://127.0.0.1:<port>`, et c'est
+> *elle* que la fiche met dans une iframe. Le navigateur envoie alors un `Referer` véridique pour
+> une page qui intègre réellement la vidéo, et le lecteur démarre — dans la fiche, sans fenêtre
+> séparée. Rien n'est falsifié : l'autre solution, forcer un `httpReferrer` de `youtube.com`,
+> consisterait à revendiquer une origine qui n'est pas la nôtre.
 >
-> Le serveur écoute sur `127.0.0.1` uniquement, sur un port éphémère, ne sert qu'une page derrière
-> un chemin aléatoire, et s'arrête avec la fenêtre. Celle-ci a sa propre partition de session :
-> c'est ce qui la soustrait à la CSP globale de l'app, dont le `frame-src 'none'` bloquerait
-> l'iframe — vérifié en comparant les deux cas, la fenêtre sur la session par défaut rend un
-> rectangle noir. Elle n'a ni preload ni intégration Node, et les cookies de YouTube n'entrent pas
-> dans la session de l'app.
+> Le serveur écoute sur `127.0.0.1` uniquement, sur un port éphémère, derrière un chemin
+> aléatoire, ne sert qu'un seul type de page et rien depuis le disque. L'identifiant vidéo est
+> validé contre l'alphabet de YouTube avant toute interpolation. La page embarque sa propre CSP :
+> elle peut encadrer YouTube et rien d'autre, et n'exécute aucun script.
+>
+> Deux ajustements côté app ont été nécessaires, tous deux vérifiés par capture. La CSP autorise
+> `frame-src http://127.0.0.1:*`. Et surtout, son injection est désormais **limitée au document
+> principal** : elle était appliquée à *toutes* les réponses, y compris celles de YouTube, si bien
+> que `script-src 'self'` bloquait les propres scripts du lecteur. C'est ce qui rendait la
+> première tentative entièrement noire — imposer notre CSP à un tiers n'avait de toute façon aucun
+> sens.
 >
 > Certaines chaînes désactivent l'intégration de leurs vidéos. Le lecteur affiche alors sa propre
 > erreur avec un lien « regarder sur YouTube », qui ouvre le vrai navigateur. Sur les 48 bandes-

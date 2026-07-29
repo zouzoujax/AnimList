@@ -25,6 +25,8 @@ export interface ShotPlan {
   settleMs?: number
   /** Scroll offset inside the page, for content below the fold. */
   scrollY?: number
+  /** CSS selector to click before capturing, for states behind an interaction. */
+  click?: string
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -40,6 +42,14 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
     { name: 'accueil', route: { name: 'home' }, settleMs: 1400 },
     { name: 'bibliotheque', route: { name: 'library' }, settleMs: 1200 },
     { name: 'fiche', route: { name: 'anime', id: animeId }, settleMs: 2600 },
+    // The trailer only loads once asked, so the shot has to press play.
+    {
+      name: 'bande-annonce',
+      route: { name: 'anime', id: animeId },
+      settleMs: 1200,
+      scrollY: 520,
+      click: '[aria-label^="Lire la bande-annonce"]'
+    },
     // The episode grid is the app's central interaction and lives below the fold.
     { name: 'episodes', route: { name: 'anime', id: animeId }, settleMs: 1600, scrollY: 1180 },
     { name: 'decouvrir', route: { name: 'discover' }, settleMs: 2600 },
@@ -77,6 +87,15 @@ export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotP
       )
       // Long enough for the scroll-triggered entrance animations to finish.
       await sleep(900)
+    }
+
+    if (shot.click) {
+      const clicked = (await win.webContents.executeJavaScript(
+        `(() => { const el = document.querySelector(${JSON.stringify(shot.click)}); if (!el) return false; el.click(); return true })()`
+      )) as boolean
+      if (!clicked) process.stdout.write(`  (rien à cliquer pour ${shot.name})\n`)
+      // The player has to fetch and start.
+      await sleep(6000)
     }
 
     const image = await win.webContents.capturePage()

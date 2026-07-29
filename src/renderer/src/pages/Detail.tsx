@@ -6,6 +6,7 @@ import {
   CheckCheck,
   ExternalLink,
   Heart,
+  Maximize2,
   Play,
   Repeat,
   RotateCcw,
@@ -225,59 +226,108 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
 }
 
 /**
- * The trailer plays in the app, in its own window — see `src/main/trailer.ts` for
- * why it cannot be an iframe on this page. YouTube stays available as a second
- * action, and is also where an unembeddable video ends up.
+ * The trailer plays right here, in place of the thumbnail.
+ *
+ * The frame's source is a loopback page rather than YouTube directly — see
+ * `src/main/trailer.ts` for why: the embedded player refuses to start on a page
+ * that sends no `Referer`, and this renderer runs on `file://`.
+ *
+ * The poster is kept until the first click so no video is fetched by merely
+ * opening an anime, and so the page has something to show while the player
+ * loads.
  */
 function Trailer({ id, cover, title }: { id: string; cover: string; title: string }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   const [thumb, setThumb] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`)
+  const [src, setSrc] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
 
   const onThumbError = (): void =>
     setThumb((current) => (current.includes('maxresdefault') ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : cover))
 
   const play = async (): Promise<void> => {
-    const ok = await window.api.app.openTrailer(id, title)
-    // A malformed id or a port that would not bind: fall back rather than
-    // leaving the click doing nothing.
-    if (!ok) {
+    setLoading(true)
+    try {
+      const url = await window.api.app.trailerUrl(id, title)
+      if (url) {
+        setSrc(url)
+        return
+      }
+      // A malformed id, or the loopback port would not bind.
       toast('Lecture impossible dans l’app, ouverture sur YouTube.', 'info')
       void window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <div
       className="group relative aspect-video w-full overflow-hidden rounded-[18px]"
-      style={{ border: '1px solid var(--line)' }}
+      style={{ border: '1px solid var(--line)', background: '#000' }}
     >
-      <button onClick={() => void play()} className="absolute inset-0" aria-label={`Lire la bande-annonce de ${title}`}>
-        <img
-          src={thumb}
-          alt=""
-          onError={onThumbError}
-          className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
+      {src ? (
+        <iframe
+          src={src}
+          title={`Bande-annonce de ${title}`}
+          allow="autoplay; encrypted-media; fullscreen"
+          allowFullScreen
+          className="h-full w-full"
+          style={{ border: 0 }}
         />
-        <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
-        <span className="absolute inset-0 grid place-items-center">
-          <span
-            className="grid h-16 w-16 place-items-center rounded-full transition-transform group-hover:scale-110"
-            style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#07080f' }}
-          >
-            <Play size={24} fill="currentColor" strokeWidth={0} className="ml-1" />
+      ) : (
+        <button
+          onClick={() => void play()}
+          className="absolute inset-0"
+          aria-label={`Lire la bande-annonce de ${title}`}
+        >
+          <img
+            src={thumb}
+            alt=""
+            onError={onThumbError}
+            className="h-full w-full object-cover opacity-70 transition duration-500 group-hover:scale-[1.03] group-hover:opacity-90"
+          />
+          <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-black/20" />
+          <span className="absolute inset-0 grid place-items-center">
+            <span
+              className="grid h-16 w-16 place-items-center rounded-full transition-transform group-hover:scale-110"
+              style={{ background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: '#07080f' }}
+            >
+              <Play size={24} fill="currentColor" strokeWidth={0} className="ml-1" />
+            </span>
           </span>
-        </span>
-        <span className="absolute bottom-3 left-4 text-[0.8rem] font-semibold">Bande-annonce</span>
-      </button>
+          <span className="absolute bottom-3 left-4 text-[0.8rem] font-semibold">
+            {loading ? 'Chargement…' : 'Bande-annonce'}
+          </span>
+        </button>
+      )}
 
-      <button
-        onClick={() => void window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)}
-        className="absolute bottom-2.5 right-3 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.72rem] text-white/75 transition-colors hover:bg-black/50 hover:text-white"
-        title="Ouvrir dans le navigateur"
+      {/* Once the player has the frame it also owns the clicks, so these sit
+          outside it and only show on hover. */}
+      <div
+        className={`absolute right-3 top-3 flex gap-1.5 transition-opacity ${
+          src ? 'opacity-0 group-hover:opacity-100' : 'opacity-100'
+        }`}
       >
-        YouTube
-        <ExternalLink size={12} />
-      </button>
+        {src && (
+          <button
+            onClick={() => void window.api.app.popoutTrailer(id, title)}
+            className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[0.72rem] text-white/85 transition-colors hover:bg-black/80 hover:text-white"
+            title="Ouvrir dans une fenêtre plus grande"
+          >
+            <Maximize2 size={12} />
+            Agrandir
+          </button>
+        )}
+        <button
+          onClick={() => void window.api.app.openExternal(`https://www.youtube.com/watch?v=${id}`)}
+          className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[0.72rem] text-white/85 transition-colors hover:bg-black/80 hover:text-white"
+          title="Ouvrir dans le navigateur"
+        >
+          YouTube
+          <ExternalLink size={12} />
+        </button>
+      </div>
     </div>
   )
 }
@@ -545,7 +595,14 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
 
           {media.trailer && (
             <section className="mb-8">
-              <Trailer id={media.trailer.id} cover={media.banner ?? media.cover.xl} title={titleOf(media, lang)} />
+              {/* Keyed by the video: moving to another anime must start from the
+                  poster again rather than carry the previous player over. */}
+              <Trailer
+                key={media.trailer.id}
+                id={media.trailer.id}
+                cover={media.banner ?? media.cover.xl}
+                title={titleOf(media, lang)}
+              />
             </section>
           )}
 

@@ -30,7 +30,9 @@ const CSP = [
   "img-src 'self' data: blob: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com",
   "media-src 'self'",
   "connect-src 'self'",
-  "frame-src 'none'",
+  // The only thing this document may frame is the trailer page served by
+  // src/main/trailer.ts on the loopback address.
+  'frame-src http://127.0.0.1:*',
   "object-src 'none'",
   "base-uri 'none'",
   "form-action 'none'"
@@ -105,6 +107,13 @@ void app.whenReady().then(() => {
 
   if (!isDev) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+      // Only our own top-level document. Forcing this policy onto a third-party
+      // frame breaks it: `script-src 'self'` blocked YouTube's own player
+      // scripts, which is why the first inline attempt rendered black.
+      if (details.resourceType !== 'mainFrame') {
+        callback({})
+        return
+      }
       callback({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [CSP] } })
     })
   }
