@@ -28,6 +28,8 @@ const MIN_GAP_MS = 1100
 /** Jikan pages episodes by 100; nothing in a library needs more than this. */
 const MAX_PAGES = 12
 const TTL = 7 * 24 * 3600_000
+/** How long an empty answer is trusted before asking again. */
+const EMPTY_TTL = 30 * 60_000
 
 interface CacheRow extends FillerInfo {
   at: number
@@ -78,30 +80,69 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  * back and Jikan refused them: a 500-episode series came back empty while a
  * 220-episode one squeaked through.
  */
-function fetchPage(malId: number, page: number): Promise<{ episodes: JikanEpisode[]; more: boolean }> {
+interface PageResult {
+  episodes: JikanEpisode[]
+  more: boolean
+}
+
+/** One attempt at one URL. `null` means "did not work, try something else". */
+async function attempt(url: string): Promise<PageResult | null> {
+  const res = await fetch(url, { headers: { Accept: 'application/json' } })
+
+  if (res.status === 429) {
+    const retryAfter = Number(res.headers.get('retry-after')) || 2
+    await sleep(Math.min(retryAfter, 10) * 1000)
+    return null
+  }
+  // 5xx is Jikan's own cache misbehaving, not our request being wrong.
+  if (!res.ok) return null
+
+  const body = (await res.json()) as {
+    data?: JikanEpisode[]
+    pagination?: { has_next_page?: boolean }
+  }
+  const episodes = body.data ?? []
+  // A 200 carrying an empty first page is a bad cached answer, not an empty
+  // series; the caller distinguishes it by asking for another form.
+  if (!episodes.length) return null
+  return { episodes, more: body.pagination?.has_next_page === true }
+}
+
+/**
+ * One page of episodes, tried against every URL form Jikan accepts.
+ *
+ * Both forms of the first page are individually unreliable, and *which* one
+ * works depends on the series — measured, not assumed:
+ *
+ * - Naruto (20) and One Piece (21): the bare URL returns a hundred episodes,
+ *   `?page=1` answers 200 with an empty list.
+ * - Naruto Shippuuden (1735): the exact opposite — the bare URL answers 504,
+ *   `?page=1` returns the hundred.
+ *
+ * So the first page tries both and keeps whichever answers. Later pages only
+ * have one form, and are retried for transient failures.
+ *
+ * Each page is its own queued job, which puts the queue's gap between pages.
+ * Paginating inside a single job fired five requests back to back.
+ */
+function fetchPage(malId: number, page: number): Promise<PageResult> {
   return gate.run('background', `filler:${malId}:${page}`, async () => {
-    // `?page=1` answers 200 with an empty list — reproducible on several series,
-    // while the same URL without the parameter returns the first hundred. Pages
-    // 2 and up behave normally, so the parameter starts at the second.
-    const url = page <= 1 ? `${ENDPOINT}/anime/${malId}/episodes` : `${ENDPOINT}/anime/${malId}/episodes?page=${page}`
+    const forms =
+      page <= 1
+        ? [`${ENDPOINT}/anime/${malId}/episodes`, `${ENDPOINT}/anime/${malId}/episodes?page=1`]
+        : [`${ENDPOINT}/anime/${malId}/episodes?page=${page}`]
 
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } })
-
-      if (res.status === 429) {
-        const retryAfter = Number(res.headers.get('retry-after')) || 2
-        await sleep(Math.min(retryAfter, 10) * 1000)
-        continue
+    for (let round = 0; round < 2; round += 1) {
+      for (const url of forms) {
+        const result = await attempt(url)
+        if (result) return result
       }
-      if (!res.ok) throw new Error(`Jikan HTTP ${res.status}`)
-
-      const body = (await res.json()) as {
-        data?: JikanEpisode[]
-        pagination?: { has_next_page?: boolean }
-      }
-      return { episodes: body.data ?? [], more: body.pagination?.has_next_page === true }
+      await sleep(1500)
     }
-    throw new Error('Jikan : trop de requêtes')
+
+    // Genuinely nothing: an empty page ends the pagination without failing the
+    // whole series, which may already have collected earlier pages.
+    return { episodes: [], more: false }
   })
 }
 
@@ -116,7 +157,12 @@ export async function fillerFor(malId: number | null): Promise<FillerInfo | null
   if (!malId || malId <= 0) return null
 
   const hit = cache.get(malId)
-  if (hit && Date.now() - hit.at < TTL) return { filler: hit.filler, recap: hit.recap, total: hit.total }
+  // An empty answer is kept only briefly: it is far more often a bad response
+  // from Jikan than a series it truly has no episode list for, and freezing
+  // that for a week would make the feature look permanently broken.
+  if (hit && Date.now() - hit.at < (hit.total > 0 ? TTL : EMPTY_TTL)) {
+    return { filler: hit.filler, recap: hit.recap, total: hit.total }
+  }
 
   try {
     // Deliberately *not* wrapped in a queue job: each page already takes one,
