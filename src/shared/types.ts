@@ -278,6 +278,17 @@ export interface FillerInfo {
   total: number
 }
 
+/** One season of a franchise, as a position in its prequel/sequel chain. */
+export interface SeasonEntry {
+  id: number
+  title: string
+  format: string | null
+  status: string | null
+  episodes: number | null
+  year: number | null
+  cover: string | null
+}
+
 export interface ImportReport {
   ok: boolean
   message: string

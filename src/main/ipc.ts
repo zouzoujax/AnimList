@@ -123,6 +123,7 @@ export function registerIpc(): void {
   ipcMain.handle('watch:anime-sama', (_e, animeId: number, titles: string[]) => resolveAnimeSama(animeId, titles))
   ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
   ipcMain.handle('anime:sweep-sequels', (e) => sweepSequels(ownerOf(e)))
+  ipcMain.handle('anime:seasons', (_e, id: number) => anilist.seasonChain(id))
 
   // ---- data ----------------------------------------------------------
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))

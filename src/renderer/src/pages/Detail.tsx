@@ -32,7 +32,7 @@ import EpisodeEditor from '@/components/EpisodeEditor'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
-import { useAnimeSama, useDetail, useFiller, useFranchiseFilms } from '@/lib/hooks'
+import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
@@ -73,6 +73,57 @@ function Stars({ value, onChange }: { value: number | null; onChange: (v: number
       <span className="w-14 text-[0.82rem] font-semibold tabular-nums">
         {shown > 0 ? `${shown}/10` : <span className="text-faint">—</span>}
       </span>
+    </div>
+  )
+}
+
+/**
+ * Season strip.
+ *
+ * AniList has no "season 3": entries are linked pairwise by prequel and sequel,
+ * so the number here is a position in that chain — which is what a viewer means
+ * by season 3 even when the entry is titled "Part 2".
+ */
+function SeasonStrip({ animeId }: { animeId: number }): React.JSX.Element | null {
+  const seasons = useSeasons(animeId)
+  const navigate = useApp((s) => s.navigate)
+  const entries = useApp((s) => s.entries)
+  const watched = useApp((s) => s.watched)
+
+  if (seasons.length < 2) return null
+
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+      <span className="label mr-0.5">Saisons</span>
+      {seasons.map((season, index) => {
+        const current = season.id === animeId
+        const seen = watched.get(season.id)?.size ?? 0
+        const done = season.episodes ? seen >= season.episodes : false
+        const tracked = entries.has(season.id)
+
+        return (
+          <button
+            key={season.id}
+            className="chip"
+            data-on={current}
+            aria-current={current ? 'page' : undefined}
+            onClick={() => !current && navigate({ name: 'anime', id: season.id })}
+            title={`${season.title}${season.year ? ` · ${season.year}` : ''}${
+              season.episodes ? ` · ${season.episodes} ép.` : ''
+            }${tracked ? ` · ${seen} vus` : ' · pas dans ta bibliothèque'}`}
+          >
+            S{index + 1}
+            {/* A dot rather than a colour alone, so the state is not carried by
+                hue only. */}
+            {tracked && (
+              <span
+                className="h-[5px] w-[5px] rounded-full"
+                style={{ background: done ? 'var(--accent-2)' : 'var(--color-faint)' }}
+              />
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -125,6 +176,8 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
 
   return (
     <div>
+      <SeasonStrip animeId={detail.id} />
+
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Stops at the last broadcast episode: marking one that has not aired
             would invent a viewing. */}

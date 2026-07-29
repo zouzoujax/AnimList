@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { BrowseQuery, FillerInfo, Media, MediaDetail } from '@shared/types'
+import type { BrowseQuery, FillerInfo, Media, MediaDetail, SeasonEntry } from '@shared/types'
 import { searchTitles, type AnimeSamaTarget } from '@/lib/watch'
 
 /**
@@ -216,6 +216,31 @@ export function useFiller(malId: number | null | undefined): FillerInfo | null {
   }, [id])
 
   return info
+}
+
+/**
+ * Every season of this anime's franchise, in broadcast order.
+ *
+ * Empty until it arrives, and empty for a standalone series — the caller shows
+ * nothing rather than a strip of one.
+ */
+export function useSeasons(animeId: number | null): SeasonEntry[] {
+  const [seasons, setSeasons] = useState<SeasonEntry[]>([])
+
+  useEffect(() => {
+    setSeasons([])
+    if (!animeId) return
+    let alive = true
+    window.api.anime
+      .seasons(animeId)
+      .then((res) => alive && setSeasons(res))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [animeId])
+
+  return seasons
 }
 
 export function useNow(intervalMs = 60_000): number {

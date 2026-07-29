@@ -14,6 +14,7 @@ import type {
   Paged,
   PageInfo,
   StudioWorks,
+  SeasonEntry,
   SeasonName
 } from '@shared/types'
 
@@ -690,6 +691,109 @@ export async function importById(id: number): Promise<ImportCandidate | null> {
     // A single unreachable entry ends that chain; the import carries on.
     return null
   }
+}
+
+// ---------------------------------------------------------------- season chain
+
+const CHAIN_QUERY = `
+query Chain($id: Int) {
+  Media(id: $id, type: ANIME) {
+    id
+    title { romaji english }
+    format
+    status
+    episodes
+    startDate { year month day }
+    coverImage { large }
+    relations { edges { relationType(version: 2) node { id type format } } }
+  }
+}`
+
+interface RawChainNode {
+  id: number
+  title: { romaji: string | null; english: string | null }
+  format: string | null
+  status: string | null
+  episodes: number | null
+  startDate: { year: number | null; month: number | null; day: number | null } | null
+  coverImage: { large: string | null } | null
+  relations: {
+    edges: { relationType: string | null; node: { id: number; type: string | null; format: string | null } | null }[]
+  } | null
+}
+
+/** Only formats that air as a season belong in a season strip. */
+const CHAIN_FORMATS = new Set(['TV', 'ONA', 'TV_SHORT'])
+
+/** Long enough for the longest franchise, short enough to bound the walk. */
+const CHAIN_MAX = 14
+
+async function chainNode(id: number): Promise<RawChainNode | null> {
+  try {
+    const data = await request<{ Media: RawChainNode | null }>(CHAIN_QUERY, { id }, 'background', `chain:${id}`)
+    return data.Media
+  } catch {
+    return null
+  }
+}
+
+const neighbour = (node: RawChainNode, kind: 'PREQUEL' | 'SEQUEL'): number | null =>
+  (node.relations?.edges ?? []).find(
+    (e) => e.relationType === kind && e.node?.type === 'ANIME' && CHAIN_FORMATS.has(e.node.format ?? '')
+  )?.node?.id ?? null
+
+const toSeason = (node: RawChainNode): SeasonEntry => ({
+  id: node.id,
+  title: node.title.romaji ?? node.title.english ?? `#${node.id}`,
+  format: node.format,
+  status: node.status,
+  episodes: node.episodes,
+  year: node.startDate?.year ?? null,
+  cover: node.coverImage?.large ?? null
+})
+
+/**
+ * Every season of the franchise this anime belongs to, in broadcast order.
+ *
+ * AniList has no notion of "season 3"; it links entries pairwise with PREQUEL
+ * and SEQUEL. So the walk goes back to the earliest entry, then forward,
+ * collecting as it goes. Numbering is by position in that chain, which is what
+ * "season 3" means to a viewer even when the entry is titled "Part 2".
+ *
+ * Returns an empty array rather than failing: a missing strip is cosmetic.
+ */
+export async function seasonChain(id: number): Promise<SeasonEntry[]> {
+  const start = await chainNode(id)
+  if (!start) return []
+
+  // Back to the first entry.
+  let root = start
+  const seenBack = new Set([start.id])
+  for (let i = 0; i < CHAIN_MAX; i += 1) {
+    const previous = neighbour(root, 'PREQUEL')
+    if (!previous || seenBack.has(previous)) break
+    const node = await chainNode(previous)
+    if (!node) break
+    seenBack.add(node.id)
+    root = node
+  }
+
+  // Then forward, collecting.
+  const chain: SeasonEntry[] = [toSeason(root)]
+  const seen = new Set([root.id])
+  let current = root
+  for (let i = 0; i < CHAIN_MAX; i += 1) {
+    const next = neighbour(current, 'SEQUEL')
+    if (!next || seen.has(next)) break
+    const node = await chainNode(next)
+    if (!node) break
+    seen.add(node.id)
+    chain.push(toSeason(node))
+    current = node
+  }
+
+  // A single entry is not a season strip.
+  return chain.length > 1 ? chain : []
 }
 
 // ---------------------------------------------------------------- sequels

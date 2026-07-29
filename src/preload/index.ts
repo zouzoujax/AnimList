@@ -12,6 +12,7 @@ import type {
   MediaDetail,
   Paged,
   Prefs,
+  SeasonEntry,
   SeasonName,
   Snapshot,
   StudioWorks,
@@ -72,6 +73,8 @@ const api = {
     studio: (name: string, page: number): Promise<StudioWorks> => ipcRenderer.invoke('anime:studio', name, page),
     /** Filler and recap episodes from MyAnimeList; null when it has no list. */
     filler: (malId: number | null): Promise<FillerInfo | null> => ipcRenderer.invoke('anime:filler', malId),
+    /** Every season of this anime's franchise, in broadcast order. */
+    seasons: (id: number): Promise<SeasonEntry[]> => ipcRenderer.invoke('anime:seasons', id),
     /** Looks for aired sequels of followed series and adds the new ones. */
     sweepSequels: (): Promise<{ added: Media[]; checked: number }> => ipcRenderer.invoke('anime:sweep-sequels'),
     onSequelsAdded: (cb: (added: Media[]) => void): (() => void) => {
