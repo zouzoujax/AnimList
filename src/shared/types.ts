@@ -199,6 +199,12 @@ export interface Prefs {
    */
   sequelsAdded: number[]
   lastSequelSweep: number
+  /**
+   * Suite → série dont elle découle, relevé pendant le balayage des suites.
+   * Sert à replier les saisons suivantes derrière leur saison mère dans la
+   * bibliothèque, sans redemander la relation à AniList à chaque affichage.
+   */
+  sequelOf: Record<string, number>
   /** Hand corrections for the TV Time importer, keyed by source series id. */
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
@@ -442,6 +448,7 @@ export const DEFAULT_PREFS: Prefs = {
   autoSequels: true,
   sequelsAdded: [],
   lastSequelSweep: 0,
+  sequelOf: {},
   tvtimeOverrides: {},
   tvtimeFolder: null
 }

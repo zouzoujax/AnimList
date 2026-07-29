@@ -3,6 +3,7 @@ import {
   Check,
   CheckSquare,
   Heart,
+  Layers,
   LayoutGrid,
   LibraryBig,
   Plus,
@@ -183,6 +184,8 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
   const [listId, setListId] = useState<string | null>(null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [showSequels, setShowSequels] = useState(false)
+  const sequelOf = useApp((s) => s.prefs.sequelOf)
 
   const lists = useApp((s) => s.lists)
   const deleteList = useApp((s) => s.deleteList)
@@ -232,10 +235,30 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
     return [...tally.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12)
   }, [rows])
 
+  /**
+   * Une saison suivante n'a rien à faire dans la liste tant qu'on n'y a pas
+   * touché : la saison mère la représente. Dès qu'elle est commencée, finie ou
+   * mise en pause, elle redevient une entrée à part entière.
+   */
+  const folded = useMemo(() => {
+    const own = new Set(rows.map((r) => r.media.id))
+    const out = new Set<number>()
+    for (const { entry, media } of rows) {
+      if (entry.status !== 'planned' && entry.status !== 'dropped') continue
+      if ((watched.get(media.id)?.size ?? 0) > 0) continue
+      const parent = sequelOf[String(media.id)]
+      if (parent !== undefined && own.has(parent)) out.add(media.id)
+    }
+    return out
+  }, [rows, watched, sequelOf])
+
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
     const inList = activeList ? new Set(activeList.animeIds) : null
+    // Une recherche explicite doit retrouver une saison repliée.
+    const hide = !showSequels && !needle && folded.size > 0
     const filtered = rows.filter(({ entry, media }) => {
+      if (hide && folded.has(media.id)) return false
       if (inList && !inList.has(media.id)) return false
       if (filter === 'favorites' ? !entry.favorite : filter !== 'all' && entry.status !== filter) return false
       if (genre && !media.genres.includes(genre)) return false
@@ -263,7 +286,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
           )
       }
     })
-  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched, activeList])
+  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched, activeList, folded, showSequels])
 
   if (rows.length === 0) {
     return (
@@ -377,6 +400,22 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
               <span className="tabular-nums opacity-60">{counts[f.id] ?? 0}</span>
             </button>
           ))}
+          {folded.size > 0 && (
+            <button
+              data-on={showSequels}
+              className="chip"
+              onClick={() => setShowSequels((v) => !v)}
+              title={
+                showSequels
+                  ? 'Replier les saisons suivantes pas encore commencées'
+                  : 'Afficher les saisons suivantes pas encore commencées'
+              }
+            >
+              <Layers size={12} />
+              Saisons suivantes
+              <span className="tabular-nums opacity-60">{folded.size}</span>
+            </button>
+          )}
           {genres.length > 0 && <span className="mx-1 h-4 w-px" style={{ background: 'var(--line-2)' }} />}
           {genres.map(([g, n]) => (
             <button key={g} data-on={genre === g} className="chip" onClick={() => setGenre(genre === g ? null : g)}>

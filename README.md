@@ -228,21 +228,8 @@ demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de tex
 tenue partout est donc que l'accent teinte les fonds et les contours, et que le texte reste de
 l'encre.
 
-### Outillage de conception
-
-[Impeccable](https://impeccable.style) est installé hors du dépôt et sert d'auditeur :
-
-```bash
-npx impeccable install          # écrit dans .claude/ (ignoré par git)
-node .claude/skills/impeccable/scripts/detect.mjs src/renderer   # audit d'anti-patterns
-```
-
-`PRODUCT.md` à la racine est son fichier de contexte : il consigne la vérité produit — usagers,
-contraintes, principes — sans aucune décision visuelle.
-
-Une limite de son détecteur, vérifiée : la règle `gradient-text` ne voit pas un dégradé écrit sur
-plusieurs lignes, alors que le même CSS sur une ligne est signalé. Un résultat vert ne suffit
-donc pas à conclure.
+`PRODUCT.md` à la racine consigne la vérité produit — usagers, contraintes, principes — sans
+aucune décision visuelle.
 
 ## Qualité
 

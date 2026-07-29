@@ -61,8 +61,14 @@ export async function sweepSequels(win: BrowserWindow | null): Promise<SequelSwe
   }
 
   const added: Media[] = []
-  for (const sequels of found.values()) {
+  // Every relation seen is recorded, not only the ones added: the library folds
+  // sequels behind their parent season, and that has to work for seasons the
+  // user added by hand long before this sweep ever ran.
+  const parentOf: Record<string, number> = { ...prefs.sequelOf }
+
+  for (const [parent, sequels] of found) {
     for (const media of sequels) {
+      if (isWanted(media) && media.id !== parent) parentOf[media.id] = parent
       if (own.has(media.id) || offered.has(media.id) || !isWanted(media)) continue
       // Marked as offered before it is added, so a failure halfway cannot cause
       // the same series to be proposed again on the next run.
@@ -73,7 +79,7 @@ export async function sweepSequels(win: BrowserWindow | null): Promise<SequelSwe
     }
   }
 
-  setPrefs({ sequelsAdded: [...offered], lastSequelSweep: Date.now() })
+  setPrefs({ sequelsAdded: [...offered], sequelOf: parentOf, lastSequelSweep: Date.now() })
 
   if (added.length && win && !win.isDestroyed()) {
     announce(win, added, prefs.titleLang)
@@ -111,8 +117,12 @@ const FIRST_DELAY_MS = 90_000
 
 export function startSequelWatcher(win: BrowserWindow): () => void {
   const kick = (): void => {
-    if (!getPrefs().autoSequels) return
-    if (Date.now() - getPrefs().lastSequelSweep < EVERY_MS) return
+    const prefs = getPrefs()
+    if (!prefs.autoSequels) return
+    // The daily guard is skipped while no relation is known: the library needs
+    // that map to fold seasons, and waiting a day for the first one is silly.
+    const cold = Object.keys(prefs.sequelOf).length === 0
+    if (!cold && Date.now() - prefs.lastSequelSweep < EVERY_MS) return
     void sweepSequels(win)
   }
 
