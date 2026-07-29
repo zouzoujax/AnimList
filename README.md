@@ -307,11 +307,19 @@ npm run release
 `electron-builder` dépose à côté de l'installeur. Envoyer le `.exe` à la main ne suffit donc
 pas — il faut passer par `npm run release`, ou joindre le `latest.yml` généré.
 
-Deux limites à connaître. L'application n'est **pas signée** : Windows SmartScreen avertira
-à l'installation comme à la mise à jour, et c'est pour ça que l'installeur reste visible au
-lieu de tourner en silence — un échec silencieux ressemblerait à un plantage. Et rien ne
-s'installe sans être demandé : la vérification est automatique, le téléchargement et le
-redémarrage sont deux clics explicites.
+Côté application, le cycle est entièrement automatique : recherche au lancement puis toutes
+les six heures, téléchargement seul dès qu'une version paraît, installation en silence à la
+fermeture de l'app — `electron-updater` passe `/S` à l'installeur NSIS, aucun assistant
+n'apparaît. Une notification annonce la version prête et propose le redémarrage immédiat, et le
+réglage « Mise à jour automatique » ramène les trois étapes à des boutons.
+
+Ce que l'app ne fait pas : se fermer d'elle-même pour installer. Remplacer une application en
+cours d'usage se décide par celui qui l'utilise.
+
+Une limite à connaître : l'application n'est **pas signée**. Windows SmartScreen avertit à la
+première installation, celle faite à la main depuis le `.exe` téléchargé par un navigateur. La
+mise à jour, elle, n'est pas concernée : le fichier arrive par Node sans marque de provenance,
+donc sans contrôle de réputation.
 
 ## Licence
 

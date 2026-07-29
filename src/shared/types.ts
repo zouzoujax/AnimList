@@ -191,6 +191,11 @@ export interface Prefs {
   showAdult: boolean
   weekStart: 0 | 1
   lastAiringCheck: number
+  /**
+   * Télécharge une nouvelle version dès qu'elle paraît, et l'installe à la
+   * fermeture de l'app. Coupé, tout reste manuel depuis les Réglages.
+   */
+  autoUpdate: boolean
   /** Add a series' sequels to the library on their own, once they have aired. */
   autoSequels: boolean
   /**
@@ -445,6 +450,7 @@ export const DEFAULT_PREFS: Prefs = {
   showAdult: false,
   weekStart: 1,
   lastAiringCheck: 0,
+  autoUpdate: true,
   autoSequels: true,
   sequelsAdded: [],
   lastSequelSweep: 0,

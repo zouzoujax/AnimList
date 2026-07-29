@@ -7,7 +7,7 @@ import { initAnimeSama } from './animesama'
 import { initFiller } from './filler'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
-import { scheduleStartupCheck } from './updater'
+import { startUpdateWatcher } from './updater'
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore } from './store'
@@ -136,7 +136,7 @@ void app.whenReady().then(() => {
   }
 
   stopWatcher = startAiringWatcher(mainWindow)
-  stopUpdateCheck = scheduleStartupCheck()
+  stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
 
   app.on('activate', () => {

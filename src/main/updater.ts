@@ -6,13 +6,19 @@
  * signature and handing it to the NSIS installer, and getting any of that wrong
  * is a way to ship malware to yourself.
  *
- * Nothing is installed without being asked. The check runs on its own, the
- * download and the restart are both explicit, because replacing a running
- * application under the user is not a decision to take for them.
+ * Le cycle est automatique : l'app cherche une version toutes les six heures,
+ * la télécharge seule et l'installe en silence à la fermeture. Ce qu'elle ne
+ * fait pas, c'est se fermer d'elle-même pour installer — arracher l'app à
+ * quelqu'un au milieu d'un épisode n'est pas une décision à prendre pour lui.
+ * Une notification propose le redémarrage immédiat pour ceux qui le veulent.
+ *
+ * Le tout est désactivable depuis les Réglages ; chaque étape redevient alors
+ * manuelle.
  */
 
-import { BrowserWindow, app } from 'electron'
+import { BrowserWindow, Notification, app } from 'electron'
 import type { UpdateStatus } from '@shared/types'
+import { getPrefs } from './store'
 
 let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null }
 let started = false
@@ -49,17 +55,41 @@ async function attach(): Promise<Updater | null> {
   if (started) return auto
   started = true
 
-  // Downloading is the user's call, so the automatic part stops at "found".
-  auto.autoDownload = false
+  // Installed at the next quit, silently: electron-updater passes /S to the
+  // NSIS installer itself, so no wizard appears behind the user's back.
   auto.autoInstallOnAppQuit = true
 
   auto.on('update-available', (info) => set({ phase: 'available', version: info.version, message: null }))
   auto.on('update-not-available', () => set({ phase: 'current', version: null, message: null }))
   auto.on('download-progress', (progress) => set({ phase: 'downloading', percent: Math.round(progress.percent) }))
-  auto.on('update-downloaded', (info) => set({ phase: 'ready', version: info.version, percent: 100 }))
+  auto.on('update-downloaded', (info) => {
+    set({ phase: 'ready', version: info.version, percent: 100 })
+    announceReady(info.version)
+  })
   auto.on('error', (err) => set({ phase: 'error', message: err.message }))
 
   return auto
+}
+
+/**
+ * Dit que la version est là, une seule fois par version téléchargée.
+ *
+ * Sans ça une mise à jour entièrement automatique serait invisible : elle
+ * s'installerait à la fermeture sans que personne n'ait rien vu passer.
+ */
+let announced: string | null = null
+
+function announceReady(version: string): void {
+  if (announced === version) return
+  announced = version
+  if (!Notification.isSupported() || !getPrefs().notifications) return
+
+  const note = new Notification({
+    title: `AnimeList ${version} est prête`,
+    body: 'Elle s’installera à la fermeture de l’app. Clique pour redémarrer maintenant.'
+  })
+  note.on('click', () => void installUpdate())
+  note.show()
 }
 
 export async function checkForUpdates(): Promise<UpdateStatus> {
@@ -68,6 +98,10 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
     set({ phase: 'unsupported', message: 'Les mises à jour ne concernent que la version installée.' })
     return state
   }
+
+  // Relu à chaque passage : couper le réglage doit prendre effet tout de suite,
+  // sans relancer l'app.
+  auto.autoDownload = getPrefs().autoUpdate
 
   set({ phase: 'checking', message: null, percent: 0 })
   try {
@@ -100,15 +134,28 @@ export async function installUpdate(): Promise<void> {
   auto.quitAndInstall(false, true)
 }
 
+/** Une session ouverte plusieurs jours doit voir passer une version. */
+const EVERY_MS = 6 * 3600_000
+/** Assez tard pour ne concurrencer ni le premier rendu ni le balayage des diffusions. */
+const FIRST_DELAY_MS = 45_000
+
 /**
- * Checks once, shortly after launch.
+ * Cherche peu après le lancement, puis toutes les six heures.
  *
- * Delayed so it never competes with the first paint or the airing sweep, and
- * silent about failures — being offline is not something to interrupt for.
+ * Silencieux en cas d'échec : être hors ligne n'est pas une raison d'interrompre
+ * qui que ce soit. Une fois la version prête, on arrête de chercher — il n'y a
+ * plus rien à trouver avant le redémarrage.
  */
-export function scheduleStartupCheck(): () => void {
-  const timer = setTimeout(() => {
+export function startUpdateWatcher(): () => void {
+  const kick = (): void => {
+    if (state.phase === 'ready' || state.phase === 'downloading') return
     void checkForUpdates()
-  }, 45_000)
-  return () => clearTimeout(timer)
+  }
+
+  const first = setTimeout(kick, FIRST_DELAY_MS)
+  const timer = setInterval(kick, EVERY_MS)
+  return () => {
+    clearTimeout(first)
+    clearInterval(timer)
+  }
 }

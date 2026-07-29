@@ -490,6 +490,12 @@ export default function SettingsPage(): React.JSX.Element {
         <Row label="Auteur">
           <span className="text-[0.82rem] font-semibold">Zaidal</span>
         </Row>
+        <Row
+          label="Mise à jour automatique"
+          hint="Une nouvelle version publiée sur GitHub est téléchargée seule et installée à la fermeture de l'app. Coupé, elle n'est que signalée."
+        >
+          <Toggle on={prefs.autoUpdate} onChange={(autoUpdate) => setPrefs({ autoUpdate })} />
+        </Row>
         <UpdatePanel version={info?.version ?? null} />
         <Row label="Schéma de données" hint="Version du format de ton fichier local.">
           <span className="text-[0.8rem] tabular-nums text-muted">

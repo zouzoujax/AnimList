@@ -1,9 +1,10 @@
 /**
  * Update controls for the settings page.
  *
- * Each step is explicit — check, download, restart — because replacing a running
- * application is not something to do behind the user's back while they are in
- * the middle of an episode.
+ * En automatique il n'y a rien à faire : le panneau ne fait que raconter où en
+ * est le cycle, et propose le redémarrage immédiat quand la version est prête.
+ * Le réglage coupé, les trois étapes — chercher, télécharger, redémarrer —
+ * redeviennent des boutons.
  */
 
 import { useEffect, useState } from 'react'
@@ -13,6 +14,7 @@ import { useApp } from '../store/app'
 
 export default function UpdatePanel({ version }: { version: string | null }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
+  const auto = useApp((s) => s.prefs.autoUpdate)
   const [status, setStatus] = useState<UpdateStatus>({
     phase: 'idle',
     version: null,
@@ -34,17 +36,21 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
       case 'current':
         return `Version ${version ?? '—'} — à jour.`
       case 'available':
-        return `Version ${status.version} disponible.`
+        return auto
+          ? `Version ${status.version} trouvée, téléchargement en cours…`
+          : `Version ${status.version} disponible.`
       case 'downloading':
         return `Téléchargement… ${status.percent} %`
       case 'ready':
-        return `Version ${status.version} prête. Elle s'installera au redémarrage.`
+        return `Version ${status.version} prête. Elle s'installera à la fermeture de l'app.`
       case 'error':
         return status.message ?? 'La vérification a échoué.'
       case 'unsupported':
         return 'Lancé depuis les sources : il n’y a pas d’application installée à remplacer.'
       default:
-        return `Version ${version ?? '—'}.`
+        return auto
+          ? `Version ${version ?? '—'}. Les nouvelles versions s'installent toutes seules.`
+          : `Version ${version ?? '—'}.`
     }
   })()
 
@@ -60,7 +66,8 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
           </p>
         </div>
 
-        {status.phase === 'available' && (
+        {/* En automatique le téléchargement est déjà parti tout seul. */}
+        {status.phase === 'available' && !auto && (
           <button className="btn btn-primary" onClick={() => void window.api.app.downloadUpdate()}>
             <Download size={14} />
             Télécharger
@@ -70,7 +77,7 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
         {status.phase === 'ready' && (
           <button className="btn btn-primary" onClick={() => void window.api.app.installUpdate()}>
             <RotateCw size={14} />
-            Redémarrer et installer
+            Redémarrer maintenant
           </button>
         )}
 
