@@ -407,8 +407,11 @@ function buildEpisodeMeta(m: RawDetail): MediaDetail['episodeMeta'] {
   // déduire, et le calendrier de diffusion le sait mieux que les épisodes
   // référencés par les plateformes : celles-ci n'en listent parfois qu'un seul,
   // ce qui donnait une grille d'un épisode pour une saison déjà bien avancée.
-  const aired = m.nextAiringEpisode ? m.nextAiringEpisode.episode - 1 : 0
-  const total = m.episodes ?? Math.max(listed.length, aired)
+  //
+  // L'épisode programmé compte : il existe, la fiche l'annonce en haut, et la
+  // grille l'affiche grisé comme celle d'une saison au total connu.
+  const known = m.nextAiringEpisode?.episode ?? 0
+  const total = m.episodes ?? Math.max(listed.length, known)
   const out: MediaDetail['episodeMeta'] = []
   for (let n = 1; n <= total; n += 1) {
     const src = listed[n - 1]
