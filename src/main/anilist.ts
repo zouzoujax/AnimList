@@ -402,7 +402,13 @@ const RELATION_LABELS: Record<string, string> = {
 /** AniList only labels episodes that a streaming partner listed; the rest fall back to a number. */
 function buildEpisodeMeta(m: RawDetail): MediaDetail['episodeMeta'] {
   const listed = m.streamingEpisodes ?? []
-  const total = m.episodes ?? listed.length
+
+  // Une saison en cours peut n'avoir aucun total annoncé. Il faut alors le
+  // déduire, et le calendrier de diffusion le sait mieux que les épisodes
+  // référencés par les plateformes : celles-ci n'en listent parfois qu'un seul,
+  // ce qui donnait une grille d'un épisode pour une saison déjà bien avancée.
+  const aired = m.nextAiringEpisode ? m.nextAiringEpisode.episode - 1 : 0
+  const total = m.episodes ?? Math.max(listed.length, aired)
   const out: MediaDetail['episodeMeta'] = []
   for (let n = 1; n <= total; n += 1) {
     const src = listed[n - 1]
