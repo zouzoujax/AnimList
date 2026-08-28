@@ -99,10 +99,11 @@ unsigned, so Windows SmartScreen warns on install and on update.
 - Measured watch-link coverage: 87 % direct Anime-Sama links across 85 titles, the rest falling
   back to search. Anime-Sama slugs are unguessable (`Kaiju No. 8` → `kaiju-n8`), so they are
   read from the site catalogue and the season URL is verified before being offered.
-- 319 unit tests, ESLint with no errors, both TypeScript projects clean.
-- **No screenshots exist yet.** A `npm run screenshots` command is planned and must use a
-  demonstration dataset built from public AniList data — never the real library, because the
-  repository is public and the history is personal.
+- 323 unit tests, ESLint with no errors, both TypeScript projects clean.
+- Nine screenshots in `docs/screenshots/`, produced by `npm run screenshots`. They are built
+  from a fixed demonstration library of public AniList entries seeded into a throwaway
+  user-data folder — never the real library, because the repository is public and the history
+  is personal. The cast is fixed rather than "trending" so a re-run produces a diffable set.
 - There are no users besides the author, no testimonials, no benchmarks and no pricing. Future
   work must not invent any.
 
