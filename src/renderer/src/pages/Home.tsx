@@ -1,12 +1,13 @@
 import { ArrowUpRight, Compass, Play, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { Media } from '@shared/types'
 import { AnimeCard, ContinueCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, relativeDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
+import { setLume } from '@/lib/lume'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
 function greeting(): string {
@@ -20,45 +21,64 @@ function greeting(): string {
 function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
+  const reduceMotion = useApp((s) => s.prefs.reduceMotion)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
   const toast = useApp((s) => s.toast)
   const glow = toneAccent(media.cover.color)
+  const frame = useRef<HTMLDivElement>(null)
+
+  // Écrit sur le DOM, jamais dans un état : ça se déclenche à chaque pixel
+  // parcouru et ne doit pas redessiner la une. Même geste que sur les cartes.
+  const onMove = (event: React.MouseEvent): void => {
+    const el = frame.current
+    if (!el || reduceMotion) return
+    const box = el.getBoundingClientRect()
+    el.style.setProperty('--px', String((event.clientX - box.left) / box.width - 0.5))
+    el.style.setProperty('--py', String((event.clientY - box.top) / box.height - 0.5))
+  }
+
+  const onLeave = (): void => {
+    const el = frame.current
+    if (!el) return
+    el.style.setProperty('--px', '0')
+    el.style.setProperty('--py', '0')
+  }
 
   return (
     <motion.div
+      ref={frame}
+      onMouseMove={onMove}
+      onMouseLeave={onLeave}
       initial={{ opacity: 0, scale: 0.99 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 180, damping: 26 }}
       className="spotlight span-all relative mb-9 overflow-hidden rounded-[26px]"
       style={{ border: `1px solid ${rgba(glow, 0.25)}`, boxShadow: `0 40px 90px -50px ${rgba(glow, 1)}` }}
     >
-      <img
-        src={media.banner ?? media.cover.xl}
-        alt=""
-        draggable={false}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
+      <div className="sp-plane sp-back absolute inset-0">
+        <img
+          src={media.banner ?? media.cover.xl}
+          alt=""
+          draggable={false}
+          className="sp-drift h-full w-full object-cover"
+        />
+      </div>
       <div
         className="absolute inset-0"
         style={{ background: `linear-gradient(95deg, rgba(5,6,12,.97) 30%, rgba(5,6,12,.5) 62%, ${rgba(glow, 0.35)})` }}
       />
-      <div
-        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 opacity-25"
-        style={{
-          background: 'linear-gradient(100deg, transparent, rgba(255,255,255,.5), transparent)',
-          animation: 'sweep 7s ease-in-out infinite'
-        }}
-      />
 
       <div className="relative flex items-end gap-6 p-7">
-        <Poster
-          src={media.cover.xl}
-          alt=""
-          className="sp-poster hidden h-[236px] w-[158px] shrink-0 sm:block"
-          rounded="rounded-[16px]"
-        />
+        <div className="sp-plane sp-fore shrink-0">
+          <Poster
+            src={media.cover.xl}
+            alt=""
+            className="sp-poster hidden h-[236px] w-[158px] sm:block"
+            rounded="rounded-[16px]"
+          />
+        </div>
 
-        <div className="min-w-0 flex-1 pb-1">
+        <div className="sp-plane sp-mid min-w-0 flex-1 pb-1">
           <p className="label mb-2" style={{ color: rgba(glow, 1) }}>
             {resumeAt ? 'Reprendre' : 'À la une'}
           </p>
@@ -117,7 +137,15 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
   )
 }
 
-function UpcomingCard({ media, index }: { media: Media; index: number }): React.JSX.Element {
+function UpcomingCard({
+  media,
+  index,
+  onHover
+}: {
+  media: Media
+  index: number
+  onHover: (media: Media | null) => void
+}): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
   const glow = toneAccent(media.cover.color)
@@ -130,6 +158,8 @@ function UpcomingCard({ media, index }: { media: Media; index: number }): React.
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       whileHover={{ y: -4 }}
+      onMouseEnter={() => onHover(media)}
+      onMouseLeave={() => onHover(null)}
       className="glass flex w-[268px] shrink-0 items-center gap-3 rounded-[16px] p-2.5 text-left"
     >
       <Poster src={media.cover.large} alt="" className="h-[68px] w-[46px] shrink-0" rounded="rounded-[10px]" />
@@ -198,6 +228,22 @@ export default function HomePage(): React.JSX.Element {
   const heroResume = heroMedia && continueList[0] ? nextEpisodeOf(state, heroMedia.id, heroMedia.episodes) : null
   const empty = entries.size === 0
 
+  /*
+   * La page est éclairée par la série dont elle parle : à la une par défaut,
+   * par l'affiche survolée le temps du survol. On rend la main à l'accent en
+   * quittant l'accueil, sinon la teinte suivrait l'utilisateur ailleurs.
+   */
+  const heroCover = heroMedia?.cover.color ?? null
+  useEffect(() => {
+    setLume(heroCover)
+    return () => setLume(null)
+  }, [heroCover])
+
+  const lightUp = useCallback(
+    (media: Media | null): void => setLume(media ? media.cover.color : heroCover),
+    [heroCover]
+  )
+
   return (
     <div className="page">
       <p className="label mb-1.5">
@@ -235,7 +281,7 @@ export default function HomePage(): React.JSX.Element {
           <Section title="Continuer" subtitle={`${continueList.length} séries en cours`}>
             <RowScroller>
               {continueList.map((media, i) => (
-                <ContinueCard key={media.id} media={media} index={i} />
+                <ContinueCard key={media.id} media={media} index={i} onHover={lightUp} />
               ))}
             </RowScroller>
           </Section>
@@ -253,7 +299,7 @@ export default function HomePage(): React.JSX.Element {
           >
             <RowScroller>
               {upcoming.map((media, i) => (
-                <UpcomingCard key={media.id} media={media} index={i} />
+                <UpcomingCard key={media.id} media={media} index={i} onHover={lightUp} />
               ))}
             </RowScroller>
           </Section>
@@ -275,7 +321,7 @@ export default function HomePage(): React.JSX.Element {
           ) : (
             <RowScroller>
               {trending.items.map((media, i) => (
-                <AnimeCard key={media.id} media={media} index={i} />
+                <AnimeCard key={media.id} media={media} index={i} onHover={lightUp} />
               ))}
             </RowScroller>
           )}
@@ -289,7 +335,7 @@ export default function HomePage(): React.JSX.Element {
           ) : (
             <RowScroller>
               {season.items.map((media, i) => (
-                <AnimeCard key={media.id} media={media} index={i} />
+                <AnimeCard key={media.id} media={media} index={i} onHover={lightUp} />
               ))}
             </RowScroller>
           )}

@@ -10,11 +10,14 @@ import { Poster, ProgressRing } from './ui'
 export function AnimeCard({
   media,
   width = 172,
-  index = 0
+  index = 0,
+  onHover
 }: {
   media: Media
   width?: number | string
   index?: number
+  /** L'accueil s'en sert pour teinter la lumière de la page. Ailleurs : rien. */
+  onHover?: (media: Media | null) => void
 }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
@@ -36,6 +39,7 @@ export function AnimeCard({
   }
 
   const onLeave = (): void => {
+    onHover?.(null)
     const el = cardRef.current
     if (!el) return
     el.style.setProperty('--rx', '0')
@@ -58,6 +62,7 @@ export function AnimeCard({
       ref={cardRef}
       onClick={() => navigate({ name: 'anime', id: media.id })}
       onMouseMove={onMove}
+      onMouseEnter={() => onHover?.(media)}
       onMouseLeave={onLeave}
       className="group relative shrink-0 text-left"
       style={{ width }}
@@ -162,7 +167,15 @@ export function AnimeCard({
 }
 
 /** Wide "keep watching" card used on the home page. */
-export function ContinueCard({ media, index = 0 }: { media: Media; index?: number }): React.JSX.Element {
+export function ContinueCard({
+  media,
+  index = 0,
+  onHover
+}: {
+  media: Media
+  index?: number
+  onHover?: (media: Media | null) => void
+}): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
   const seen = useApp((s) => s.watched.get(media.id)?.size ?? 0)
@@ -184,6 +197,8 @@ export function ContinueCard({ media, index = 0 }: { media: Media; index?: numbe
   return (
     <motion.button
       onClick={() => navigate({ name: 'anime', id: media.id })}
+      onMouseEnter={() => onHover?.(media)}
+      onMouseLeave={() => onHover?.(null)}
       className="group relative h-[196px] w-[358px] shrink-0 overflow-hidden rounded-[20px] text-left"
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}

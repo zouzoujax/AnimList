@@ -11,6 +11,10 @@ const NOISE =
 /**
  * Ambient background. Every layer is driven by theme tokens, so a theme can dim
  * the aurora to nothing, swap the scrim, or switch on its own effect layer.
+ *
+ * The three halos take their hue from `--lume-*`, which the home page pulls
+ * from the cover art of whatever it is currently about. Off the home page those
+ * tokens resolve straight back to the accent, so nothing else changes.
  */
 export function Aurora(): React.JSX.Element {
   return (
@@ -19,7 +23,7 @@ export function Aurora(): React.JSX.Element {
       <div
         className="absolute -left-[18%] -top-[28%] h-[68vmax] w-[68vmax] rounded-full"
         style={{
-          background: 'radial-gradient(circle, var(--accent), transparent 62%)',
+          background: 'radial-gradient(circle, var(--lume), transparent 62%)',
           filter: 'blur(90px)',
           opacity: 'calc(0.26 * var(--aurora))',
           animation: 'drift-a 30s ease-in-out infinite'
@@ -28,7 +32,7 @@ export function Aurora(): React.JSX.Element {
       <div
         className="absolute -right-[22%] top-[6%] h-[58vmax] w-[58vmax] rounded-full"
         style={{
-          background: 'radial-gradient(circle, var(--accent-2), transparent 64%)',
+          background: 'radial-gradient(circle, var(--lume-2), transparent 64%)',
           filter: 'blur(96px)',
           opacity: 'calc(0.2 * var(--aurora))',
           animation: 'drift-b 38s ease-in-out infinite'
@@ -37,7 +41,7 @@ export function Aurora(): React.JSX.Element {
       <div
         className="absolute -bottom-[32%] left-[26%] h-[56vmax] w-[56vmax] rounded-full"
         style={{
-          background: 'radial-gradient(circle, #ff4d8d, transparent 66%)',
+          background: 'radial-gradient(circle, var(--lume-3), transparent 66%)',
           filter: 'blur(100px)',
           opacity: 'calc(0.14 * var(--aurora))',
           animation: 'drift-c 44s ease-in-out infinite'

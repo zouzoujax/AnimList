@@ -9,6 +9,19 @@
 }
 
 /*
+ * La lumière ambiante de la fenêtre. `--lume-src` est écrit en ligne sur la
+ * racine par l'accueil — la couleur de la jaquette de l'anime regardé — et
+ * retiré en partant, ce qui le ramène à l'accent. Il faut l'enregistrer :
+ * une propriété personnalisée ordinaire saute d'une couleur à l'autre au lieu
+ * de les traverser.
+ */
+@property --lume-src {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #7c5cff;
+}
+
+/*
  * Every theme is a full override of this token set — colours, typography,
  * corner radii, shadows, blur and background effects — so switching one changes
  * the whole look rather than just the hue.
@@ -35,6 +48,22 @@
   --grid-min: 158px;
   --gutter: 1.75rem;
   color-scheme: dark;
+
+  /*
+   * L'accent de l'utilisateur garde toujours la main dans le mélange : la
+   * jaquette tire la couleur, elle ne la remplace pas.
+   */
+  --lume-src: var(--accent);
+  --lume: color-mix(in oklab, var(--accent) 38%, var(--lume-src));
+  --lume-2: color-mix(in oklab, var(--accent-2) 46%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #ff4d8d 58%, var(--lume-src));
+
+  /*
+   * Déclarée sur la racine, donc hors de portée de `.reduce-motion` qui vit sur
+   * le body — et c'est voulu : la couleur dit de quel anime la page parle, elle
+   * n'est pas un mouvement dont on peut se passer.
+   */
+  transition: --lume-src 1100ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -379,6 +408,33 @@ textarea {
     opacity: 1;
   }
 
+  /*
+   * La une en trois plans. Le fond dérive tout seul pendant qu'on lit ; par
+   * dessus, --px/--py (-0.5..0.5, écrits au mousemove comme pour les cartes)
+   * décalent l'affiche fort, le texte à peine, le fond à contresens. C'est ce
+   * décalage inégal qui donne la profondeur, pas la quantité de mouvement.
+   */
+  .sp-plane {
+    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform;
+  }
+  .sp-back {
+    transform: translate3d(calc(var(--px, 0) * -12px), calc(var(--py, 0) * -8px), 0);
+  }
+  .sp-mid {
+    transform: translate3d(calc(var(--px, 0) * 7px), calc(var(--py, 0) * 5px), 0);
+  }
+  .sp-fore {
+    transform: translate3d(calc(var(--px, 0) * 17px), calc(var(--py, 0) * 13px), 0);
+  }
+
+  /* Séparé du plan : une animation et une transition ne peuvent pas se
+     partager `transform`, l'animation gagnerait et figerait le curseur. */
+  .sp-drift {
+    animation: drift-sp 26s ease-in-out infinite;
+    will-change: transform;
+  }
+
   .clamp-2 {
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -432,12 +488,15 @@ textarea {
   }
 }
 
-@keyframes sweep {
-  from {
-    transform: translateX(-120%);
+/* Le grossissement plancher couvre le débattement de la parallaxe : en dessous,
+   un bord de bannière apparaîtrait aux extrêmes du curseur. */
+@keyframes drift-sp {
+  0%,
+  100% {
+    transform: scale(1.12) translate3d(-1.6%, -1%, 0);
   }
-  to {
-    transform: translateX(220%);
+  50% {
+    transform: scale(1.19) translate3d(1.6%, 1.4%, 0);
   }
 }
 
@@ -586,6 +645,20 @@ textarea {
 /* Posters keep their own contrast; everything else loses the neon halo. */
 :root[data-theme='paper'] .tilt-inner {
   box-shadow: 0 10px 30px -18px rgba(28, 26, 23, 0.55) !important;
+}
+
+/*
+ * Papier est plat et éditorial, Terminal est net et sans profondeur : ni l'un
+ * ni l'autre n'a de place pour une une qui respire. La lueur d'ambiance, elle,
+ * reste — leur `--aurora` la dose déjà (0.3 et 0).
+ */
+:root[data-theme='paper'] .sp-plane,
+:root[data-theme='terminal'] .sp-plane {
+  transform: none;
+}
+:root[data-theme='paper'] .sp-drift,
+:root[data-theme='terminal'] .sp-drift {
+  animation: none;
 }
 
 /* ══════════════════════════════════════════════════ TERMINAL
