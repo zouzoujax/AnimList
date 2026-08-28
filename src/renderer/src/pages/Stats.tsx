@@ -1,48 +1,102 @@
 import {
   Activity,
+  Anchor,
   Archive,
   Atom,
   Award,
   Ban,
+  Bed,
+  Bookmark,
   Boxes,
   CalendarCheck,
+  CalendarClock,
   CalendarDays,
+  CalendarRange,
   ChartColumn,
   CheckCheck,
   Clapperboard,
   Clock,
+  Compass,
   Crown,
   Database,
+  Diamond,
   Dices,
+  Drum,
   Eye,
+  Factory,
+  Feather,
+  Film,
+  Fish,
   Flame,
+  Flower2,
+  FolderHeart,
+  Footprints,
+  Gamepad2,
   Gauge,
   Gem,
   Ghost,
   Globe,
   Heart,
+  HeartHandshake,
+  History,
   Hourglass,
   Layers,
+  Leaf,
+  Library,
+  ListTodo,
+  Magnet,
   Medal,
+  Megaphone,
+  Milestone,
   Moon,
+  Mountain,
+  NotebookPen,
   Orbit,
+  Package,
   Palette,
   Pencil,
+  PenLine,
   Play,
   Popcorn,
+  Puzzle,
+  Radio,
   Repeat,
   Rocket,
+  RotateCcw,
+  Ruler,
+  Scale,
+  Shuffle,
+  Skull,
+  Smartphone,
   Snail,
+  Snowflake,
   Sparkles,
+  Split,
+  Sprout,
   Star,
+  Sun,
+  Sunrise,
   Swords,
   Target,
+  Tent,
+  ThumbsDown,
+  Ticket,
   Timer,
+  Tornado,
+  Trash2,
+  TreePine,
   TrendingUp,
   Trophy,
+  Tv,
+  Umbrella,
   Undo2,
   Users,
-  Zap
+  Warehouse,
+  Waves,
+  Wifi,
+  Wind,
+  Zap,
+  Infinity as InfinityIcon
 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
@@ -103,7 +157,7 @@ interface Badge {
   group: string
 }
 
-const BADGE_GROUPS = ['Volume', 'Assiduité', 'Exploits', 'Collection', 'Curiosité', 'Critique'] as const
+const BADGE_GROUPS = ['Volume', 'Assiduité', 'Exploits', 'Collection', 'Curiosité', 'Critique', 'Époques'] as const
 
 function BadgeCard({ badge, index }: { badge: Badge; index: number }): React.JSX.Element {
   const accent = useApp((s) => s.prefs.accent)
@@ -148,6 +202,7 @@ export default function StatsPage(): React.JSX.Element {
   const lang = useApp((s) => s.prefs.titleLang)
   const accent = useApp((s) => s.prefs.accent)
   const navigate = useApp((s) => s.navigate)
+  const listCount = useApp((s) => s.lists.length)
 
   const stats = useMemo(() => {
     const perDay = new Map<number, number>()
@@ -218,6 +273,84 @@ export default function StatsPage(): React.JSX.Element {
       }
     }
 
+    // Habitudes fines : heure creuse, jour de semaine, mois de l'année, et les
+    // records d'une seule journée. Toujours sans les épisodes importés, dont la
+    // date vient d'une autre app et ne dit rien de l'heure à laquelle on
+    // regardait.
+    const weekdays = new Set<number>()
+    const months = new Set<number>()
+    const minutesPerDay = new Map<number, number>()
+    const titlesPerDay = new Map<number, Set<number>>()
+    const perTitleDay = new Map<string, number>()
+    let morning = 0
+    for (const ev of events) {
+      if (ev.imported) continue
+      const d = new Date(ev.at)
+      const day = startOfDay(ev.at)
+      weekdays.add(d.getDay())
+      months.add(d.getMonth())
+      if (d.getHours() >= 5 && d.getHours() < 9) morning += 1
+      minutesPerDay.set(day, (minutesPerDay.get(day) ?? 0) + ev.minutes)
+      let seen = titlesPerDay.get(day)
+      if (!seen) titlesPerDay.set(day, (seen = new Set()))
+      seen.add(ev.animeId)
+      const key = `${day}:${ev.animeId}`
+      perTitleDay.set(key, (perTitleDay.get(key) ?? 0) + 1)
+    }
+
+    // Ce que la bibliothèque couvre : époques, saisons de diffusion, formats,
+    // et les deux extrêmes de la popularité AniList.
+    const releaseYears = new Set<number>()
+    const decades = new Set<number>()
+    const airSeasons = new Set<string>()
+    let oldest = Number.POSITIVE_INFINITY
+    let shortForm = 0
+    let confidential = 0
+    let mainstream = 0
+    let planned = 0
+    let harsh = 0
+    let contrarian = 0
+    let fastFinish = 0
+    for (const entry of list) {
+      const media = mediaMap.get(entry.animeId)
+      if (entry.status === 'planned') planned += 1
+      if (entry.score !== null && entry.score <= 3) harsh += 1
+      if (!media) continue
+      if (media.seasonYear) {
+        releaseYears.add(media.seasonYear)
+        decades.add(Math.floor(media.seasonYear / 10) * 10)
+        oldest = Math.min(oldest, media.seasonYear)
+      }
+      if (media.season) airSeasons.add(media.season)
+      if (media.popularity < 5_000) confidential += 1
+      if (media.popularity > 300_000) mainstream += 1
+      // Un écart de 25 points entre la note donnée (sur 10) et la moyenne
+      // AniList (sur 100) : deux avis qui ne parlent pas de la même série.
+      if (
+        entry.score !== null &&
+        media.averageScore !== null &&
+        Math.abs(entry.score * 10 - media.averageScore) >= 25
+      ) {
+        contrarian += 1
+      }
+      if (entry.status !== 'completed') continue
+      if ((media.duration ?? 99) <= 10) shortForm += 1
+      if (
+        entry.startedAt !== null &&
+        entry.finishedAt !== null &&
+        (media.episodes ?? 0) >= 12 &&
+        entry.finishedAt - entry.startedAt <= DAY_MS
+      ) {
+        fastFinish += 1
+      }
+    }
+
+    const peak = (values: Iterable<number>): number => {
+      let out = 0
+      for (const v of values) out = Math.max(out, v)
+      return out
+    }
+
     return {
       minutes,
       episodes: events.length,
@@ -244,7 +377,29 @@ export default function StatsPage(): React.JSX.Element {
       movies,
       longDone,
       perfect,
-      dropped
+      dropped,
+
+      morning,
+      weekdays: weekdays.size,
+      months: months.size,
+      bestDayMinutes: peak(minutesPerDay.values()),
+      bestTitleDay: peak(perTitleDay.values()),
+      bestVariety: peak([...titlesPerDay.values()].map((set) => set.size)),
+      startedTitles: new Set(events.map((ev) => ev.animeId)).size,
+      topGenre: peak(perGenre.values()),
+      topStudio: peak(perStudio.values()),
+      releaseYears: releaseYears.size,
+      decades,
+      airSeasons,
+      oldest,
+      shortForm,
+      confidential,
+      mainstream,
+      planned,
+      scoresUsed: new Set(scored.map((e) => e.score)).size,
+      harsh,
+      contrarian,
+      fastFinish
     }
   }, [events, entries, mediaMap])
 
@@ -353,6 +508,38 @@ export default function StatsPage(): React.JSX.Element {
         icon: Hourglass,
         progress: days / 30
       },
+      {
+        group: 'Volume',
+        id: 'c7500',
+        label: 'Sans limite',
+        hint: '7 500 épisodes',
+        icon: InfinityIcon,
+        progress: stats.episodes / 7500
+      },
+      {
+        group: 'Volume',
+        id: 'h1000',
+        label: 'Le millier d’heures',
+        hint: '1 000 heures',
+        icon: Mountain,
+        progress: hours / 1000
+      },
+      {
+        group: 'Volume',
+        id: 'd100',
+        label: 'Cent jours d’écran',
+        hint: '100 jours cumulés',
+        icon: Tent,
+        progress: days / 100
+      },
+      {
+        group: 'Volume',
+        id: 'seen100',
+        label: 'Cent titres entamés',
+        hint: '100 séries commencées',
+        icon: Footprints,
+        progress: stats.startedTitles / 100
+      },
 
       // ---- Assiduité : régularité dans le temps
       {
@@ -419,6 +606,62 @@ export default function StatsPage(): React.JSX.Element {
         icon: Moon,
         progress: stats.night / 25
       },
+      {
+        group: 'Assiduité',
+        id: 'streak50',
+        label: 'Inébranlable',
+        hint: '50 jours de suite',
+        icon: Anchor,
+        progress: stats.streaks.best / 50
+      },
+      {
+        group: 'Assiduité',
+        id: 'streak365',
+        label: 'Une année sans faute',
+        hint: '365 jours de suite',
+        icon: Sun,
+        progress: stats.streaks.best / 365
+      },
+      {
+        group: 'Assiduité',
+        id: 'days100',
+        label: 'Cent jours actifs',
+        hint: '100 jours actifs',
+        icon: Sprout,
+        progress: stats.activeDays / 100
+      },
+      {
+        group: 'Assiduité',
+        id: 'days365',
+        label: 'Une année d’activité',
+        hint: '365 jours actifs',
+        icon: TreePine,
+        progress: stats.activeDays / 365
+      },
+      {
+        group: 'Assiduité',
+        id: 'morning',
+        label: 'Lève-tôt',
+        hint: '50 épisodes entre 5 h et 9 h',
+        icon: Sunrise,
+        progress: stats.morning / 50
+      },
+      {
+        group: 'Assiduité',
+        id: 'weekdays',
+        label: 'Semaine complète',
+        hint: 'regarder les 7 jours de la semaine',
+        icon: CalendarRange,
+        progress: stats.weekdays / 7
+      },
+      {
+        group: 'Assiduité',
+        id: 'months',
+        label: 'Les douze mois',
+        hint: 'regarder pendant les 12 mois de l’année',
+        icon: CalendarClock,
+        progress: stats.months / 12
+      },
 
       // ---- Exploits : performances sur une journée
       {
@@ -476,6 +719,70 @@ export default function StatsPage(): React.JSX.Element {
         hint: 'un visionnage répété',
         icon: Repeat,
         progress: stats.rewatches
+      },
+      {
+        group: 'Exploits',
+        id: 'marathon75',
+        label: 'Démesure',
+        hint: '75 épisodes en un jour',
+        icon: Tornado,
+        progress: stats.bestDay / 75
+      },
+      {
+        group: 'Exploits',
+        id: 'day8h',
+        label: 'Journée pleine',
+        hint: '8 heures en une seule journée',
+        icon: Bed,
+        progress: stats.bestDayMinutes / 480
+      },
+      {
+        group: 'Exploits',
+        id: 'day12h',
+        label: 'Sans dormir',
+        hint: '12 heures en une seule journée',
+        icon: Skull,
+        progress: stats.bestDayMinutes / 720
+      },
+      {
+        group: 'Exploits',
+        id: 'binge12',
+        label: 'D’une traite',
+        hint: '12 épisodes de la même série en un jour',
+        icon: Drum,
+        progress: stats.bestTitleDay / 12
+      },
+      {
+        group: 'Exploits',
+        id: 'variety5',
+        label: 'Zappeur',
+        hint: '5 séries différentes en un jour',
+        icon: Shuffle,
+        progress: stats.bestVariety / 5
+      },
+      {
+        group: 'Exploits',
+        id: 'fastFinish',
+        label: 'Avalée en un jour',
+        hint: 'finir une série de 12+ épisodes en 24 h',
+        icon: Wind,
+        progress: stats.fastFinish
+      },
+      {
+        group: 'Exploits',
+        id: 'long5',
+        label: 'Marathonien',
+        hint: '5 séries de 100+ épisodes',
+        icon: Waves,
+        progress: stats.longDone / 5
+      },
+      {
+        group: 'Exploits',
+        id: 'rewatch10',
+        label: 'Éternel retour',
+        hint: '10 revisionnages',
+        icon: RotateCcw,
+        progress: stats.rewatches / 10
       },
 
       // ---- Collection : taille et forme de la bibliothèque
@@ -543,6 +850,86 @@ export default function StatsPage(): React.JSX.Element {
         icon: Clapperboard,
         progress: stats.movies / 10
       },
+      {
+        group: 'Collection',
+        id: 'done25',
+        label: 'Bon élève',
+        hint: '25 séries terminées',
+        icon: Bookmark,
+        progress: stats.completed / 25
+      },
+      {
+        group: 'Collection',
+        id: 'done250',
+        label: 'Rayonnage complet',
+        hint: '250 séries terminées',
+        icon: Library,
+        progress: stats.completed / 250
+      },
+      {
+        group: 'Collection',
+        id: 'lib100',
+        label: 'Étagère pleine',
+        hint: '100 titres suivis',
+        icon: Package,
+        progress: stats.tracked / 100
+      },
+      {
+        group: 'Collection',
+        id: 'lib500',
+        label: 'Entrepôt',
+        hint: '500 titres suivis',
+        icon: Warehouse,
+        progress: stats.tracked / 500
+      },
+      {
+        group: 'Collection',
+        id: 'fav50',
+        label: 'Grand cœur',
+        hint: '50 favoris',
+        icon: HeartHandshake,
+        progress: stats.favorites / 50
+      },
+      {
+        group: 'Collection',
+        id: 'movies1',
+        label: 'Séance unique',
+        hint: '1 film terminé',
+        icon: Film,
+        progress: stats.movies
+      },
+      {
+        group: 'Collection',
+        id: 'movies25',
+        label: 'Salle obscure',
+        hint: '25 films terminés',
+        icon: Ticket,
+        progress: stats.movies / 25
+      },
+      {
+        group: 'Collection',
+        id: 'backlog50',
+        label: 'Pile à voir',
+        hint: '50 titres en attente',
+        icon: ListTodo,
+        progress: stats.planned / 50
+      },
+      {
+        group: 'Collection',
+        id: 'lists3',
+        label: 'Rangement',
+        hint: '3 listes personnalisées',
+        icon: FolderHeart,
+        progress: listCount / 3
+      },
+      {
+        group: 'Collection',
+        id: 'shortForm',
+        label: 'Format court',
+        hint: '10 séries de moins de 10 min terminées',
+        icon: Feather,
+        progress: stats.shortForm / 10
+      },
 
       // ---- Curiosité : diversité de ce qui est regardé
       {
@@ -584,6 +971,54 @@ export default function StatsPage(): React.JSX.Element {
         hint: '25 studios différents',
         icon: Users,
         progress: stats.studioCount / 25
+      },
+      {
+        group: 'Curiosité',
+        id: 'genres15',
+        label: 'Sans frontière',
+        hint: '15 genres différents',
+        icon: Compass,
+        progress: stats.genres.length / 15
+      },
+      {
+        group: 'Curiosité',
+        id: 'studios50',
+        label: 'Carte des studios',
+        hint: '50 studios différents',
+        icon: Factory,
+        progress: stats.studioCount / 50
+      },
+      {
+        group: 'Curiosité',
+        id: 'studioFan',
+        label: 'Maison de confiance',
+        hint: '250 épisodes d’un même studio',
+        icon: Magnet,
+        progress: stats.topStudio / 250
+      },
+      {
+        group: 'Curiosité',
+        id: 'genreFan',
+        label: 'Genre de prédilection',
+        hint: '500 épisodes d’un même genre',
+        icon: Puzzle,
+        progress: stats.topGenre / 500
+      },
+      {
+        group: 'Curiosité',
+        id: 'confidential',
+        label: 'Hors des sentiers',
+        hint: 'suivre un titre de moins de 5 000 membres',
+        icon: Fish,
+        progress: stats.confidential
+      },
+      {
+        group: 'Curiosité',
+        id: 'mainstream',
+        label: 'Grand public',
+        hint: 'suivre un titre de plus de 300 000 membres',
+        icon: Megaphone,
+        progress: stats.mainstream
       },
 
       // ---- Critique : notes, ressentis, notes écrites
@@ -642,9 +1077,163 @@ export default function StatsPage(): React.JSX.Element {
         hint: 'abandonner 5 séries',
         icon: Ban,
         progress: stats.dropped / 5
+      },
+      {
+        group: 'Critique',
+        id: 'rate250',
+        label: 'Grand jury',
+        hint: '250 notes données',
+        icon: Scale,
+        progress: stats.scoredCount / 250
+      },
+      {
+        group: 'Critique',
+        id: 'scale',
+        label: 'Toute la gamme',
+        hint: 'utiliser les 10 notes',
+        icon: Ruler,
+        progress: stats.scoresUsed / 10
+      },
+      {
+        group: 'Critique',
+        id: 'perfect5',
+        label: 'Panthéon',
+        hint: '5 notes de 10/10',
+        icon: Diamond,
+        progress: stats.perfect / 5
+      },
+      {
+        group: 'Critique',
+        id: 'harsh',
+        label: 'Verdict sévère',
+        hint: 'mettre 3/10 ou moins',
+        icon: ThumbsDown,
+        progress: stats.harsh
+      },
+      {
+        group: 'Critique',
+        id: 'contrarian',
+        label: 'À contre-courant',
+        hint: 's’écarter de 25 points de la note AniList',
+        icon: Split,
+        progress: stats.contrarian
+      },
+      {
+        group: 'Critique',
+        id: 'notes1',
+        label: 'Première ligne',
+        hint: '1 fiche annotée',
+        icon: PenLine,
+        progress: stats.notes
+      },
+      {
+        group: 'Critique',
+        id: 'notes50',
+        label: 'Journal intime',
+        hint: '50 fiches annotées',
+        icon: NotebookPen,
+        progress: stats.notes / 50
+      },
+      {
+        group: 'Critique',
+        id: 'dropped25',
+        label: 'Tri sans état d’âme',
+        hint: '25 abandons',
+        icon: Trash2,
+        progress: stats.dropped / 25
+      },
+
+      // ---- Époques : les années que la bibliothèque traverse
+      {
+        group: 'Époques',
+        id: 'era80',
+        label: 'Avant la couleur',
+        hint: 'un titre d’avant 1990',
+        icon: Radio,
+        progress: stats.oldest < 1990 ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'era90',
+        label: 'Années 1990',
+        hint: 'un titre des années 1990',
+        icon: Tv,
+        progress: stats.decades.has(1990) ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'era2000',
+        label: 'Années 2000',
+        hint: 'un titre des années 2000',
+        icon: Gamepad2,
+        progress: stats.decades.has(2000) ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'era2010',
+        label: 'Années 2010',
+        hint: 'un titre des années 2010',
+        icon: Smartphone,
+        progress: stats.decades.has(2010) ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'era2020',
+        label: 'Années 2020',
+        hint: 'un titre des années 2020',
+        icon: Wifi,
+        progress: stats.decades.has(2020) ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'decades4',
+        label: 'Traversée du temps',
+        hint: '4 décennies différentes',
+        icon: Milestone,
+        progress: stats.decades.size / 4
+      },
+      {
+        group: 'Époques',
+        id: 'years25',
+        label: 'Vingt-cinq millésimes',
+        hint: '25 années de sortie différentes',
+        icon: History,
+        progress: stats.releaseYears / 25
+      },
+      {
+        group: 'Époques',
+        id: 'winter',
+        label: 'Hiver',
+        hint: 'un titre de la saison d’hiver',
+        icon: Snowflake,
+        progress: stats.airSeasons.has('WINTER') ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'spring',
+        label: 'Printemps',
+        hint: 'un titre de la saison de printemps',
+        icon: Flower2,
+        progress: stats.airSeasons.has('SPRING') ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'summer',
+        label: 'Été',
+        hint: 'un titre de la saison d’été',
+        icon: Umbrella,
+        progress: stats.airSeasons.has('SUMMER') ? 1 : 0
+      },
+      {
+        group: 'Époques',
+        id: 'autumn',
+        label: 'Automne',
+        hint: 'un titre de la saison d’automne',
+        icon: Leaf,
+        progress: stats.airSeasons.has('FALL') ? 1 : 0
       }
     ]
-  }, [stats])
+  }, [stats, listCount])
 
   if (stats.episodes === 0) {
     return (
