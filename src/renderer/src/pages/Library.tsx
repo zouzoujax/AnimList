@@ -6,6 +6,7 @@ import {
   Layers,
   LayoutGrid,
   LibraryBig,
+  Pencil,
   Plus,
   Rows3,
   Search,
@@ -18,6 +19,7 @@ import { GENRE_LABELS, STATUS_LABELS, type Entry, type LibraryStatus, type Media
 import { titleMatches } from '@shared/titles'
 import { AnimeCard } from '@/components/AnimeCard'
 import BulkBar from '@/components/BulkBar'
+import ListPicker from '@/components/ListPicker'
 import { EmptyState, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { titleOf } from '@/lib/format'
@@ -185,10 +187,10 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showSequels, setShowSequels] = useState(false)
+  const [managing, setManaging] = useState(false)
   const sequelOf = useApp((s) => s.prefs.sequelOf)
 
   const lists = useApp((s) => s.lists)
-  const deleteList = useApp((s) => s.deleteList)
   const setListMembership = useApp((s) => s.setListMembership)
 
   const toggleSelected = (animeId: number): void => {
@@ -425,48 +427,39 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
           ))}
         </div>
 
-        {lists.length > 0 && (
-          <div
-            className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5"
-            style={{ borderColor: 'var(--line)' }}
-          >
-            <span className="label mr-0.5">Listes</span>
-            {lists.map((list) => (
-              <button
-                key={list.id}
-                data-on={listId === list.id}
-                className="chip"
-                onClick={() => setListId(listId === list.id ? null : list.id)}
-              >
-                <span aria-hidden>{list.emoji}</span>
-                {list.name}
-                <span className="tabular-nums opacity-60">{list.animeIds.length}</span>
-              </button>
-            ))}
-            {activeList && (
-              <>
-                {selecting && selected.size > 0 && (
-                  <button
-                    className="btn !h-7 text-[0.74rem]"
-                    onClick={() => void setListMembership(activeList.id, [...selected], false)}
-                  >
-                    Retirer de la liste
-                  </button>
-                )}
-                <button
-                  className="btn !h-7 text-[0.74rem]"
-                  style={{ color: '#ff8080', borderColor: 'rgba(255,128,128,.3)' }}
-                  onClick={() => {
-                    void deleteList(activeList.id)
-                    setListId(null)
-                  }}
-                >
-                  Supprimer « {activeList.name} »
-                </button>
-              </>
-            )}
-          </div>
-        )}
+        {/* Toujours visible, même sans aucune liste : c'est le seul endroit d'où
+            on peut en créer une sans passer par une sélection. */}
+        <div
+          className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t pt-2.5"
+          style={{ borderColor: 'var(--line)' }}
+        >
+          <span className="label mr-0.5">Listes</span>
+          {lists.map((list) => (
+            <button
+              key={list.id}
+              data-on={listId === list.id}
+              className="chip"
+              onClick={() => setListId(listId === list.id ? null : list.id)}
+            >
+              <span aria-hidden>{list.emoji}</span>
+              {list.name}
+              <span className="tabular-nums opacity-60">{list.animeIds.length}</span>
+            </button>
+          ))}
+          {lists.length === 0 && <span className="text-[0.74rem] text-faint">Aucune liste pour l'instant.</span>}
+          {activeList && selecting && selected.size > 0 && (
+            <button
+              className="btn !h-7 text-[0.74rem]"
+              onClick={() => void setListMembership(activeList.id, [...selected], false)}
+            >
+              Retirer de la liste
+            </button>
+          )}
+          <button className="btn !h-7 text-[0.74rem]" onClick={() => setManaging(true)}>
+            <Pencil size={12} />
+            {lists.length === 0 ? 'Créer une liste' : 'Gérer'}
+          </button>
+        </div>
       </div>
 
       {visible.length === 0 ? (
@@ -509,6 +502,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
       )}
 
       {selecting && <BulkBar selected={selected} onClear={() => setSelected(new Set())} />}
+      <ListPicker open={managing} onClose={() => setManaging(false)} animeIds={[]} />
     </div>
   )
 }

@@ -7,6 +7,7 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  FolderPlus,
   Heart,
   Maximize2,
   Play,
@@ -29,6 +30,7 @@ import {
 } from '@shared/types'
 import { MiniCard } from '@/components/AnimeCard'
 import EpisodeEditor from '@/components/EpisodeEditor'
+import ListPicker from '@/components/ListPicker'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
@@ -478,6 +480,12 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const media: Media | MediaDetail | undefined = data ?? cached
   const [notes, setNotes] = useState(entry?.notes ?? '')
   const [expanded, setExpanded] = useState(false)
+  const [picking, setPicking] = useState(false)
+  const lists = useApp((s) => s.lists)
+
+  // Ranger une série demandait jusqu'ici de retourner dans la bibliothèque et
+  // d'ouvrir une sélection. Depuis sa fiche, c'est un bouton.
+  const inLists = lists.filter((l) => l.animeIds.includes(id))
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Reset the textarea only when the anime changes. Depending on `entry` would
@@ -649,6 +657,18 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               >
                 <Heart size={16} fill={entry?.favorite ? 'currentColor' : 'none'} />
               </button>
+
+              {entry && (
+                <button
+                  className="icon-btn !h-[38px] !w-[38px]"
+                  onClick={() => setPicking(true)}
+                  aria-label="Listes"
+                  title={inLists.length > 0 ? inLists.map((l) => l.name).join(', ') : 'Ranger dans une liste'}
+                  style={inLists.length > 0 ? { color: 'var(--accent)', background: 'var(--panel-2)' } : undefined}
+                >
+                  <FolderPlus size={15} />
+                </button>
+              )}
 
               {entry && (
                 <button
@@ -961,6 +981,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
           {error && <ErrorBox message={error} onRetry={retry} />}
         </aside>
       </div>
+
+      <ListPicker open={picking} onClose={() => setPicking(false)} animeIds={[id]} />
     </div>
   )
 }
