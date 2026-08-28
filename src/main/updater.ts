@@ -23,14 +23,26 @@ import { getPrefs } from './store'
 let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null }
 let started = false
 
-/** Loaded lazily: importing it in dev would look for an update-config that isn't there. */
+/** Chargé à la demande : un mégaoctet de code inutile à une session de dev. */
 type Updater = typeof import('electron-updater').autoUpdater
 
-async function updater(): Promise<Updater | null> {
-  // A dev run is not a packaged app; there is nothing to replace.
-  if (!app.isPackaged) return null
-  const { autoUpdater } = await import('electron-updater')
-  return autoUpdater
+/**
+ * `electron-updater` est en CommonJS et pose `autoUpdater` avec un accesseur
+ * défini à l'exécution. L'analyseur d'exports que Node emploie pour un
+ * `import()` ne repère pas ce genre d'accesseur : `mod.autoUpdater` vaut
+ * `undefined`, et seul `mod.default` — les exports CommonJS bruts — porte
+ * l'objet.
+ *
+ * Ce détail a rendu les mises à jour muettes jusqu'à la 0.3.0 : la valeur
+ * `undefined` était lue comme « pas d'updater disponible », donc comme « app
+ * lancée depuis les sources ». L'app installée se déclarait non installée et ne
+ * contactait jamais GitHub.
+ */
+async function updater(): Promise<Updater> {
+  const mod = await import('electron-updater')
+  const auto = mod.autoUpdater ?? (mod as { default?: { autoUpdater?: Updater } }).default?.autoUpdater
+  if (!auto) throw new Error("electron-updater n'expose pas autoUpdater")
+  return auto
 }
 
 function broadcast(): void {
@@ -50,8 +62,9 @@ export function updateStatus(): UpdateStatus {
 
 /** Wires the events once, on the first check. */
 async function attach(): Promise<Updater | null> {
+  // A dev run is not a packaged app; there is nothing to replace.
+  if (!app.isPackaged) return null
   const auto = await updater()
-  if (!auto) return null
   if (started) return auto
   started = true
 
@@ -93,18 +106,21 @@ function announceReady(version: string): void {
 }
 
 export async function checkForUpdates(): Promise<UpdateStatus> {
-  const auto = await attach()
-  if (!auto) {
+  if (!app.isPackaged) {
     set({ phase: 'unsupported', message: 'Les mises à jour ne concernent que la version installée.' })
     return state
   }
 
-  // Relu à chaque passage : couper le réglage doit prendre effet tout de suite,
-  // sans relancer l'app.
-  auto.autoDownload = getPrefs().autoUpdate
-
   set({ phase: 'checking', message: null, percent: 0 })
   try {
+    // Dans le try : une panne de chargement de la bibliothèque doit se voir
+    // comme une panne, pas se déguiser en configuration non prise en charge.
+    const auto = await attach()
+    if (!auto) throw new Error('Updater indisponible.')
+
+    // Relu à chaque passage : couper le réglage doit prendre effet tout de
+    // suite, sans relancer l'app.
+    auto.autoDownload = getPrefs().autoUpdate
     await auto.checkForUpdates()
   } catch (err) {
     set({ phase: 'error', message: (err as Error).message })
@@ -113,11 +129,12 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
 }
 
 export async function downloadUpdate(): Promise<UpdateStatus> {
-  const auto = await attach()
-  if (!auto || state.phase !== 'available') return state
+  if (state.phase !== 'available') return state
 
   set({ phase: 'downloading', percent: 0, message: null })
   try {
+    const auto = await attach()
+    if (!auto) throw new Error('Updater indisponible.')
     await auto.downloadUpdate()
   } catch (err) {
     set({ phase: 'error', message: (err as Error).message })
@@ -127,8 +144,9 @@ export async function downloadUpdate(): Promise<UpdateStatus> {
 
 /** Quits and runs the installer. Only valid once the download has finished. */
 export async function installUpdate(): Promise<void> {
-  const auto = await attach()
-  if (!auto || state.phase !== 'ready') return
+  if (state.phase !== 'ready') return
+  const auto = await attach().catch(() => null)
+  if (!auto) return
   // `isSilent: false` keeps the installer visible: it is unsigned, so a silent
   // run that trips SmartScreen would look like the app simply failed to restart.
   auto.quitAndInstall(false, true)
@@ -149,6 +167,7 @@ const FIRST_DELAY_MS = 45_000
 export function startUpdateWatcher(): () => void {
   const kick = (): void => {
     if (state.phase === 'ready' || state.phase === 'downloading') return
+    // `checkForUpdates` capture tout : rien ne peut se perdre en rejet muet.
     void checkForUpdates()
   }
 

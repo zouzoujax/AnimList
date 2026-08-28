@@ -86,9 +86,14 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
             className="btn"
             disabled={busy || status.phase === 'unsupported'}
             onClick={() =>
-              void window.api.app.checkUpdate().then((next) => {
-                if (next.phase === 'current') toast('Tu as déjà la dernière version.', 'ok')
-              })
+              void window.api.app
+                .checkUpdate()
+                .then((next) => {
+                  if (next.phase === 'current') toast('Tu as déjà la dernière version.', 'ok')
+                })
+                // Sans ce filet, un rejet du canal laissait le bouton sans effet
+                // visible : rien ne se passait, et rien ne disait pourquoi.
+                .catch((err: Error) => toast(`Vérification impossible : ${err.message}`, 'error'))
             }
           >
             <RefreshCw size={14} className={busy ? 'animate-spin' : undefined} />
