@@ -25,6 +25,12 @@ export interface ShotPlan {
   settleMs?: number
   /** Scroll offset inside the page, for content below the fold. */
   scrollY?: number
+  /**
+   * Scroll until this element is at the top instead of guessing an offset.
+   * A section whose distance from the top depends on how much data sits above
+   * it cannot be reached by a fixed number.
+   */
+  scrollTo?: string
   /** CSS selector to click before capturing, for states behind an interaction. */
   click?: string
 }
@@ -55,6 +61,8 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
     { name: 'decouvrir', route: { name: 'discover' }, settleMs: 2600 },
     { name: 'calendrier', route: { name: 'calendar' }, settleMs: 2200 },
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
+    // The badge wall sits under every chart, so its offset moves with the data.
+    { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },
     { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 }
   ]
 
@@ -80,11 +88,12 @@ export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotP
     win.webContents.send('nav:goto', shot.route)
     await sleep(shot.settleMs ?? 1200)
 
-    if (shot.scrollY) {
+    if (shot.scrollY !== undefined || shot.scrollTo) {
       // The scroller is the <main> element, not the document.
-      await win.webContents.executeJavaScript(
-        `document.getElementById('contenu')?.scrollTo({ top: ${shot.scrollY} }); void 0`
-      )
+      const target = shot.scrollTo
+        ? `(() => { const el = document.querySelector(${JSON.stringify(shot.scrollTo)}); const box = document.getElementById('contenu'); if (!el || !box) return; box.scrollTo({ top: box.scrollTop + el.getBoundingClientRect().top - 76 }) })()`
+        : `document.getElementById('contenu')?.scrollTo({ top: ${shot.scrollY} })`
+      await win.webContents.executeJavaScript(`${target}; void 0`)
       // Long enough for the scroll-triggered entrance animations to finish.
       await sleep(900)
     }

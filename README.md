@@ -33,7 +33,7 @@ personnel.</sub>
 </tr>
 <tr>
 <td><a href="docs/screenshots/bibliotheque.jpg"><img src="docs/screenshots/bibliotheque.jpg" alt="Bibliothèque"></a><br><sub><b>Bibliothèque.</b> Cinq statuts, favoris, filtres par genre et format, listes personnalisées, mode sélection et actions groupées.</sub></td>
-<td><a href="docs/screenshots/statistiques.jpg"><img src="docs/screenshots/statistiques.jpg" alt="Statistiques"></a><br><sub><b>Statistiques.</b> Temps total, séries de jours, heatmap annuelle, graphique mensuel, top genres et studios, badges.</sub></td>
+<td><a href="docs/screenshots/statistiques.jpg"><img src="docs/screenshots/statistiques.jpg" alt="Statistiques"></a><br><sub><b>Statistiques.</b> Temps total, séries de jours, heatmap annuelle, graphique mensuel, top genres et studios.</sub></td>
 </tr>
 <tr>
 <td><a href="docs/screenshots/decouvrir.jpg"><img src="docs/screenshots/decouvrir.jpg" alt="Découvrir"></a><br><sub><b>Découvrir.</b> Tendances, saison en cours, populaires, mieux notés, à venir, recherche instantanée.</sub></td>
@@ -44,7 +44,11 @@ personnel.</sub>
 <table>
 <tr>
 <td width="50%"><a href="docs/screenshots/bande-annonce.jpg"><img src="docs/screenshots/bande-annonce.jpg" alt="Bande-annonce jouée dans la fiche"></a><br><sub><b>Bande-annonce.</b> Elle se lance à la place de la vignette, dans la page. Pas de fenêtre, pas d'habillage YouTube.</sub></td>
+<td width="50%"><a href="docs/screenshots/badges.jpg"><img src="docs/screenshots/badges.jpg" alt="Le mur des badges"></a><br><sub><b>Badges.</b> Cent, en sept groupes. Chacun mesure quelque chose que l'historique dit vraiment : volume, régularité, records d'une journée, forme de la collection, diversité, sévérité des notes, époques traversées.</sub></td>
+</tr>
+<tr>
 <td width="50%"><a href="docs/screenshots/reglages.jpg"><img src="docs/screenshots/reglages.jpg" alt="Réglages"></a><br><sub><b>Réglages.</b> Quatre thèmes et quatre dispositions, combinables librement.</sub></td>
+<td width="50%"></td>
 </tr>
 </table>
 

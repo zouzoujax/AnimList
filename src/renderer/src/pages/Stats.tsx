@@ -1375,7 +1375,7 @@ export default function StatsPage(): React.JSX.Element {
         </div>
       </div>
 
-      <Section title="Badges" subtitle={`${unlocked} sur ${badges.length} débloqués`}>
+      <Section id="badges" title="Badges" subtitle={`${unlocked} sur ${badges.length} débloqués`}>
         <div className="flex flex-col gap-7">
           {BADGE_GROUPS.map((group) => {
             const list = badges.filter((b) => b.group === group)

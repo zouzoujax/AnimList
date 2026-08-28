@@ -3,18 +3,21 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 export function Section({
+  id,
   title,
   subtitle,
   action,
   children
 }: {
+  /** Anchor, so a link or the screenshot run can jump straight to the section. */
+  id?: string
   title: string
   subtitle?: string
   action?: ReactNode
   children: ReactNode
 }): React.JSX.Element {
   return (
-    <section className="mb-9">
+    <section id={id} className="mb-9">
       <header className="mb-3.5 flex items-end justify-between gap-4 px-1">
         <div>
           <h2 className="title-xl text-[1.32rem] leading-tight">{title}</h2>
