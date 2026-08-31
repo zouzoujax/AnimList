@@ -1235,6 +1235,8 @@ export default function StatsPage(): React.JSX.Element {
     ]
   }, [stats, listCount])
 
+  const [badgeFilter, setBadgeFilter] = useState<'all' | 'done' | 'todo'>('all')
+
   if (stats.episodes === 0) {
     return (
       <div className="mx-auto max-w-[900px] px-7 py-16">
@@ -1253,6 +1255,19 @@ export default function StatsPage(): React.JSX.Element {
   }
 
   const unlocked = badges.filter((b) => b.progress >= 1).length
+  // « À faire » classe les plus proches d'abord : sur cent badges, la question
+  // n'est pas lesquels manquent, c'est lequel est à portée.
+  const shownBadges =
+    badgeFilter === 'done'
+      ? badges.filter((b) => b.progress >= 1)
+      : badgeFilter === 'todo'
+        ? badges.filter((b) => b.progress < 1).sort((a, b) => b.progress - a.progress)
+        : badges
+  const BADGE_FILTERS = [
+    { id: 'all' as const, label: 'Tous', count: badges.length },
+    { id: 'done' as const, label: 'Débloqués', count: unlocked },
+    { id: 'todo' as const, label: 'À faire', count: badges.length - unlocked }
+  ]
 
   return (
     <div className="page">
@@ -1375,18 +1390,40 @@ export default function StatsPage(): React.JSX.Element {
         </div>
       </div>
 
-      <Section id="badges" title="Badges" subtitle={`${unlocked} sur ${badges.length} débloqués`}>
+      <Section
+        id="badges"
+        title="Badges"
+        subtitle={`${unlocked} sur ${badges.length} débloqués`}
+        action={
+          <div className="flex shrink-0 gap-1.5">
+            {BADGE_FILTERS.map((f) => (
+              <button key={f.id} data-on={badgeFilter === f.id} className="chip" onClick={() => setBadgeFilter(f.id)}>
+                {f.label}
+                <span className="tabular-nums opacity-60">{f.count}</span>
+              </button>
+            ))}
+          </div>
+        }
+      >
         <div className="flex flex-col gap-7">
+          {shownBadges.length === 0 && (
+            <p className="px-1 text-[0.82rem] text-muted">
+              Aucun badge débloqué pour l'instant. Coche des épisodes et ils viendront.
+            </p>
+          )}
           {BADGE_GROUPS.map((group) => {
-            const list = badges.filter((b) => b.group === group)
+            const list = shownBadges.filter((b) => b.group === group)
             if (!list.length) return null
-            const done = list.filter((b) => b.progress >= 1).length
+            // Le compte reste celui du groupe entier : filtrer l'affichage ne
+            // doit pas changer ce que le groupe vaut.
+            const whole = badges.filter((b) => b.group === group)
+            const done = whole.filter((b) => b.progress >= 1).length
             return (
               <div key={group}>
                 <header className="mb-3 flex items-center gap-3 px-1">
                   <h3 className="text-[0.92rem] font-semibold">{group}</h3>
                   <span className="text-[0.72rem] tabular-nums text-faint">
-                    {done}/{list.length}
+                    {done}/{whole.length}
                   </span>
                   <div className="hairline flex-1" />
                 </header>
