@@ -17,3 +17,7 @@ DATA EXPORT/
 # réinstallable en une commande, et settings.local.json est par convention local.
 .claude/
 .impeccable/
+
+# Scripts de lancement locaux. « Create Realeses on Github.bat » contient un
+# jeton GitHub en clair : ce fichier ne doit jamais partir dans le dépôt public.
+*.bat
