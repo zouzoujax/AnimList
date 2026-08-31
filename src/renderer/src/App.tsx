@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Suspense, lazy, useEffect, useRef } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useRef } from 'react'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
 import { Aurora, Sidebar, TitleBar } from '@/components/Shell'
 import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
@@ -77,6 +78,12 @@ export default function App(): React.JSX.Element {
     }
   }, [toast])
 
+  // Dans le magasin plutôt qu'ici : les Réglages doivent pouvoir l'ouvrir, et
+  // un raccourci qu'on ne trouve que par hasard n'existe qu'à moitié.
+  const helpOpen = useApp((s) => s.helpOpen)
+  const setHelp = useApp((s) => s.setHelp)
+  useShortcutsKey(useCallback(() => setHelp(true), [setHelp]))
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -147,6 +154,7 @@ export default function App(): React.JSX.Element {
       )}
 
       <CommandPalette />
+      <Shortcuts open={helpOpen} onClose={() => setHelp(false)} />
       <Toasts />
     </div>
   )

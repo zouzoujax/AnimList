@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.13 — 1er septembre 2026
+
+### Ajouts
+
+- Une aide des raccourcis dans l'app, ouverte par `?` ou depuis les Réglages : clavier et souris, y compris les gestes qu'on ne devine pas seul comme le clic droit sur un épisode
+
 ## 0.3.12 — 1er septembre 2026
 
 ### Corrections

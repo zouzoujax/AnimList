@@ -177,6 +177,7 @@ géométrie que le logo affiché dans l'app, à relancer si tu changes la marque
 | `Alt+←` | Retour |
 | `Maj+clic` sur un épisode | Cocher tous les épisodes jusque-là |
 | Clic droit sur un épisode | Éditer ses visionnages : date, durée, ressenti, note |
+| `?` | L'aide des raccourcis, dans l'app |
 
 ## Où sont mes données
 

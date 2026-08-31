@@ -41,12 +41,15 @@ interface AppState {
   lists: CustomList[]
   toasts: Toast[]
   paletteOpen: boolean
+  /** L'aide des raccourcis, ouvrable par `?` comme depuis les Réglages. */
+  helpOpen: boolean
 
   init: () => Promise<void>
   navigate: (route: Route) => void
   back: () => void
   setPrefs: (patch: Partial<Prefs>) => Promise<void>
   setPalette: (open: boolean) => void
+  setHelp: (open: boolean) => void
   toast: (message: string, kind?: Toast['kind']) => void
   dismissToast: (id: number) => void
 
@@ -117,6 +120,7 @@ export const useApp = create<AppState>((set, get) => ({
   lists: [],
   toasts: [],
   paletteOpen: false,
+  helpOpen: false,
 
   init: async () => {
     const [snapshot, prefs] = await Promise.all([window.api.library.snapshot(), window.api.prefs.get()])
@@ -166,6 +170,7 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   setPalette: (paletteOpen) => set({ paletteOpen }),
+  setHelp: (helpOpen) => set({ helpOpen }),
 
   toast: (message, kind = 'ok') => {
     const id = (toastSeq += 1)

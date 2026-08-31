@@ -4,6 +4,7 @@ import {
   FileDown,
   FileUp,
   FolderOpen,
+  Keyboard,
   HardDrive,
   Languages,
   Layers,
@@ -150,6 +151,7 @@ function CacheRow(): React.JSX.Element {
 
 export default function SettingsPage(): React.JSX.Element {
   const prefs = useApp((s) => s.prefs)
+  const setHelp = useApp((s) => s.setHelp)
   const setPrefs = useApp((s) => s.setPrefs)
   const toast = useApp((s) => s.toast)
   const entries = useApp((s) => s.entries)
@@ -506,6 +508,13 @@ export default function SettingsPage(): React.JSX.Element {
         </Row>
 
         <TvTimeImport />
+
+        <Row label="Raccourcis" hint="Clavier et souris, y compris les gestes qu'on ne devine pas seul">
+          <button className="btn" onClick={() => setHelp(true)}>
+            <Keyboard size={14} />
+            Voir
+          </button>
+        </Row>
 
         <Row label="Dossier de données" hint={info?.dbPath ?? '—'}>
           <button className="btn" onClick={() => window.api.data.reveal()}>
