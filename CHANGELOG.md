@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.4 — 31 août 2026
+
+### Corrections
+
+- La fenêtre « Quoi de neuf » affiche enfin son contenu : GitHub livre les notes déjà converties en HTML, et l'app n'y lisait que du Markdown
+
 ## 0.3.3 — 31 août 2026
 
 ### Ajouts

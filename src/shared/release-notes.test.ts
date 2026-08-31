@@ -46,6 +46,28 @@ describe('parseReleaseNote', () => {
   it('returns nothing for an empty body', () => {
     expect(parseReleaseNote('')).toEqual([])
   })
+
+  // Ce que GitHub sert réellement : le flux atom rend le Markdown avant de le
+  // livrer. Sans ce cas, la fenêtre restait vide chez tout le monde.
+  it('reads the HTML the GitHub feed actually delivers', () => {
+    const sections = parseReleaseNote(
+      '<h3>Ajouts</h3>\n<ul>\n<li>Une fenêtre « Quoi de neuf »</li>\n<li>Un filtre</li>\n</ul>\n' +
+        '<h3>Corrections</h3>\n<ul>\n<li>Les épisodes non diffusés</li>\n</ul>'
+    )
+    expect(sections.map((s) => s.kind)).toEqual(['add', 'fix'])
+    expect(sections[0].items).toEqual(['Une fenêtre « Quoi de neuf »', 'Un filtre'])
+    expect(sections[1].items).toEqual(['Les épisodes non diffusés'])
+  })
+
+  it('decodes the entities the renderer escapes', () => {
+    const items = parseReleaseNote('<ul><li>un &amp; deux &#233;t&#xe9; &quot;cité&quot; &#39;x&#39;</li></ul>')[0]
+      .items
+    expect(items).toEqual(['un & deux été "cité" \'x\''])
+  })
+
+  it('drops the paragraphs a release body carries around its lists', () => {
+    expect(parseReleaseNote('<p>Une introduction.</p>')).toEqual([])
+  })
 })
 
 describe('changelogSection', () => {

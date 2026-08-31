@@ -40,6 +40,33 @@ const HEADINGS: { kind: NoteKind; label: string; match: RegExp }[] = [
 
 const ORDER: NoteKind[] = ['add', 'change', 'fix', 'remove', 'other']
 
+/**
+ * Le fournisseur GitHub ne renvoie pas le Markdown qu'on a écrit : il lit le
+ * flux atom, où le corps de la release arrive **déjà converti en HTML**. Les
+ * deux formes doivent donc être comprises — le Markdown parce que c'est ce que
+ * `CHANGELOG.md` contient, le HTML parce que c'est ce que l'app reçoit.
+ */
+function fromHtml(html: string): string {
+  return (
+    html
+      .replace(/<h[1-6][^>]*>/gi, '\n## ')
+      .replace(/<li[^>]*>/gi, '\n- ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(h[1-6]|li|p|div|ul|ol)>/gi, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+      .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(Number(dec)))
+      // En dernier : décoder plus tôt fabriquerait de fausses entités.
+      .replace(/&amp;/g, '&')
+  )
+}
+
+const LOOKS_LIKE_HTML = /<(h[1-6]|li|ul|ol|p|br|div)\b/i
+
 /** Le corps d'une release est du Markdown écrit à la main : il faut le nettoyer. */
 function clean(line: string): string {
   return line
@@ -51,11 +78,12 @@ function clean(line: string): string {
     .trim()
 }
 
-export function parseReleaseNote(markdown: string): NoteSection[] {
+export function parseReleaseNote(body: string): NoteSection[] {
   const found = new Map<NoteKind, NoteSection>()
   let current: NoteKind = 'other'
+  const text = LOOKS_LIKE_HTML.test(body) ? fromHtml(body) : body
 
-  for (const raw of markdown.split(/\r?\n/)) {
+  for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim()
     if (!line) continue
 
