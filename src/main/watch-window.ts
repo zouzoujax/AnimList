@@ -13,7 +13,7 @@
  * rien et la fenêtre ne peut rien demander à l'app.
  */
 
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
 
@@ -62,11 +62,28 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
     win = null
   })
 
-  // Les publicités du site ouvrent des fenêtres : elles partent au navigateur
-  // système, où l'utilisateur a ses défenses habituelles.
-  win.webContents.setWindowOpenHandler(({ url: target }) => {
-    if (/^https?:\/\//i.test(target)) void shell.openExternal(target)
-    return { action: 'deny' }
+  /**
+   * Aucune fenêtre surgissante, et rien renvoyé au navigateur.
+   *
+   * Le premier clic sur le lecteur en déclenche une : c'est le modèle du site.
+   * La faire suivre vers le navigateur — ce que faisait la première version —
+   * revient à ouvrir soi-même la publicité qu'on vient de refuser. Tous les
+   * navigateurs les bloquent par défaut ; celui-ci aussi.
+   *
+   * Conséquence assumée : les liens Discord et X de leur en-tête, qui passent
+   * par le même mécanisme, ne s'ouvrent plus.
+   */
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+
+  /**
+   * La fenêtre reste chez eux.
+   *
+   * Un clic mal placé peut emmener la page entière sur une régie publicitaire.
+   * Seule la navigation de premier niveau est concernée : le lecteur vit dans
+   * une iframe, dont les changements d'adresse ne passent pas par ici.
+   */
+  win.webContents.on('will-navigate', (event, target) => {
+    if (!target.startsWith(`${ORIGIN}/`)) event.preventDefault()
   })
 
   void win.loadURL(url)
