@@ -35,6 +35,8 @@ export interface AnimeSamaTarget {
   url: string
   direct: boolean
   absent?: boolean
+  /** L'adresse porte un menu d'épisodes : seule celle-là peut être positionnée. */
+  episodes?: boolean
 }
 
 export const WATCH_BADGE: Record<WatchKind, { label: string; color: string }> = {
@@ -165,7 +167,7 @@ export function watchLinks(
           ? 'URL vérifiée dans le catalogue du site'
           : 'Titre introuvable dans le catalogue : recherche',
       color: '#8b5cf6',
-      pick: animeSama?.direct ? pick : null
+      pick: animeSama?.episodes ? pick : null
     },
     { id: 'franime', label: 'FrAnime', color: '#34d399', pick: null, ...franime },
     {

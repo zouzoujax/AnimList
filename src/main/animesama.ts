@@ -21,11 +21,25 @@ export interface WatchTarget {
   direct: boolean
   /** Hand-checked as not present on the site — don't offer a pointless search. */
   absent?: boolean
+  /**
+   * L'adresse porte la liste des épisodes, et pas seulement la fiche de la
+   * série. Seules ces pages-là ont un menu à positionner.
+   */
+  episodes?: boolean
 }
 
 interface Row extends WatchTarget {
   at: number
+  /**
+   * Version de la règle qui a produit cette réponse. Jusqu'à la 2, on s'arrêtait
+   * au hub de la série — `/catalogue/<slug>/` — qui répond 200 sans contenir le
+   * moindre épisode. Les réponses d'avant doivent être refaites, pas attendues
+   * trente jours.
+   */
+  v?: number
 }
+
+const RULE_VERSION = 2
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -93,7 +107,9 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
   }
 
   const hit = cache.get(animeId)
-  if (hit && Date.now() - hit.at < TTL) return { url: hit.url, direct: hit.direct }
+  if (hit && hit.v === RULE_VERSION && Date.now() - hit.at < TTL) {
+    return { url: hit.url, direct: hit.direct, episodes: hit.episodes }
+  }
 
   const primary = titles[0] ?? ''
   const { base, season } = baseAndSeason(primary)
@@ -125,24 +141,56 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
     return fallback
   }
 
-  // Prefer the episode list for the right season; fall back to the show page.
-  // Season 0 means the title gave no usable number ("Final Season") — going
-  // straight to the series page beats guessing.
-  const paths = season > 0 ? [`/catalogue/${slug}/saison${season}/`, `/catalogue/${slug}/`] : [`/catalogue/${slug}/`]
+  /**
+   * Les épisodes vivent sous `saison<N>/<langue>/`, jamais au-dessus : le hub
+   * `/catalogue/<slug>/` et la saison nue répondent 200 tous les deux, sans
+   * contenir un seul épisode. Un simple code 200 ne prouvait donc rien — d'où
+   * des liens qui tombaient sur la fiche de la série.
+   *
+   * `episodes.js` tranche : 404 sur le hub, 200 sur une vraie page d'épisodes.
+   *
+   * VOSTFR d'abord, VF ensuite. Saison 0 veut dire que le titre n'a pas donné
+   * de numéro exploitable (« Final Season ») : on tente la première saison,
+   * qui est le cas de très loin le plus courant.
+   */
+  const seasons = season > 0 ? [season, 1] : [1]
+  const paths: string[] = []
+  for (const n of seasons) {
+    for (const lang of ['vostfr', 'vf']) {
+      const path = `/catalogue/${slug}/saison${n}/${lang}/`
+      if (!paths.includes(path)) paths.push(path)
+    }
+  }
+
   for (const path of paths) {
     try {
-      const probe = await text(ORIGIN + path)
+      const probe = await text(`${ORIGIN}${path}episodes.js`)
       if (probe.status !== 200) continue
     } catch {
       break
     }
-    const target: WatchTarget = { url: ORIGIN + path, direct: true }
-    cache.set(animeId, { ...target, at: Date.now() })
+    const target: WatchTarget = { url: ORIGIN + path, direct: true, episodes: true }
+    cache.set(animeId, { ...target, at: Date.now(), v: RULE_VERSION })
     persist()
     return target
   }
 
-  cache.set(animeId, { ...fallback, at: Date.now() })
+  // Aucune page d'épisodes trouvée : la fiche de la série reste utile, mais
+  // elle n'a pas de menu, et il ne faut pas laisser croire le contraire.
+  try {
+    const hub = `/catalogue/${slug}/`
+    const probe = await text(ORIGIN + hub)
+    if (probe.status === 200) {
+      const target: WatchTarget = { url: ORIGIN + hub, direct: true, episodes: false }
+      cache.set(animeId, { ...target, at: Date.now(), v: RULE_VERSION })
+      persist()
+      return target
+    }
+  } catch {
+    // Réseau muet : on retombe sur la recherche, comme partout ailleurs.
+  }
+
+  cache.set(animeId, { ...fallback, at: Date.now(), v: RULE_VERSION })
   persist()
   return fallback
 }
