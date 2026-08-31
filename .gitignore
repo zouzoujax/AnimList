@@ -18,6 +18,8 @@ DATA EXPORT/
 .claude/
 .impeccable/
 
-# Scripts de lancement locaux. « Create Realeses on Github.bat » contient un
-# jeton GitHub en clair : ce fichier ne doit jamais partir dans le dépôt public.
+# Scripts de lancement locaux. Celui qui publie les releases contient un jeton
+# GitHub en clair : renommé .bat → .ps1, il était ressorti de l'oubli. Les deux
+# extensions sont couvertes, le dépôt est public.
 *.bat
+*.ps1
