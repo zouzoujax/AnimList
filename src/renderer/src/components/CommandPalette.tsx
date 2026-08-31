@@ -34,16 +34,35 @@ const NAV_COMMANDS: { label: string; icon: typeof House; route: Route }[] = [
   { label: 'Réglages', icon: Settings, route: { name: 'settings' } }
 ]
 
+/**
+ * L'enveloppe ne porte aucun état.
+ *
+ * `Modal` démonte ses enfants à la fermeture : en logeant la saisie et le
+ * curseur dans le corps plutôt qu'ici, la palette repart vide à chaque
+ * ouverture sans que personne ait eu à la vider. Elle ne lance pas non plus de
+ * recherche tant qu'elle est fermée.
+ */
 export function CommandPalette(): React.JSX.Element {
   const open = useApp((s) => s.paletteOpen)
   const setPalette = useApp((s) => s.setPalette)
+
+  return (
+    <Modal open={open} onClose={() => setPalette(false)} width={640}>
+      <Palette />
+    </Modal>
+  )
+}
+
+function Palette(): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
   const mediaMap = useApp((s) => s.media)
   const entries = useApp((s) => s.entries)
 
   const [query, setQuery] = useState('')
-  const [cursor, setCursor] = useState(0)
+  // Le curseur appartient à une longueur de liste : dès qu'elle change, il
+  // repart de zéro de lui-même, sans effet de remise à zéro.
+  const [held, setHeld] = useState({ len: 0, index: 0 })
   const debounced = useDebounced(query.trim(), 350)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -51,12 +70,9 @@ export function CommandPalette(): React.JSX.Element {
   const remote = useBrowse(debounced.length >= 2 ? { kind: 'search', search: debounced, perPage: 12 } : null)
 
   useEffect(() => {
-    if (!open) return
-    setQuery('')
-    setCursor(0)
     const t = setTimeout(() => inputRef.current?.focus(), 40)
     return () => clearTimeout(t)
-  }, [open])
+  }, [])
 
   const local = useMemo(() => {
     const needle = query.trim()
@@ -96,7 +112,8 @@ export function CommandPalette(): React.JSX.Element {
     ]
   }, [local, remote.items, query, lang, navigate])
 
-  useEffect(() => setCursor(0), [items.length])
+  const cursor = held.len === items.length ? held.index : 0
+  const move = (index: number): void => setHeld({ len: items.length, index })
 
   useEffect(() => {
     listRef.current?.querySelector<HTMLElement>(`[data-idx="${cursor}"]`)?.scrollIntoView({ block: 'nearest' })
@@ -105,10 +122,10 @@ export function CommandPalette(): React.JSX.Element {
   const onKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setCursor((c) => (c + 1) % Math.max(items.length, 1))
+      move((cursor + 1) % Math.max(items.length, 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
-      setCursor((c) => (c - 1 + items.length) % Math.max(items.length, 1))
+      move((cursor - 1 + items.length) % Math.max(items.length, 1))
     } else if (e.key === 'Enter') {
       e.preventDefault()
       items[cursor]?.run()
@@ -116,7 +133,7 @@ export function CommandPalette(): React.JSX.Element {
   }
 
   return (
-    <Modal open={open} onClose={() => setPalette(false)} width={640}>
+    <>
       <div className="flex items-center gap-3 border-b px-4" style={{ borderColor: 'var(--line)' }}>
         <Search size={17} className="text-faint" />
         <input
@@ -140,7 +157,7 @@ export function CommandPalette(): React.JSX.Element {
             <button
               key={item.key}
               data-idx={i}
-              onMouseEnter={() => setCursor(i)}
+              onMouseEnter={() => move(i)}
               onClick={() => item.run()}
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition"
               style={{
@@ -172,6 +189,6 @@ export function CommandPalette(): React.JSX.Element {
         <span>⏎ ouvrir</span>
         <span>Échap fermer</span>
       </div>
-    </Modal>
+    </>
   )
 }

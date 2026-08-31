@@ -3,28 +3,50 @@ import type { BrowseQuery, FillerInfo, Media, MediaDetail, SeasonEntry } from '@
 import { searchTitles, type AnimeSamaTarget } from '@/lib/watch'
 
 /**
- * Anime-Sama slugs are unguessable, so the main process reads them from the
- * site's own catalogue. Until it answers, callers fall back to a search link.
+ * Une réponse qui appartient à une clé.
+ *
+ * Le réflexe est de vider l'état au début de l'effet puis de le remplir à
+ * l'arrivée. Ça coûte un rendu de plus, et surtout ça laisse les données de la
+ * fiche précédente à l'écran pendant l'image qui sépare le rendu de l'effet.
+ *
+ * Garder la clé **avec** la valeur permet de déduire le vide pendant le rendu :
+ * dès que la clé change, la valeur d'avant n'est plus la bonne réponse, sans
+ * que personne ait eu à l'effacer. Une clé vide veut dire « rien à demander ».
  */
-export function useAnimeSama(media: Media | null): AnimeSamaTarget | null {
-  const [target, setTarget] = useState<AnimeSamaTarget | null>(null)
-  const id = media?.id ?? null
-  const titles = media ? searchTitles(media).join('|') : ''
+function useKeyed<T>(key: string, empty: T, run: () => Promise<T>): T {
+  const [held, setHeld] = useState<{ key: string; value: T }>({ key: '', value: empty })
+  // Le lanceur est recréé à chaque rendu ; le mettre en dépendance relancerait
+  // la requête sans fin. Seule la clé décide qu'il faut repartir.
+  const latest = useRef(run)
+  useEffect(() => {
+    latest.current = run
+  })
 
   useEffect(() => {
-    setTarget(null)
-    if (id === null || !titles) return
+    if (!key) return
     let alive = true
-    window.api.watch
-      .animeSama(id, titles.split('|'))
-      .then((res) => alive && setTarget(res))
+    latest
+      .current()
+      .then((res) => alive && setHeld({ key, value: res }))
       .catch(() => {})
     return () => {
       alive = false
     }
-  }, [id, titles])
+  }, [key])
 
-  return target
+  return held.key === key ? held.value : empty
+}
+
+/**
+ * Anime-Sama slugs are unguessable, so the main process reads them from the
+ * site's own catalogue. Until it answers, callers fall back to a search link.
+ */
+export function useAnimeSama(media: Media | null): AnimeSamaTarget | null {
+  const id = media?.id ?? null
+  const titles = media ? searchTitles(media).join('|') : ''
+  return useKeyed<AnimeSamaTarget | null>(id === null || !titles ? '' : `${id}|${titles}`, null, () =>
+    window.api.watch.animeSama(id as number, titles.split('|'))
+  )
 }
 
 export function useDebounced<T>(value: T, delay = 320): T {
@@ -49,48 +71,56 @@ interface BrowseResult {
 
 /** Paginated AniList browse with cancellation on query change. */
 export function useBrowse(query: BrowseQuery | null): BrowseResult {
-  const [items, setItems] = useState<Media[]>([])
-  const [loading, setLoading] = useState(!!query)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [stale, setStale] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
   const [nonce, setNonce] = useState(0)
   const pageRef = useRef(1)
-  const keyRef = useRef('')
-  const key = query ? JSON.stringify(query) : ''
+  const key = query ? `${JSON.stringify(query)}:${nonce}` : ''
+
+  // Une seule poche d'état, estampillée par la requête à laquelle elle répond.
+  // Tant que l'estampille ne correspond pas, on sait qu'on est en train de
+  // charger — sans avoir eu à l'écrire nulle part.
+  const [held, setHeld] = useState<{
+    key: string
+    items: Media[]
+    stale: boolean
+    hasMore: boolean
+    error: string | null
+  }>({ key: '', items: [], stale: false, hasMore: false, error: null })
+
+  // L'objet requête est recréé à chaque rendu : en dépendance, il relancerait
+  // la recherche sans fin. Sa forme est déjà dans la clé, seule la clé décide.
+  const latestQuery = useRef(query)
+  useEffect(() => {
+    latestQuery.current = query
+  })
 
   useEffect(() => {
-    if (!query) {
-      setItems([])
-      setLoading(false)
-      return
-    }
+    const current = latestQuery.current
+    if (!current || !key) return
     let alive = true
-    keyRef.current = key
     pageRef.current = 1
-    setLoading(true)
-    setError(null)
 
     window.api.anime
-      .browse({ ...query, page: 1 })
+      .browse({ ...current, page: 1 })
       .then((res) => {
-        if (!alive || keyRef.current !== key) return
-        setItems(res.items)
-        setStale(res.stale)
-        setHasMore(res.pageInfo.hasNextPage)
+        if (!alive) return
+        setHeld({ key, items: res.items, stale: res.stale, hasMore: res.pageInfo.hasNextPage, error: null })
       })
       .catch((err: Error) => {
-        if (alive) setError(err.message)
-      })
-      .finally(() => {
-        if (alive) setLoading(false)
+        if (alive) setHeld({ key, items: [], stale: false, hasMore: false, error: err.message })
       })
 
     return () => {
       alive = false
     }
-  }, [key, nonce])
+  }, [key])
+
+  const fresh = held.key === key
+  const items = fresh ? held.items : []
+  const loading = key !== '' && !fresh
+  const error = fresh ? held.error : null
+  const stale = fresh && held.stale
+  const hasMore = fresh && held.hasMore
 
   const loadMore = useCallback(() => {
     if (!query || loadingMore || loading || !hasMore) return
@@ -99,15 +129,20 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
     window.api.anime
       .browse({ ...query, page })
       .then((res) => {
-        if (keyRef.current !== key) return
         pageRef.current = page
-        setItems((prev) => {
-          const seen = new Set(prev.map((m) => m.id))
-          return [...prev, ...res.items.filter((m) => !seen.has(m.id))]
+        // La page suivante s'ajoute à celle qui est là, et seulement si c'est
+        // toujours la même requête : sinon elle appartient à un écran quitté.
+        setHeld((prev) => {
+          if (prev.key !== key) return prev
+          const seen = new Set(prev.items.map((m) => m.id))
+          return {
+            ...prev,
+            items: [...prev.items, ...res.items.filter((m) => !seen.has(m.id))],
+            hasMore: res.pageInfo.hasNextPage
+          }
         })
-        setHasMore(res.pageInfo.hasNextPage)
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setHeld((prev) => (prev.key === key ? { ...prev, error: err.message } : prev)))
       .finally(() => setLoadingMore(false))
   }, [key, query, loading, loadingMore, hasMore])
 
@@ -129,28 +164,34 @@ export function useDetail(id: number | null): {
   error: string | null
   retry: () => void
 } {
-  const [data, setData] = useState<MediaDetail | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [nonce, setNonce] = useState(0)
+  // Le nonce entre dans la clé : réessayer, c'est repartir sur une autre clé.
+  const key = id === null ? '' : `${id}:${nonce}`
+  const [held, setHeld] = useState<{ key: string; data: MediaDetail | null; error: string | null }>({
+    key: '',
+    data: null,
+    error: null
+  })
 
   useEffect(() => {
-    if (id === null) return
+    if (!key) return
     let alive = true
-    setLoading(true)
-    setError(null)
-    setData(null)
     window.api.anime
-      .detail(id)
-      .then((res) => alive && setData(res))
-      .catch((err: Error) => alive && setError(err.message))
-      .finally(() => alive && setLoading(false))
+      .detail(id as number)
+      .then((res) => alive && setHeld({ key, data: res, error: null }))
+      .catch((err: Error) => alive && setHeld({ key, data: null, error: err.message }))
     return () => {
       alive = false
     }
-  }, [id, nonce])
+  }, [key, id])
 
-  return { data, loading, error, retry: () => setNonce((n) => n + 1) }
+  const fresh = held.key === key
+  return {
+    data: fresh ? held.data : null,
+    loading: key !== '' && !fresh,
+    error: fresh ? held.error : null,
+    retry: () => setNonce((n) => n + 1)
+  }
 }
 
 /** Fires when the sentinel scrolls into view — used for infinite grids. */
@@ -171,25 +212,13 @@ export function useInView(onEnter: () => void): (node: HTMLElement | null) => vo
   }, [])
 }
 
+const NO_FILMS: Media[] = []
+const NO_SEASONS: SeasonEntry[] = []
+
 /** Films of the whole franchise, not just the ones linked to this entry. */
 export function useFranchiseFilms(media: Media | null): Media[] {
-  const [films, setFilms] = useState<Media[]>([])
   const title = media ? (media.title.english ?? media.title.romaji) : ''
-
-  useEffect(() => {
-    setFilms([])
-    if (!title) return
-    let alive = true
-    window.api.anime
-      .films(title)
-      .then((res) => alive && setFilms(res))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [title])
-
-  return films
+  return useKeyed(title, NO_FILMS, () => window.api.anime.films(title))
 }
 
 /**
@@ -199,23 +228,8 @@ export function useFranchiseFilms(media: Media | null): Media[] {
  * episode list for — the caller must render the grid regardless.
  */
 export function useFiller(malId: number | null | undefined): FillerInfo | null {
-  const [info, setInfo] = useState<FillerInfo | null>(null)
   const id = malId ?? null
-
-  useEffect(() => {
-    setInfo(null)
-    if (!id) return
-    let alive = true
-    window.api.anime
-      .filler(id)
-      .then((res) => alive && setInfo(res))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [id])
-
-  return info
+  return useKeyed<FillerInfo | null>(id ? String(id) : '', null, () => window.api.anime.filler(id))
 }
 
 /**
@@ -225,22 +239,7 @@ export function useFiller(malId: number | null | undefined): FillerInfo | null {
  * nothing rather than a strip of one.
  */
 export function useSeasons(animeId: number | null): SeasonEntry[] {
-  const [seasons, setSeasons] = useState<SeasonEntry[]>([])
-
-  useEffect(() => {
-    setSeasons([])
-    if (!animeId) return
-    let alive = true
-    window.api.anime
-      .seasons(animeId)
-      .then((res) => alive && setSeasons(res))
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [animeId])
-
-  return seasons
+  return useKeyed(animeId ? String(animeId) : '', NO_SEASONS, () => window.api.anime.seasons(animeId as number))
 }
 
 export function useNow(intervalMs = 60_000): number {

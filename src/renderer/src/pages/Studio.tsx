@@ -7,55 +7,77 @@ import { num } from '@/lib/format'
 import { useInView } from '@/lib/hooks'
 import { useApp } from '@/store/app'
 
+const EMPTY_ITEMS: Media[] = []
+
 export default function StudioPage({ studio }: { studio: string }): React.JSX.Element {
   const entries = useApp((s) => s.entries)
   const watched = useApp((s) => s.watched)
   const back = useApp((s) => s.back)
 
-  const [items, setItems] = useState<Media[]>([])
-  const [name, setName] = useState(studio)
-  const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
-  const [hasMore, setHasMore] = useState(false)
-  const [page, setPage] = useState(1)
-  const [error, setError] = useState<string | null>(null)
+  // Tout ce qui vient du réseau tient dans une seule poche, estampillée du
+  // studio auquel elle répond. Changer de studio la périme d'elle-même : plus
+  // besoin de la vider avant de repartir, ni d'un drapeau de chargement.
+  const [held, setHeld] = useState<{
+    studio: string
+    name: string
+    items: Media[]
+    hasMore: boolean
+    page: number
+    error: string | null
+  }>({ studio: '', name: studio, items: [], hasMore: false, page: 1, error: null })
 
   useEffect(() => {
     let alive = true
-    setLoading(true)
-    setError(null)
-    setItems([])
-    setPage(1)
     window.api.anime
       .studio(studio, 1)
       .then((res: StudioWorks) => {
         if (!alive) return
-        setName(res.studio)
-        setItems(res.items)
-        setHasMore(res.pageInfo.hasNextPage)
+        setHeld({
+          studio,
+          name: res.studio,
+          items: res.items,
+          hasMore: res.pageInfo.hasNextPage,
+          page: 1,
+          error: null
+        })
       })
-      .catch((err: Error) => alive && setError(err.message))
-      .finally(() => alive && setLoading(false))
+      .catch(
+        (err: Error) =>
+          alive && setHeld({ studio, name: studio, items: [], hasMore: false, page: 1, error: err.message })
+      )
     return () => {
       alive = false
     }
   }, [studio])
 
+  const fresh = held.studio === studio
+  const items = useMemo(() => (fresh ? held.items : EMPTY_ITEMS), [fresh, held.items])
+  const name = fresh ? held.name : studio
+  const loading = !fresh
+  const hasMore = fresh && held.hasMore
+  const error = fresh ? held.error : null
+
   const loadMore = (): void => {
     if (loading || loadingMore || !hasMore) return
-    const next = page + 1
+    const next = held.page + 1
     setLoadingMore(true)
     window.api.anime
       .studio(studio, next)
       .then((res) => {
-        setPage(next)
-        setItems((prev) => {
-          const seen = new Set(prev.map((m) => m.id))
-          return [...prev, ...res.items.filter((m) => !seen.has(m.id))]
+        // La page suivante n'a de sens que si on est resté sur le même studio.
+        setHeld((prev) => {
+          if (prev.studio !== studio) return prev
+          const seen = new Set(prev.items.map((m) => m.id))
+          return {
+            ...prev,
+            page: next,
+            items: [...prev.items, ...res.items.filter((m) => !seen.has(m.id))],
+            hasMore: res.pageInfo.hasNextPage
+          }
         })
-        setHasMore(res.pageInfo.hasNextPage)
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((err: Error) => setHeld((prev) => (prev.studio === studio ? { ...prev, error: err.message } : prev)))
       .finally(() => setLoadingMore(false))
   }
   const sentinel = useInView(loadMore)

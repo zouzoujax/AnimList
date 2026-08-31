@@ -76,14 +76,16 @@ function UpcomingSchedule({ items }: { items: Media[] }): React.JSX.Element {
 
 export default function DiscoverPage({ initialSearch }: { initialSearch?: string }): React.JSX.Element {
   const [tab, setTab] = useState<BrowseKind>('trending')
-  const [search, setSearch] = useState(initialSearch ?? '')
+  // La saisie appartient à la recherche qui a ouvert la page. Arriver avec une
+  // autre — depuis la palette, par exemple — rend la précédente caduque sans
+  // qu'on ait à l'écraser dans un effet.
+  const [typed, setTyped] = useState({ from: initialSearch ?? '', text: initialSearch ?? '' })
   const [genre, setGenre] = useState<string | null>(null)
   const [format, setFormat] = useState<MediaFormat | null>(null)
+  const opened = initialSearch ?? ''
+  const search = typed.from === opened ? typed.text : opened
+  const setSearch = (text: string): void => setTyped({ from: opened, text })
   const debounced = useDebounced(search.trim(), 380)
-
-  useEffect(() => {
-    if (initialSearch) setSearch(initialSearch)
-  }, [initialSearch])
 
   const searching = debounced.length >= 2
   const showSchedule = !searching && tab === 'upcoming'

@@ -50,13 +50,28 @@ function WeekPicker({
   weekStart: 0 | 1
   onPick: (weekStartTs: number) => void
 }): React.JSX.Element {
+  // `Modal` démonte ses enfants à la fermeture : le mois parcouru vit dans le
+  // corps, donc rouvrir retombe sur le mois affiché sans remise à zéro.
+  return (
+    <Modal open={open} onClose={onClose} width={420}>
+      <PickerBody current={current} weekStart={weekStart} onPick={onPick} onClose={onClose} />
+    </Modal>
+  )
+}
+
+function PickerBody({
+  current,
+  weekStart,
+  onPick,
+  onClose
+}: {
+  current: number
+  weekStart: 0 | 1
+  onPick: (weekStartTs: number) => void
+  onClose: () => void
+}): React.JSX.Element {
   const [month, setMonth] = useState(() => new Date(current).setDate(1))
   const now = useNow()
-
-  // Reopening should always land on the month you're looking at.
-  useEffect(() => {
-    if (open) setMonth(new Date(current).setDate(1))
-  }, [open, current])
 
   const shiftMonth = (delta: number): void => {
     const d = new Date(month)
@@ -67,7 +82,7 @@ function WeekPicker({
   const weeks = weeksOfMonth(month, weekStart)
 
   return (
-    <Modal open={open} onClose={onClose} width={420}>
+    <>
       <div
         className="flex items-center justify-between gap-2 border-b px-3 py-2.5"
         style={{ borderColor: 'var(--line)' }}
@@ -135,9 +150,11 @@ function WeekPicker({
           Fermer
         </button>
       </div>
-    </Modal>
+    </>
   )
 }
+
+const EMPTY_SLOTS: AiringEntry[] = []
 
 export default function CalendarPage(): React.JSX.Element {
   const entries = useApp((s) => s.entries)
@@ -150,9 +167,6 @@ export default function CalendarPage(): React.JSX.Element {
   const [offset, setOffset] = useState(0)
   const [pickerOpen, setPickerOpen] = useState(false)
   const now = useNow()
-  const [slots, setSlots] = useState<AiringEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [nonce, setNonce] = useState(0)
 
   const ids = useMemo(
@@ -164,15 +178,19 @@ export default function CalendarPage(): React.JSX.Element {
   const from = useMemo(() => startOfWeek(now, weekStart) + offset * 7 * DAY_MS, [now, offset, weekStart])
   const to = from + 7 * DAY_MS
 
+  // Une semaine vide de bibliothèque n'a rien à demander : la clé est vide, et
+  // l'absence de requête se lit dans le rendu au lieu de s'écrire dans l'effet.
+  const key =
+    scope === 'library' && !ids.length ? '' : `${scope}|${from}|${to}|${nonce}|${scope === 'all' ? '' : ids.join()}`
+  const [held, setHeld] = useState<{ key: string; slots: AiringEntry[]; error: string | null }>({
+    key: '',
+    slots: [],
+    error: null
+  })
+
   useEffect(() => {
-    if (scope === 'library' && !ids.length) {
-      setSlots([])
-      setLoading(false)
-      return
-    }
+    if (!key) return
     let alive = true
-    setLoading(true)
-    setError(null)
     const seconds = { from: Math.floor(from / 1000), to: Math.floor(to / 1000) }
 
     const request =
@@ -187,14 +205,20 @@ export default function CalendarPage(): React.JSX.Element {
             )
 
     request
-      .then((res) => alive && setSlots(res))
-      .catch((err: Error) => alive && setError(err.message))
-      .finally(() => alive && setLoading(false))
+      .then((res) => alive && setHeld({ key, slots: res, error: null }))
+      .catch((err: Error) => alive && setHeld({ key, slots: [], error: err.message }))
 
     return () => {
       alive = false
     }
-  }, [scope, ids, from, to, mediaMap, nonce])
+  }, [key, scope, ids, from, to, mediaMap])
+
+  const fresh = held.key === key
+  // Mémoïsé : sans ça le tableau vide est recréé à chaque rendu et les calculs
+  // qui en dépendent repartent pour rien.
+  const slots = useMemo(() => (fresh ? held.slots : EMPTY_SLOTS), [fresh, held.slots])
+  const loading = key !== '' && !fresh
+  const error = fresh ? held.error : null
 
   const days = useMemo(() => {
     const buckets: { date: number; items: AiringEntry[] }[] = Array.from({ length: 7 }, (_, i) => ({

@@ -18,7 +18,7 @@ import {
   Users
 } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   EMOTIONS,
   GENRE_LABELS,
@@ -491,7 +491,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
 
   const media: Media | MediaDetail | undefined = data ?? cached
-  const [notes, setNotes] = useState(entry?.notes ?? '')
+  const [draft, setDraft] = useState<{ animeId: number; text: string }>({ animeId: id, text: entry?.notes ?? '' })
   const [expanded, setExpanded] = useState(false)
   const [picking, setPicking] = useState(false)
   const lists = useApp((s) => s.lists)
@@ -501,10 +501,12 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const inLists = lists.filter((l) => l.animeIds.includes(id))
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Reset the textarea only when the anime changes. Depending on `entry` would
-  // overwrite what you are typing every time the debounced save echoes back.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => setNotes(entry?.notes ?? ''), [entry?.animeId])
+  // La saisie appartient à une fiche. Tant que c'est la même, c'est elle qui
+  // fait foi — sinon l'enregistrement différé, en revenant par `entry`,
+  // écraserait ce qu'on est en train de taper. Changer de fiche suffit à la
+  // rendre caduque, sans remise à zéro.
+  const notes = draft.animeId === id ? draft.text : (entry?.notes ?? '')
+  const setNotes = (text: string): void => setDraft({ animeId: id, text })
 
   const glow = useMemo(() => toneAccent(media?.cover.color), [media?.cover.color])
   const animeSama = useAnimeSama(media ?? null)
