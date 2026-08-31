@@ -9,6 +9,17 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.6 — 31 août 2026
+
+### Modifications
+
+- Le cache des données AniList se borne enfin : il pesait 7,4 Mo et ne diminuait jamais
+- Les Réglages affichent son poids et permettent de le vider
+
+### Corrections
+
+- Les écrans ne gardent plus les données de la page précédente le temps d'une image en changeant de fiche
+
 ## 0.3.5 — 31 août 2026
 
 ### Ajouts

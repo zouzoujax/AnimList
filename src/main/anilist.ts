@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
+import { applyBudget } from '@shared/cache-budget'
 import { createQueue, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -28,7 +29,16 @@ const TTL = {
   /** Une franchise ne gagne pas une saison dans la journée. */
   chain: 12 * 3600_000
 }
-const MAX_CACHE_ENTRIES = 600
+/**
+ * Un budget en octets, pas en entrées : une réponse « airing-all » pèse 131 Ko
+ * quand un « airing » en pèse 200. Le plafond de six cents entrées n'avait
+ * jamais mordu, et le fichier était monté à 7,4 Mo.
+ */
+const MAX_CACHE_BYTES = 3 * 1024 * 1024
+/** Au-delà de trente fois sa fraîcheur, une réponse n'est plus un secours. */
+const STALE_FACTOR = 30
+/** Mais on ne jette jamais moins de trois jours : hors ligne, tout compte. */
+const MIN_KEEP_MS = 3 * 24 * 3600_000
 
 const MEDIA_FIELDS = `
   id
@@ -141,6 +151,8 @@ query ByMal($ids: [Int], $page: Int) {
 
 interface CacheRow {
   at: number
+  /** Sa propre fraîcheur : chaque entrée vieillit à son rythme. */
+  ttl?: number
   data: unknown
 }
 
@@ -154,21 +166,47 @@ export function initAniList(): void {
   try {
     const rows = JSON.parse(readFileSync(cacheFile, 'utf8')) as [string, CacheRow][]
     cache = new Map(rows)
+    // Au démarrage aussi : une app qui ne fait aucune requête doit quand même
+    // voir son cache maigrir. Compacter en mémoire ne suffit pas — sans cette
+    // écriture, le fichier gardait son poids jusqu'à la première requête.
+    if (compactCache() > 0) persistCache()
   } catch {
     cache = new Map()
   }
+}
+
+/** Renvoie le nombre d'entrées retirées, pour savoir s'il faut réécrire. */
+function compactCache(): number {
+  const before = cache.size
+  const { kept } = applyBudget([...cache.entries()], {
+    now: Date.now(),
+    maxBytes: MAX_CACHE_BYTES,
+    staleFactor: STALE_FACTOR,
+    defaultTtl: TTL.list,
+    minKeepMs: MIN_KEEP_MS
+  })
+  cache = new Map(kept)
+  return before - kept.length
 }
 
 function persistCache(): void {
   if (cacheTimer) return
   cacheTimer = setTimeout(() => {
     cacheTimer = null
-    if (cache.size > MAX_CACHE_ENTRIES) {
-      const rows = [...cache.entries()].sort((a, b) => b[1].at - a[1].at).slice(0, MAX_CACHE_ENTRIES)
-      cache = new Map(rows)
-    }
+    compactCache()
     fs.writeFile(cacheFile, JSON.stringify([...cache.entries()]), 'utf8').catch(() => {})
   }, 3000)
+}
+
+/** Ce que le cache pèse, pour que les Réglages puissent le dire. */
+export function cacheStats(): { entries: number; bytes: number } {
+  return { entries: cache.size, bytes: JSON.stringify([...cache.entries()]).length }
+}
+
+/** Vide le cache AniList. Rien n'est perdu : tout se retélécharge. */
+export function purgeCache(): void {
+  cache = new Map()
+  fs.writeFile(cacheFile, '[]', 'utf8').catch(() => {})
 }
 
 // ---------------------------------------------------------------- transport
@@ -222,7 +260,7 @@ async function cached<T>(k: string, ttl: number, run: () => Promise<T>): Promise
   if (hit && Date.now() - hit.at < ttl) return { data: hit.data as T, stale: false }
   try {
     const data = await run()
-    cache.set(k, { at: Date.now(), data })
+    cache.set(k, { at: Date.now(), ttl, data })
     persistCache()
     return { data, stale: false }
   } catch (err) {
@@ -827,9 +865,9 @@ export async function seasonChain(id: number): Promise<SeasonEntry[]> {
   if (!chain) return []
 
   const at = Date.now()
-  for (const season of chain) cache.set(`chain:${season.id}`, { at, data: chain })
+  for (const season of chain) cache.set(`chain:${season.id}`, { at, ttl: TTL.chain, data: chain })
   // Une chaîne vide n'a qu'une clé à retenir, sinon on remarcherait pour rien.
-  if (!chain.length) cache.set(`chain:${id}`, { at, data: chain })
+  if (!chain.length) cache.set(`chain:${id}`, { at, ttl: TTL.chain, data: chain })
   persistCache()
 
   return chain

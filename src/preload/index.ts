@@ -115,6 +115,13 @@ const api = {
     reset: (): Promise<void> => ipcRenderer.invoke('data:reset'),
     reveal: (): Promise<void> => ipcRenderer.invoke('data:reveal')
   },
+  cache: {
+    /** Poids du cache AniList sur le disque, tel qu'il serait écrit. */
+    stats: (): Promise<{ entries: number; bytes: number }> => ipcRenderer.invoke('cache:stats'),
+    /** Rien n'est perdu : tout se retélécharge à la demande. */
+    purge: (): Promise<void> => ipcRenderer.invoke('cache:purge')
+  },
+
   videos: {
     /** Fichiers du dossier associé, ou null si aucun dossier n'a été choisi. */
     scan: (animeId: number): Promise<LocalFolder | null> => ipcRenderer.invoke('videos:scan', animeId),

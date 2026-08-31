@@ -135,6 +135,10 @@ export function registerIpc(): void {
   ipcMain.handle('data:reset', () => resetAll())
   ipcMain.handle('data:reveal', () => revealDataFolder())
 
+  // ---- caches disque ---------------------------------------------------
+  ipcMain.handle('cache:stats', () => anilist.cacheStats())
+  ipcMain.handle('cache:purge', () => anilist.purgeCache())
+
   // ---- fichiers locaux ------------------------------------------------
   ipcMain.handle('videos:scan', (_e, animeId: number) => scanFolder(animeId))
   ipcMain.handle('videos:choose', (_e, animeId: number) => chooseFolder(animeId))

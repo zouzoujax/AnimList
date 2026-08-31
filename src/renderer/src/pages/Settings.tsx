@@ -105,6 +105,49 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
   )
 }
 
+/**
+ * Le cache AniList, dit et purgeable.
+ *
+ * Il s'auto-limite désormais, mais le voir grossir sans jamais pouvoir le
+ * regarder était une boîte noire de plus. Le vider ne perd rien : tout se
+ * retélécharge à la demande.
+ */
+function CacheRow(): React.JSX.Element {
+  const [stats, setStats] = useState<{ entries: number; bytes: number } | null>(null)
+  const toast = useApp((s) => s.toast)
+
+  useEffect(() => {
+    let alive = true
+    void window.api.cache.stats().then((next) => alive && setStats(next))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const weight = stats ? `${(stats.bytes / 1048576).toFixed(1).replace('.', ',')} Mo` : '—'
+  const hint = stats
+    ? `${stats.entries} réponses d'AniList gardées hors ligne, ${weight}. Les plus vieilles partent d'elles-mêmes.`
+    : 'Lecture…'
+
+  return (
+    <Row label="Cache des données" hint={hint}>
+      <button
+        className="btn"
+        disabled={!stats || stats.entries === 0}
+        onClick={() => {
+          void window.api.cache.purge().then(async () => {
+            setStats(await window.api.cache.stats())
+            toast('Cache vidé. Tout se retéléchargera à la demande.', 'ok')
+          })
+        }}
+      >
+        <Trash2 size={14} />
+        Vider
+      </button>
+    </Row>
+  )
+}
+
 export default function SettingsPage(): React.JSX.Element {
   const prefs = useApp((s) => s.prefs)
   const setPrefs = useApp((s) => s.setPrefs)
@@ -470,6 +513,8 @@ export default function SettingsPage(): React.JSX.Element {
             Ouvrir
           </button>
         </Row>
+
+        <CacheRow />
 
         <Row label="Tout effacer" hint="Supprime la bibliothèque et l'historique. Irréversible.">
           <button
