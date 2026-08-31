@@ -17,10 +17,11 @@
  */
 
 import { BrowserWindow, Notification, app } from 'electron'
-import type { UpdateStatus } from '@shared/types'
+import type { ReleaseNote, UpdateStatus } from '@shared/types'
+import { parseReleaseNote } from '@shared/release-notes'
 import { getPrefs } from './store'
 
-let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null }
+let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null, notes: [] }
 let started = false
 
 /** Chargé à la demande : un mégaoctet de code inutile à une session de dev. */
@@ -60,6 +61,25 @@ export function updateStatus(): UpdateStatus {
   return state
 }
 
+/**
+ * `releaseNotes` arrive sous trois formes selon la version et le fournisseur :
+ * une chaîne, une liste `{version, note}`, ou rien. Le reste de l'app n'a pas à
+ * connaître ces trois cas.
+ */
+function notesOf(info: {
+  version: string
+  releaseNotes?: string | { version: string; note: string | null }[] | null
+}): ReleaseNote[] {
+  const raw = info.releaseNotes
+  if (!raw) return []
+
+  const entries = typeof raw === 'string' ? [{ version: info.version, note: raw }] : raw
+  return entries
+    .map((e) => ({ version: e.version, sections: parseReleaseNote(e.note ?? '') }))
+    .filter((n) => n.sections.length > 0)
+    .sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }))
+}
+
 /** Wires the events once, on the first check. */
 async function attach(): Promise<Updater | null> {
   // A dev run is not a packaged app; there is nothing to replace.
@@ -72,11 +92,17 @@ async function attach(): Promise<Updater | null> {
   // NSIS installer itself, so no wizard appears behind the user's back.
   auto.autoInstallOnAppQuit = true
 
-  auto.on('update-available', (info) => set({ phase: 'available', version: info.version, message: null }))
-  auto.on('update-not-available', () => set({ phase: 'current', version: null, message: null }))
+  // Sans ça `releaseNotes` ne porte que la dernière release : quelqu'un qui a
+  // sauté trois versions ne verrait qu'un tiers de ce qui va changer chez lui.
+  auto.fullChangelog = true
+
+  auto.on('update-available', (info) =>
+    set({ phase: 'available', version: info.version, message: null, notes: notesOf(info) })
+  )
+  auto.on('update-not-available', () => set({ phase: 'current', version: null, message: null, notes: [] }))
   auto.on('download-progress', (progress) => set({ phase: 'downloading', percent: Math.round(progress.percent) }))
   auto.on('update-downloaded', (info) => {
-    set({ phase: 'ready', version: info.version, percent: 100 })
+    set({ phase: 'ready', version: info.version, percent: 100, notes: notesOf(info) })
     announceReady(info.version)
   })
   auto.on('error', (err) => set({ phase: 'error', message: err.message }))
@@ -107,11 +133,11 @@ function announceReady(version: string): void {
 
 export async function checkForUpdates(): Promise<UpdateStatus> {
   if (!app.isPackaged) {
-    set({ phase: 'unsupported', message: 'Les mises à jour ne concernent que la version installée.' })
+    set({ phase: 'unsupported', message: 'Les mises à jour ne concernent que la version installée.', notes: [] })
     return state
   }
 
-  set({ phase: 'checking', message: null, percent: 0 })
+  set({ phase: 'checking', message: null, percent: 0, notes: [] })
   try {
     // Dans le try : une panne de chargement de la bibliothèque doit se voir
     // comme une panne, pas se déguiser en configuration non prise en charge.

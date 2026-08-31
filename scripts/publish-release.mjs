@@ -16,6 +16,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createRequire } from 'node:module'
+import { changelogSection, parseReleaseNote } from '../src/shared/release-notes.ts'
 
 const require = createRequire(import.meta.url)
 const { version } = require('../package.json')
@@ -61,6 +62,22 @@ function checkArtifacts() {
   console.log(`Trois fichiers cohérents, installeur de ${actual.toLocaleString('fr-FR')} octets.`)
 }
 
+/**
+ * Le corps de la release est ce que l'app installée affichera : sans lui, la
+ * fenêtre « Quoi de neuf » reste vide chez tout le monde, et personne ne le
+ * verra avant la version suivante.
+ */
+function notes() {
+  const file = path.join(process.cwd(), 'CHANGELOG.md')
+  const body = changelogSection(fs.readFileSync(file, 'utf8'), version)
+  if (!body) throw new Error(`CHANGELOG.md n'a pas de section « ## ${version} » — l'app n'aurait rien à afficher.`)
+
+  const sections = parseReleaseNote(body)
+  if (!sections.length) throw new Error(`La section ${version} du CHANGELOG ne contient aucune puce lisible.`)
+  console.log(`Notes : ${sections.map((s) => `${s.items.length} ${s.label.toLowerCase()}`).join(', ')}.`)
+  return body
+}
+
 /** Reuses the release when the tag already has one, so a retry is harmless. */
 async function release() {
   const sharing = await json(`${api}/releases`).then((all) => all.filter((r) => r.tag_name === TAG))
@@ -77,12 +94,20 @@ async function release() {
   const [existing] = sharing
   if (existing) {
     console.log(`Release ${TAG} déjà là (id ${existing.id}).`)
+    if (existing.body !== RELEASE_BODY) {
+      await json(`${api}/releases/${existing.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: RELEASE_BODY })
+      })
+      console.log('  notes de version mises à jour')
+    }
     return existing
   }
   const created = await json(`${api}/releases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tag_name: TAG, name: `AnimeList ${version}` })
+    body: JSON.stringify({ tag_name: TAG, name: `AnimeList ${version}`, body: RELEASE_BODY })
   })
   console.log(`Release ${TAG} créée (id ${created.id}).`)
   return created
@@ -106,6 +131,7 @@ async function upload(rel, name) {
 }
 
 checkArtifacts()
+const RELEASE_BODY = notes()
 const rel = await release()
 // En série, jamais en parallèle : c'est tout l'intérêt de ce script.
 for (const name of ASSETS) await upload(rel, name)

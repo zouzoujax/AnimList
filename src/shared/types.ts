@@ -1,3 +1,4 @@
+import type { ReleaseNote } from './release-notes'
 export type MediaFormat = 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC'
 export type MediaStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS'
 export type SeasonName = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
@@ -362,11 +363,16 @@ export type UpdatePhase =
   /** Running from source: there is no installed app to replace. */
   | 'unsupported'
 
+export type { ReleaseNote, NoteKind, NoteSection } from './release-notes'
+
 export interface UpdateStatus {
   phase: UpdatePhase
   version: string | null
   percent: number
   message: string | null
+  /** Ce que la mise à jour apporte, une entrée par version sautée. Vide tant
+   *  qu'aucune version n'a été trouvée, ou si la release n'a pas de notes. */
+  notes: ReleaseNote[]
 }
 
 export const EMOTIONS: { id: EmotionId; emoji: string; label: string }[] = [
