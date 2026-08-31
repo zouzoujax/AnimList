@@ -10,7 +10,7 @@ toute ta bibliothèque vit dans un fichier sur ton PC.
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?logo=tailwindcss&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-319%20passing-3FB950)
+![Tests](https://img.shields.io/badge/tests-378%20passing-3FB950)
 ![Runtime deps](https://img.shields.io/badge/dépendances%20runtime-1-8957E5)
 
 Auteur : **Zaidal**
@@ -70,13 +70,19 @@ personnel.</sub>
   une fenêtre. Voir la note technique plus bas : le lecteur intégré de YouTube refuse de démarrer
   sur une page `file://`, ce qui demande un détour
 - **Calendrier** — grille hebdomadaire des prochains épisodes de tes séries
-- **Où regarder** — chaque fiche propose Crunchyroll, Anime-Sama et ADN, en indiquant
-  si le lien mène à l'anime lui-même ou à une recherche. Les slugs Anime-Sama étant
-  indevinables (`Kaiju No. 8` → `kaiju-n8`), ils sont lus dans le catalogue du site puis
-  l'URL de saison est vérifiée avant d'être proposée : 87 % de liens directs mesurés sur
-  une bibliothèque de 85 titres, le reste bascule sur la recherche
+- **Où regarder, à l'épisode près** — chaque fiche propose Crunchyroll, Anime-Sama, FrAnime et
+  ADN, en indiquant si le lien mène à l'anime lui-même ou à une recherche. Les slugs Anime-Sama
+  étant indevinables (`Kaiju No. 8` → `kaiju-n8`), ils sont lus dans le catalogue du site, puis
+  la page d'épisodes est vérifiée avant d'être proposée.
+
+  Le lien vise l'**épisode** où tu en es, pas seulement la série. Les adresses Crunchyroll
+  viennent d'AniList — leur identifiant (`/watch/G9DUEDM08/…`) ne se devine pas. Anime-Sama,
+  lui, n'a pas d'adresse par épisode : le numéro y vit dans le stockage local du navigateur,
+  alors l'app ouvre le site dans une de ses fenêtres et pose ce numéro avant que la page ne le
+  lise. C'est leur page, leur lecteur ; les fenêtres surgissantes sont bloquées. Un bouton ▶
+  apparaît aussi au survol de chaque épisode diffusé de la grille
 - **Statistiques** — temps total, séries de jours (streaks), heatmap annuelle, graphique
-  mensuel, top genres/studios, 12 badges, panthéon des mieux notées
+  mensuel, top genres/studios, 100 badges filtrables, panthéon des mieux notées
 - **Notifications Windows** quand un épisode d'une série suivie sort
 - **Import MyAnimeList** (`animelist_*.xml` ou `.xml.gz`) avec reconstruction de l'historique
 - **Import TV Time / OpenTV** — choisis le dossier de l'export, les séries suivies sont
@@ -85,7 +91,17 @@ personnel.</sub>
   donc les épisodes sont versés le long d'une chaîne de suites avec débordement. Les séries
   introuvables sont listées avec un champ pour saisir un id AniList ; les corrections sont
   conservées et rejouées
-- **Export / restauration** JSON, et fonctionnement hors-ligne grâce au cache disque
+- **Lecteur de fichiers locaux** — associe un dossier à une série et regarde tes épisodes depuis
+  la fiche. Le numéro est lu dans le nom du fichier, en écartant d'abord ce qui n'en est pas
+  (`1080p`, `x265`, l'année, le CRC), et l'épisode se coche seul aux neuf dixièmes de la lecture.
+  Les sous-titres posés à côté de la vidéo sont convertis à la volée. Ce que Chromium ne décode
+  pas — le x265 surtout — s'ouvre dans le lecteur du système plutôt que d'afficher un carré noir
+- **Des mises à jour qui disent ce qu'elles changent** — une version trouvée ouvre une fenêtre
+  « Quoi de neuf », rubrique par rubrique. Les notes voyagent avec la release, jamais avec l'app :
+  `CHANGELOG.md` en est la source, `npm run release` en verse la section dans le corps de la
+  release GitHub, et l'app la relit. Quelqu'un qui a sauté trois versions les voit toutes les trois
+- **Export / restauration** JSON, et fonctionnement hors-ligne grâce au cache disque, borné en
+  poids et purgeable depuis les Réglages
 
 ## Démarrer
 
@@ -238,7 +254,7 @@ aucune décision visuelle.
 ## Qualité
 
 ```bash
-npm test           # 319 tests unitaires (Vitest)
+npm test           # 378 tests unitaires (Vitest)
 npm run lint       # ESLint 10, typé, 0 erreur
 npm run typecheck  # tsc sur les deux projets
 npm run format     # Prettier
@@ -265,7 +281,11 @@ Deux mécanismes méritent d'être signalés :
 - [x] Interface de revisionnage
 - [x] Édition de l'historique (corriger une date, retirer un épisode)
 - [x] Notes et ressentis par épisode
-- [ ] Listes personnalisées et actions groupées
+- [x] Listes personnalisées et actions groupées
+- [x] Lecteur de fichiers locaux
+- [x] Liens vers l'épisode, et pas seulement vers la série
+- [x] Notes de version affichées dans l'app
+- [ ] Dates de diffusion corrigeables à la main
 - [x] Notifications par série, avec délai configurable
 - [x] Accessibilité et découpage du bundle
 - [x] Écriture incrémentale du store
@@ -307,15 +327,33 @@ export GH_TOKEN=...
 npm run release
 ```
 
-`electron-updater` ne lit pas la page de release : il lui faut le `latest.yml` que
-`electron-builder` dépose à côté de l'installeur. Envoyer le `.exe` à la main ne suffit donc
-pas — il faut passer par `npm run release`, ou joindre le `latest.yml` généré.
+`npm run release` construit l'installeur puis l'envoie par `scripts/publish-release.mjs`.
+
+Ce script existe pour une raison mesurée : `electron-builder --publish always` envoie ses trois
+fichiers en parallèle, et chacun, ne trouvant pas de release pour le tag, la crée. Deux fois de
+suite la course a produit **deux releases sur un même tag** — le blockmap sur l'une, l'installeur
+et le `latest.yml` sur l'autre. Or seule celle qui possède le tag répond aux URLs de
+téléchargement : le manifeste renvoyait 404 et chaque app installée se croyait à jour. Le script
+crée la release une fois, puis envoie les trois fichiers l'un après l'autre.
+
+Il refuse aussi de partir si le `latest.yml` ne décrit pas l'installeur posé à côté — le mélange
+de deux builds dans `release/` a déjà coûté une version — et s'arrête net s'il voit deux releases
+sur un même tag. Il vérifie enfin que le `latest.yml` répond bien par l'URL du tag, seule preuve
+qui compte.
+
+`electron-updater` ne lit pas la page de release : il lui faut ce `latest.yml`. Envoyer le `.exe`
+à la main ne suffit donc pas.
+
+Le corps de la release vient de `CHANGELOG.md` : une section `## <version>`, des rubriques
+`### Ajouts`, `### Modifications`, `### Corrections`. Le script refuse de publier une version dont
+la section manque — sans elle, la fenêtre « Quoi de neuf » resterait vide chez tout le monde.
 
 Côté application, le cycle est entièrement automatique : recherche au lancement puis toutes
 les six heures, téléchargement seul dès qu'une version paraît, installation en silence à la
 fermeture de l'app — `electron-updater` passe `/S` à l'installeur NSIS, aucun assistant
-n'apparaît. Une notification annonce la version prête et propose le redémarrage immédiat, et le
-réglage « Mise à jour automatique » ramène les trois étapes à des boutons.
+n'apparaît. « Redémarrer maintenant » emprunte le même chemin silencieux et rouvre l'app. Une
+notification annonce la version prête, et le réglage « Mise à jour automatique » ramène les trois
+étapes à des boutons.
 
 Ce que l'app ne fait pas : se fermer d'elle-même pour installer. Remplacer une application en
 cours d'usage se décide par celui qui l'utilise.

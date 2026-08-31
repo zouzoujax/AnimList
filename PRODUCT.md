@@ -98,8 +98,13 @@ unsigned, so Windows SmartScreen warns on install and on update.
   episodes beyond a series' cap.
 - Measured watch-link coverage: 87 % direct Anime-Sama links across 85 titles, the rest falling
   back to search. Anime-Sama slugs are unguessable (`Kaiju No. 8` → `kaiju-n8`), so they are
-  read from the site catalogue and the season URL is verified before being offered.
-- 323 unit tests, ESLint with no errors, both TypeScript projects clean.
+  read from the site catalogue and the episode page is verified before being offered — a plain
+  200 proved nothing, the series hub answers 200 with no episode behind it.
+- Per-episode links come from AniList's own `streamingEpisodes`, never from a guessed pattern: a
+  Crunchyroll episode id (`/watch/G9DUEDM08/…`) cannot be derived. Anime-Sama has no per-episode
+  address at all — measured, not assumed: path forms answer 404 and query forms return the season
+  page byte for byte.
+- 378 unit tests, ESLint with no errors and no warnings, both TypeScript projects clean.
 - Nine screenshots in `docs/screenshots/`, produced by `npm run screenshots`. They are built
   from a fixed demonstration library of public AniList entries seeded into a throwaway
   user-data folder — never the real library, because the repository is public and the history
