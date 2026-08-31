@@ -193,6 +193,7 @@ export default function HomePage(): React.JSX.Element {
   const entries = useApp((s) => s.entries)
   const mediaMap = useApp((s) => s.media)
   const events = useApp((s) => s.events)
+  const watchedMap = useApp((s) => s.watched)
   const state = useApp()
   const refreshed = useRef(false)
   const now = useNow()
@@ -217,6 +218,36 @@ export default function HomePage(): React.JSX.Element {
     for (const ev of events) map.set(ev.animeId, Math.max(map.get(ev.animeId) ?? 0, ev.at))
     return map
   }, [events])
+
+  /**
+   * Ce qui t'attend vraiment.
+   *
+   * « Bientôt » annonce les épisodes à venir, « Continuer » range les séries en
+   * cours par date de dernière séance — mais aucune des deux ne répond à la
+   * question qu'on se pose en ouvrant l'app : qu'est-ce qui est sorti et que je
+   * n'ai pas vu ?
+   *
+   * Le retard se compte sur les épisodes **diffusés** : un épisode programmé
+   * pour jeudi n'est pas un retard. Les séries encore en diffusion passent
+   * devant, ce sont elles qui accumulent pendant qu'on regarde ailleurs.
+   */
+  const behindList = useMemo(() => {
+    const out: { media: Media; behind: number; airing: boolean }[] = []
+    for (const entry of entries.values()) {
+      if (entry.status !== 'watching') continue
+      const media = mediaMap.get(entry.animeId)
+      if (!media) continue
+      const aired = media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
+      if (aired <= 0) continue
+      const seen = watchedMap.get(media.id)
+      let behind = 0
+      for (let n = 1; n <= aired; n += 1) if (!seen?.has(n)) behind += 1
+      if (behind > 0) out.push({ media, behind, airing: media.nextAiring !== null })
+    }
+    return out.sort((a, b) => Number(b.airing) - Number(a.airing) || b.behind - a.behind).slice(0, 12)
+  }, [entries, mediaMap, watchedMap])
+
+  const behindTotal = behindList.reduce((sum, row) => sum + row.behind, 0)
 
   const continueList = useMemo(() => {
     return [...entries.values()]
@@ -287,6 +318,25 @@ export default function HomePage(): React.JSX.Element {
               }
             />
           </div>
+        )}
+
+        {behindList.length > 0 && (
+          <Section
+            title="À rattraper"
+            subtitle={`${behindTotal} épisode${behindTotal > 1 ? 's' : ''} déjà sorti${behindTotal > 1 ? 's' : ''} que tu n'as pas vu${behindTotal > 1 ? 's' : ''}`}
+          >
+            <RowScroller>
+              {behindList.map((row, i) => (
+                <ContinueCard
+                  key={row.media.id}
+                  media={row.media}
+                  index={i}
+                  note={`${row.behind} en retard`}
+                  onHover={lightUp}
+                />
+              ))}
+            </RowScroller>
+          </Section>
         )}
 
         {continueList.length > 0 && (

@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.11 — 1er septembre 2026
+
+### Ajouts
+
+- Une section « À rattraper » sur l'accueil : les séries dont des épisodes sont sortis sans que tu les aies vus, avec le retard accumulé et les séries encore en diffusion en tête
+
 ## 0.3.10 — 1er septembre 2026
 
 ### Modifications

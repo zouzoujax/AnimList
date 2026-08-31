@@ -170,10 +170,13 @@ export function AnimeCard({
 export function ContinueCard({
   media,
   index = 0,
+  note,
   onHover
 }: {
   media: Media
   index?: number
+  /** Mention posée à côté du numéro d'épisode, quand la carte sert un autre propos. */
+  note?: string
   onHover?: (media: Media | null) => void
 }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
@@ -224,8 +227,16 @@ export function ContinueCard({
         <Poster src={media.cover.large} alt="" className="h-full w-[110px] shrink-0" rounded="rounded-[13px]" />
 
         <div className="flex h-full min-w-0 flex-1 flex-col">
-          <p className="label" style={{ color: rgba(glow, 0.95) }}>
+          <p className="label flex items-center gap-1.5" style={{ color: rgba(glow, 0.95) }}>
             {next ? `${pending ? 'Prochain épisode' : 'Épisode'} ${next}` : 'Terminé'}
+            {note && (
+              <span
+                className="rounded-full px-1.5 py-px text-[0.58rem] font-bold"
+                style={{ background: rgba(glow, 0.9), color: '#07080f' }}
+              >
+                {note}
+              </span>
+            )}
           </p>
           <h3 className="clamp-2 mt-1 text-[0.98rem] font-semibold leading-snug">{titleOf(media, lang)}</h3>
 
