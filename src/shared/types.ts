@@ -365,6 +365,27 @@ export type UpdatePhase =
 
 export type { ReleaseNote, NoteKind, NoteSection } from './release-notes'
 
+/** Un fichier vidéo trouvé dans le dossier associé à une série. */
+export interface LocalEpisode {
+  /** Numéro lu dans le nom du fichier, ou `null` s'il est illisible. */
+  episode: number | null
+  name: string
+  path: string
+  /** URL du protocole maison, la seule que la fenêtre puisse ouvrir. */
+  url: string
+  /** Faux pour ce que Chromium ne décode pas : le système prend le relais. */
+  playable: boolean
+  subtitleUrl: string | null
+  size: number
+}
+
+export interface LocalFolder {
+  path: string
+  /** Le dossier a été choisi puis déplacé ou supprimé. */
+  missing: boolean
+  episodes: LocalEpisode[]
+}
+
 export interface UpdateStatus {
   phase: UpdatePhase
   version: string | null

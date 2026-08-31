@@ -31,6 +31,7 @@ import {
 import { MiniCard } from '@/components/AnimeCard'
 import EpisodeEditor from '@/components/EpisodeEditor'
 import ListPicker from '@/components/ListPicker'
+import LocalFiles from '@/components/LocalFiles'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, isUnaired, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
@@ -766,6 +767,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               <EpisodeGrid detail={detail} glow={glow} />
             ) : null}
           </Section>
+
+          <LocalFiles animeId={id} title={titleOf(media, lang)} glow={glow} />
 
           {detail && detail.characters.length > 0 && (
             <Section title="Personnages" subtitle="Voix japonaises">

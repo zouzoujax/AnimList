@@ -9,6 +9,7 @@ import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
+import { chooseFolder, forgetFolder, openInSystemPlayer, scanFolder } from './videos'
 import { sweepSequels } from './sequels'
 import {
   cacheMedia,
@@ -133,6 +134,12 @@ export function registerIpc(): void {
   ipcMain.handle('data:cancel-tvtime', () => cancelImport())
   ipcMain.handle('data:reset', () => resetAll())
   ipcMain.handle('data:reveal', () => revealDataFolder())
+
+  // ---- fichiers locaux ------------------------------------------------
+  ipcMain.handle('videos:scan', (_e, animeId: number) => scanFolder(animeId))
+  ipcMain.handle('videos:choose', (_e, animeId: number) => chooseFolder(animeId))
+  ipcMain.handle('videos:forget', (_e, animeId: number) => forgetFolder(animeId))
+  ipcMain.handle('videos:open-external', (_e, path: string) => openInSystemPlayer(path))
 
   // ---- app -----------------------------------------------------------
   ipcMain.handle('app:info', () => ({

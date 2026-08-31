@@ -8,6 +8,7 @@ import type {
   EntryPatch,
   FillerInfo,
   ImportReport,
+  LocalFolder,
   Media,
   MediaDetail,
   Paged,
@@ -114,6 +115,16 @@ const api = {
     reset: (): Promise<void> => ipcRenderer.invoke('data:reset'),
     reveal: (): Promise<void> => ipcRenderer.invoke('data:reveal')
   },
+  videos: {
+    /** Fichiers du dossier associé, ou null si aucun dossier n'a été choisi. */
+    scan: (animeId: number): Promise<LocalFolder | null> => ipcRenderer.invoke('videos:scan', animeId),
+    /** Ouvre le sélecteur de dossier, puis rescanne. */
+    choose: (animeId: number): Promise<LocalFolder | null> => ipcRenderer.invoke('videos:choose', animeId),
+    forget: (animeId: number): Promise<void> => ipcRenderer.invoke('videos:forget', animeId),
+    /** Pour ce que Chromium ne décode pas. Faux si le chemin est refusé. */
+    openExternal: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:open-external', path)
+  },
+
   app: {
     info: (): Promise<{
       version: string

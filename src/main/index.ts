@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { initAniList } from './anilist'
 import { initAnimeSama } from './animesama'
 import { initFiller } from './filler'
+import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { startUpdateWatcher } from './updater'
@@ -20,6 +21,10 @@ if (!app.requestSingleInstanceLock()) {
 
 app.setAppUserModelId('dev.willi.animelist')
 
+// Avant `whenReady`, sans quoi le protocole n'est pas tenu pour sûr et le
+// lecteur refuse d'y chercher un flux.
+registerMediaScheme()
+
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
 let stopUpdateCheck: (() => void) | null = null
@@ -31,7 +36,9 @@ const CSP = [
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
   "img-src 'self' data: blob: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com",
-  "media-src 'self'",
+  // Les fichiers vidéo locaux, servis par src/main/videos.ts. Ce protocole ne
+  // donne accès qu'aux dossiers choisis à la main dans l'app.
+  "media-src 'self' animelist-media:",
   "connect-src 'self'",
   // The only thing this document may frame is the trailer page served by
   // src/main/trailer.ts on the loopback address.
@@ -108,6 +115,7 @@ void app.whenReady().then(() => {
   initAnimeSama()
   initFiller()
   registerIpc()
+  serveMedia()
 
   if (!isDev) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

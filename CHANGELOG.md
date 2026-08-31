@@ -9,6 +9,15 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.5 — 31 août 2026
+
+### Ajouts
+
+- Un lecteur pour tes fichiers locaux : associe un dossier à une série et regarde les épisodes depuis la fiche
+- L'épisode se coche tout seul aux neuf dixièmes de la lecture
+- Les sous-titres posés à côté de la vidéo (.srt, .vtt) s'affichent, le SubRip étant converti à la volée
+- Ce que l'app ne sait pas décoder — le x265 surtout — s'ouvre dans le lecteur du système au lieu d'un carré noir
+
 ## 0.3.4 — 31 août 2026
 
 ### Corrections

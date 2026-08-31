@@ -24,6 +24,8 @@ interface Db {
   history: WatchEvent[]
   prefs: Prefs
   lists: CustomList[]
+  /** Dossier de fichiers locaux choisi pour une série, par identifiant. */
+  folders: Record<string, string>
 }
 
 const emptyDb = (): Db => ({
@@ -32,7 +34,8 @@ const emptyDb = (): Db => ({
   entries: {},
   history: [],
   prefs: { ...DEFAULT_PREFS },
-  lists: []
+  lists: [],
+  folders: {}
 })
 
 export const store = new EventEmitter()
@@ -82,7 +85,8 @@ function sanitize(raw: unknown): Db {
     entries: input.entries && typeof input.entries === 'object' ? input.entries : {},
     history: Array.isArray(input.history) ? input.history : [],
     prefs: { ...DEFAULT_PREFS, ...(input.prefs ?? {}) },
-    lists: Array.isArray(input.lists) ? input.lists : []
+    lists: Array.isArray(input.lists) ? input.lists : [],
+    folders: input.folders && typeof input.folders === 'object' ? input.folders : {}
   }
 }
 
@@ -317,6 +321,22 @@ export function setPrefs(patch: Partial<Prefs>): Prefs {
   return db.prefs
 }
 
+/** Dossier de fichiers locaux d'une série, s'il en a un. */
+export function getFolder(animeId: number): string | null {
+  return db.folders[String(animeId)] ?? null
+}
+
+export function setFolder(animeId: number, folder: string | null): void {
+  if (folder) db.folders[String(animeId)] = folder
+  else delete db.folders[String(animeId)]
+  changed()
+}
+
+/** Les dossiers autorisés : le protocole media ne sert rien en dehors d'eux. */
+export function allFolders(): string[] {
+  return Object.values(db.folders)
+}
+
 export function getMedia(id: number): Media | undefined {
   return db.media[String(id)]
 }
@@ -383,6 +403,7 @@ export function removeEntry(animeId: number): void {
     list.animeIds = list.animeIds.filter((id) => id !== animeId)
     list.updatedAt = Date.now()
   }
+  delete db.folders[String(animeId)]
   rebuildIndex()
   changed()
 }
