@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.12 — 1er septembre 2026
+
+### Corrections
+
+- Le lecteur de fichiers locaux ne se fermait pas : ses boutons tombaient dans la bande de déplacement de la fenêtre, qui capture la souris avant eux
+- Cliquer à côté de la vidéo ferme le lecteur, comme on s'y attend
+
 ## 0.3.11 — 1er septembre 2026
 
 ### Ajouts

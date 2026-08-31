@@ -69,7 +69,19 @@ export default function Player({
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[60] flex flex-col bg-black/95"
+        /**
+         * `no-drag` est indispensable, pas décoratif.
+         *
+         * La fenêtre est sans cadre : ses 44 premiers pixels portent
+         * `-webkit-app-region: drag`, et cette zone capture la souris au niveau
+         * du système, quel que soit ce qui est peint par-dessus. Le lecteur
+         * couvrant tout l'écran, son en-tête tombe dedans — les boutons
+         * « Fermer » et « Lecteur système » ne recevaient jamais le clic.
+         *
+         * Les fenêtres modales y échappaient sans le savoir : elles commencent
+         * sous la bande.
+         */
+        className="no-drag fixed inset-0 z-[60] flex flex-col bg-black/95"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -86,13 +98,21 @@ export default function Player({
             <ExternalLink size={14} />
             Lecteur système
           </button>
-          <button className="btn" onClick={onClose}>
+          <button className="btn btn-primary" onClick={onClose} title="Fermer — Échap, ou un clic à côté de la vidéo">
             <X size={14} />
             Fermer
           </button>
         </header>
 
-        <div className="grid min-h-0 flex-1 place-items-center px-5 pb-5">
+        {/* Cliquer à côté de la vidéo ferme : c'est le geste qu'on fait sans y
+            penser, et le lecteur n'avait que son bouton et la touche Échap.
+            Le test sur la cible évite de fermer en cliquant la vidéo. */}
+        <div
+          className="grid min-h-0 flex-1 place-items-center px-5 pb-5"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose()
+          }}
+        >
           {failed ? (
             <div className="max-w-md text-center">
               <TriangleAlert size={30} className="mx-auto mb-3" style={{ color: '#ffb038' }} />
