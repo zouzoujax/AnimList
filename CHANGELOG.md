@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.10 — 1er septembre 2026
+
+### Modifications
+
+- « Redémarrer maintenant » installe la mise à jour en silence et rouvre l'app : plus d'assistant Windows à cliquer. La fermeture normale le faisait déjà ainsi
+
 ## 0.3.9 — 1er septembre 2026
 
 ### Corrections

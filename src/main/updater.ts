@@ -173,9 +173,20 @@ export async function installUpdate(): Promise<void> {
   if (state.phase !== 'ready') return
   const auto = await attach().catch(() => null)
   if (!auto) return
-  // `isSilent: false` keeps the installer visible: it is unsigned, so a silent
-  // run that trips SmartScreen would look like the app simply failed to restart.
-  auto.quitAndInstall(false, true)
+  /**
+   * Silencieux, et l'app revient d'elle-même.
+   *
+   * L'assistant NSIS n'apportait rien : personne ne relit des conditions pour
+   * passer d'une version à la suivante. Il était surtout incohérent — une
+   * fermeture normale installe déjà en silence (`autoInstallOnAppQuit`), donc
+   * seul le bouton imposait des clics.
+   *
+   * L'installation est par utilisateur, sans élévation : rien à confirmer.
+   * Reste le risque qu'un exécutable non signé soit retenu par Windows sans
+   * rien dire — mais c'est exactement le risque déjà pris à chaque fermeture,
+   * pas un nouveau.
+   */
+  auto.quitAndInstall(true, true)
 }
 
 /** Une session ouverte plusieurs jours doit voir passer une version. */
