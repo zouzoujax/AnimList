@@ -33,7 +33,7 @@ import EpisodeEditor from '@/components/EpisodeEditor'
 import ListPicker from '@/components/ListPicker'
 import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
-import { countdown, formatLabel, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
+import { countdown, formatLabel, isUnaired, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
 import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
@@ -177,7 +177,7 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
    * come, so everything from it onwards cannot have been watched.
    */
   const lastAired = detail.nextAiring ? detail.nextAiring.episode - 1 : episodes.length
-  const unaired = (n: number): boolean => n > lastAired
+  const unaired = (n: number): boolean => isUnaired(detail, n)
 
   return (
     <div>
@@ -616,7 +616,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             )}
 
             <div className="mt-5 flex flex-wrap items-center gap-2">
-              {next && total !== 0 && (
+              {next && total !== 0 && !isUnaired(media, next) && (
                 <button
                   className="btn btn-primary"
                   onClick={async () => {

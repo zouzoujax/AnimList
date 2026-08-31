@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
+  airingLabel,
   countdown,
   dayLabel,
   durationParts,
+  isUnaired,
   minutesToHuman,
   monthBucket,
   premiereLabel,
@@ -153,6 +155,33 @@ describe('countdown', () => {
 
   it('counts days ahead', () => {
     expect(countdown(Math.floor(Date.now() / 1000) + 3 * 86_400 + 3600)).toMatch(/^dans 3 j/)
+  })
+})
+
+describe('isUnaired', () => {
+  const soon = { nextAiring: { episode: 12, airingAt: 1 } }
+
+  it('holds back the episode still to come and every one after it', () => {
+    expect(isUnaired(soon, 12)).toBe(true)
+    expect(isUnaired(soon, 13)).toBe(true)
+  })
+
+  it('lets through everything already broadcast', () => {
+    expect(isUnaired(soon, 11)).toBe(false)
+    expect(isUnaired(soon, 1)).toBe(false)
+  })
+
+  it('holds back nothing when no airing is scheduled', () => {
+    expect(isUnaired({ nextAiring: null }, 999)).toBe(false)
+  })
+})
+
+describe('airingLabel', () => {
+  it('names the day and the hour', () => {
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    tomorrow.setHours(18, 30, 0, 0)
+    expect(airingLabel(Math.floor(tomorrow.getTime() / 1000))).toBe('Demain à 18:30')
   })
 })
 

@@ -1,11 +1,11 @@
-import { ArrowUpRight, Compass, Play, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Clock, Compass, Play, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { Media } from '@shared/types'
 import { AnimeCard, ContinueCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
-import { countdown, relativeDay, titleOf } from '@/lib/format'
+import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
 import { setLume } from '@/lib/lume'
 import { nextEpisodeOf, useApp } from '@/store/app'
@@ -44,6 +44,10 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
     el.style.setProperty('--py', '0')
   }
 
+  // L'épisode suivant n'est pas toujours sorti : proposer de le cocher ferait
+  // inventer un visionnage. La fiche l'interdit déjà, la une doit s'aligner.
+  const pending = resumeAt !== null && isUnaired(media, resumeAt)
+
   return (
     <motion.div
       ref={frame}
@@ -80,7 +84,7 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
 
         <div className="sp-plane sp-mid min-w-0 flex-1 pb-1">
           <p className="label mb-2" style={{ color: rgba(glow, 1) }}>
-            {resumeAt ? 'Reprendre' : 'À la une'}
+            {resumeAt ? (pending ? 'En attente' : 'Reprendre') : 'À la une'}
           </p>
           <h1 className="title-xl clamp-2 max-w-2xl text-[2.1rem] leading-[1.08]">{titleOf(media, lang)}</h1>
 
@@ -109,7 +113,15 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
           )}
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            {resumeAt ? (
+            {pending && media.nextAiring ? (
+              <span
+                className="btn !cursor-default"
+                style={{ background: rgba(glow, 0.16), borderColor: rgba(glow, 0.4), color: rgba(glow, 1) }}
+              >
+                <Clock size={14} />
+                Prochain épisode {media.nextAiring.episode} · {airingLabel(media.nextAiring.airingAt)}
+              </span>
+            ) : resumeAt ? (
               <button
                 className="btn btn-primary"
                 onClick={async () => {

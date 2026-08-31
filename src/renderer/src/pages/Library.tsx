@@ -22,7 +22,7 @@ import BulkBar from '@/components/BulkBar'
 import ListPicker from '@/components/ListPicker'
 import { EmptyState, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
-import { titleOf } from '@/lib/format'
+import { isUnaired, titleOf } from '@/lib/format'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
 type Filter = LibraryStatus | 'all' | 'favorites'
@@ -100,7 +100,7 @@ function ListRow({ media, entry, index }: { media: Media; entry: Entry; index: n
         {STATUS_LABELS[entry.status]}
       </span>
 
-      {next && (
+      {next && !isUnaired(media, next) && (
         <button
           onClick={async () => {
             await toggleEpisode(media.id, next)

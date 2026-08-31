@@ -1,9 +1,9 @@
-import { Check, Play, Plus, Star } from 'lucide-react'
+import { Check, Clock, Play, Plus, Star } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useRef } from 'react'
 import type { Media } from '@shared/types'
 import { rgba, toneAccent } from '@/lib/color'
-import { countdown, formatLabel, titleOf } from '@/lib/format'
+import { airingLabel, countdown, formatLabel, isUnaired, titleOf } from '@/lib/format'
 import { nextEpisodeOf, useApp } from '@/store/app'
 import { Poster, ProgressRing } from './ui'
 
@@ -186,6 +186,9 @@ export function ContinueCard({
   const glow = toneAccent(media.cover.color)
   const total = media.episodes
   const ratio = total ? Math.min(1, seen / total) : 0
+  // Rien à cocher tant que l'épisode n'est pas diffusé : le bouton cède la
+  // place au compte à rebours.
+  const pending = next !== null && isUnaired(media, next)
 
   const markNext = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
@@ -222,7 +225,7 @@ export function ContinueCard({
 
         <div className="flex h-full min-w-0 flex-1 flex-col">
           <p className="label" style={{ color: rgba(glow, 0.95) }}>
-            {next ? `Épisode ${next}` : 'Terminé'}
+            {next ? `${pending ? 'Prochain épisode' : 'Épisode'} ${next}` : 'Terminé'}
           </p>
           <h3 className="clamp-2 mt-1 text-[0.98rem] font-semibold leading-snug">{titleOf(media, lang)}</h3>
 
@@ -244,17 +247,28 @@ export function ContinueCard({
               </div>
             </div>
 
-            {next && (
+            {pending && media.nextAiring ? (
               <span
-                onClick={markNext}
-                role="button"
-                tabIndex={-1}
-                title={`Marquer l'épisode ${next} comme vu`}
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-transform hover:scale-110 active:scale-95"
-                style={{ background: `linear-gradient(135deg, ${glow}, var(--accent-2))`, color: '#07080f' }}
+                title={airingLabel(media.nextAiring.airingAt)}
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[0.68rem] font-semibold"
+                style={{ background: rgba(glow, 0.18), color: rgba(glow, 1) }}
               >
-                <Play size={15} fill="currentColor" strokeWidth={0} className="ml-0.5" />
+                <Clock size={12} />
+                {countdown(media.nextAiring.airingAt)}
               </span>
+            ) : (
+              next && (
+                <span
+                  onClick={markNext}
+                  role="button"
+                  tabIndex={-1}
+                  title={`Marquer l'épisode ${next} comme vu`}
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-full transition-transform hover:scale-110 active:scale-95"
+                  style={{ background: `linear-gradient(135deg, ${glow}, var(--accent-2))`, color: '#07080f' }}
+                >
+                  <Play size={15} fill="currentColor" strokeWidth={0} className="ml-0.5" />
+                </span>
+              )
             )}
           </div>
         </div>

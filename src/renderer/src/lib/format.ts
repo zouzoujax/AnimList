@@ -104,6 +104,20 @@ export function countdown(airingAtSeconds: number): string {
   return `dans ${mins} min`
 }
 
+/**
+ * True when episode `n` has not been broadcast yet. `nextAiring.episode` is the
+ * one still to come, so it and everything after it cannot have been watched.
+ */
+export function isUnaired(media: Pick<Media, 'nextAiring'>, n: number): boolean {
+  return media.nextAiring !== null && n >= media.nextAiring.episode
+}
+
+/** Day and hour of an airing still to come: « Demain à 18:30 ». */
+export function airingLabel(airingAtSeconds: number): string {
+  const ms = airingAtSeconds * 1000
+  return `${relativeDay(ms)} à ${formatTime(ms)}`
+}
+
 export function scoreLabel(score: number | null): string {
   return score === null ? '—' : score.toFixed(1).replace('.', ',').replace(/,0$/, '')
 }
