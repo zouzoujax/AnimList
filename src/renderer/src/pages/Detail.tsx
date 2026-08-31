@@ -575,7 +575,16 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   // L'épisode où on en est, s'il a un lien direct chez une plateforme. Une
   // simple lecture de tableau : un mémo ici serait un hook après un retour
   // anticipé, et coûterait plus cher que le calcul.
-  const found = detail?.episodeMeta[(next ?? 1) - 1]
+  /**
+   * L'épisode qu'on peut réellement aller voir.
+   *
+   * `next` est le prochain non coché, diffusé ou non. Proposer d'ouvrir un
+   * épisode à venir mène nulle part — et chez Anime-Sama, dont le menu s'arrête
+   * aux épisodes parus, leur code retombe sur le dernier disponible : la
+   * fenêtre s'ouvrirait sur le 8 après avoir annoncé le 9.
+   */
+  const watchAt = next !== null && media && !isUnaired(media, next) ? next : null
+  const found = watchAt === null ? undefined : detail?.episodeMeta[watchAt - 1]
   const nextLink = found?.url ? found : null
   const others = otherPlatforms(detail)
   const knownMedia = [...mediaCache.values()]
@@ -971,7 +980,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               </button>
             )}
             <div className="flex flex-col gap-1.5">
-              {watchLinks(media, detail, animeSama, knownMedia, next).map((link) => (
+              {watchLinks(media, detail, animeSama, knownMedia, watchAt).map((link) => (
                 <button
                   key={link.id}
                   onClick={() => {
@@ -981,7 +990,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                     // lise, ce que le navigateur système ne permet pas. Si
                     // l'ouverture est refusée, on retombe sur le navigateur.
                     if (link.id === 'anime-sama' && link.pick) {
-                      void window.api.watch.openEpisode(link.url, next).then((ok) => {
+                      void window.api.watch.openEpisode(link.url, watchAt).then((ok) => {
                         if (!ok && link.url) void window.api.app.openExternal(link.url)
                       })
                       return
