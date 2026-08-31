@@ -108,7 +108,7 @@ export default function Player({
             penser, et le lecteur n'avait que son bouton et la touche Échap.
             Le test sur la cible évite de fermer en cliquant la vidéo. */}
         <div
-          className="grid min-h-0 flex-1 place-items-center px-5 pb-5"
+          className="grid min-h-0 flex-1 place-items-center px-3 pb-3"
           onClick={(e) => {
             if (e.target === e.currentTarget) onClose()
           }}
@@ -134,7 +134,11 @@ export default function Player({
               autoPlay
               onTimeUpdate={onTime}
               onError={() => setFailed(true)}
-              className="max-h-full max-w-full rounded-[14px]"
+              /* `object-contain` plutôt qu'un simple maximum : une vidéo plus
+                 petite que la fenêtre restait à sa taille d'origine, perdue au
+                 milieu. Elle occupe maintenant toute la place disponible, ses
+                 proportions gardées. */
+              className="h-full w-full rounded-[14px] object-contain"
             >
               {file.subtitleUrl && (
                 <track kind="subtitles" srcLang="fr" label="Sous-titres" src={file.subtitleUrl} default />
