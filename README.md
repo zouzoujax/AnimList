@@ -285,12 +285,15 @@ Deux mécanismes méritent d'être signalés :
 - [x] Lecteur de fichiers locaux
 - [x] Liens vers l'épisode, et pas seulement vers la série
 - [x] Notes de version affichées dans l'app
-- [ ] Dates de diffusion corrigeables à la main
 - [x] Notifications par série, avec délai configurable
 - [x] Accessibilité et découpage du bundle
 - [x] Écriture incrémentale du store
 - [x] Mise à jour automatique
 - [x] Captures d'écran générées (`npm run screenshots`, jeu de démo)
+- [x] « À rattraper » : ce qui est sorti et qu'on n'a pas vu
+
+Écarté : corriger les dates de diffusion à la main. AniList les fournit, et une
+saisie manuelle serait une deuxième source de vérité à maintenir pour un cas rare.
 
 ## Régénérer les captures
 
