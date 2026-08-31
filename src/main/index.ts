@@ -119,10 +119,18 @@ void app.whenReady().then(() => {
 
   if (!isDev) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      // Only our own top-level document. Forcing this policy onto a third-party
-      // frame breaks it: `script-src 'self'` blocked YouTube's own player
-      // scripts, which is why the first inline attempt rendered black.
-      if (details.resourceType !== 'mainFrame') {
+      // Notre document, et lui seul.
+      //
+      // Le type « mainFrame » ne suffit pas : la fenêtre qui ouvre un épisode
+      // chez Anime-Sama en est un aussi, et elle recevait donc notre politique.
+      // Résultat en version installée — invisible en développement, où cette
+      // règle n'est pas posée : images cassées, publicités bloquées, et pas de
+      // lecteur du tout, `frame-src` n'autorisant que la boucle locale.
+      //
+      // Une politique stricte n'a de sens que sur du code qu'on écrit. Imposée
+      // à la page d'autrui, elle ne protège de rien et casse tout.
+      const own = details.url.startsWith('file://')
+      if (details.resourceType !== 'mainFrame' || !own) {
         callback({})
         return
       }

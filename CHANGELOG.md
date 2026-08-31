@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.8 — 1er septembre 2026
+
+### Corrections
+
+- La fenêtre Anime-Sama s'affichait vide en version installée : images cassées, publicités bloquées et aucun lecteur. Notre propre politique de sécurité s'appliquait à leur page, ce qui ne se voyait pas en développement où elle n'est pas posée
+- La fenêtre détachée de la bande-annonce était dans le même cas
+
 ## 0.3.7 — 31 août 2026
 
 ### Ajouts

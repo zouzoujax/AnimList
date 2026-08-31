@@ -41,6 +41,13 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
     autoHideMenuBar: true,
     title: 'Anime-Sama',
     webPreferences: {
+      /**
+       * Sa propre session : le site range ses cookies et son stockage à part
+       * des nôtres, et aucun réglage posé sur la session par défaut ne peut
+       * l'atteindre par accident — c'est ainsi que notre politique de sécurité
+       * avait fini par étrangler leur page en version installée.
+       */
+      partition: 'persist:anime-sama',
       preload: join(__dirname, '../preload/watch.js'),
       // Le préchargement écrit dans le stockage de la page : il doit partager
       // son monde. Il n'expose rien en retour, et Node reste hors de portée.
