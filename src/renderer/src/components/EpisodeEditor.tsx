@@ -168,11 +168,14 @@ export default function EpisodeEditor({
   episode,
   title,
   url,
+  thumbnail,
   onClose
 }: {
   animeId: number
   episode: number | null
   title: string | null
+  /** Image de l'épisode, quand une plateforme en a fourni une. */
+  thumbnail: string | null
   /** Lien vers **cet** épisode chez la plateforme, quand AniList en donne un. */
   url: string | null
   onClose: () => void
@@ -186,6 +189,14 @@ export default function EpisodeEditor({
 
   return (
     <Modal open={episode !== null} onClose={onClose} width={560}>
+      {thumbnail && (
+        <img
+          src={thumbnail}
+          alt=""
+          className="h-[168px] w-full object-cover"
+          onError={(e) => (e.currentTarget.style.display = 'none')}
+        />
+      )}
       <div className="flex items-start gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line)' }}>
         <div className="min-w-0 flex-1">
           <p className="text-[0.95rem] font-semibold">Épisode {episode}</p>

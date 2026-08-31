@@ -35,7 +35,10 @@ const CSP = [
   "script-src 'self'",
   "style-src 'self' 'unsafe-inline'",
   "font-src 'self' data:",
-  "img-src 'self' data: blob: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com",
+  // Les vignettes d'épisodes viennent toutes du CDN de Crunchyroll, à qui
+  // AniList les emprunte. Sans cette entrée elles s'affichent en développement
+  // et restent noires une fois l'app installée.
+  "img-src 'self' data: blob: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com https://img1.ak.crunchyroll.com",
   // Les fichiers vidéo locaux, servis par src/main/videos.ts. Ce protocole ne
   // donne accès qu'aux dossiers choisis à la main dans l'app.
   "media-src 'self' animelist-media:",

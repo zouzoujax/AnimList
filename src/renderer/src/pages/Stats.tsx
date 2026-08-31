@@ -203,6 +203,8 @@ export default function StatsPage(): React.JSX.Element {
   const accent = useApp((s) => s.prefs.accent)
   const navigate = useApp((s) => s.navigate)
   const listCount = useApp((s) => s.lists.length)
+  const watchedMap = useApp((s) => s.watched)
+  const defaultRuntime = useApp((s) => s.prefs.defaultRuntime)
 
   const stats = useMemo(() => {
     const perDay = new Map<number, number>()
@@ -210,6 +212,15 @@ export default function StatsPage(): React.JSX.Element {
     const perStudio = new Map<string, number>()
     const perYear = new Map<number, number>()
     let minutes = 0
+    /**
+     * Les minutes réellement vécues dans l'app.
+     *
+     * `minutes` compte tout, imports compris ; `perDay` ne compte que ce qui a
+     * été coché ici. Diviser l'un par l'autre mélange deux populations et
+     * donne un rythme absurde — 268 heures par jour sur une bibliothèque
+     * importée. Toute vitesse doit se calculer sur cette valeur-ci.
+     */
+    let livedMinutes = 0
     let importedCount = 0
 
     for (const ev of events) {
@@ -218,6 +229,7 @@ export default function StatsPage(): React.JSX.Element {
       minutes += ev.minutes
       if (ev.imported) importedCount += 1
       else {
+        livedMinutes += ev.minutes
         const day = startOfDay(ev.at)
         const year = new Date(ev.at).getFullYear()
         perDay.set(day, (perDay.get(day) ?? 0) + 1)
@@ -353,6 +365,7 @@ export default function StatsPage(): React.JSX.Element {
 
     return {
       minutes,
+      livedMinutes,
       episodes: events.length,
       importedCount,
       perDay,
@@ -1237,6 +1250,62 @@ export default function StatsPage(): React.JSX.Element {
 
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'done' | 'todo'>('all')
 
+  /**
+   * Ce qui reste à voir, en temps.
+   *
+   * Un compte d'épisodes ne dit rien : douze épisodes de trois minutes et
+   * douze de cinquante ne demandent pas la même soirée. La durée de chaque
+   * série est connue ; à défaut, le réglage de durée par défaut sert de
+   * repli, comme partout ailleurs dans l'app.
+   *
+   * Seuls les épisodes d'une série au total connu sont comptés : une saison en
+   * cours sans nombre annoncé donnerait un chiffre inventé.
+   */
+  const backlog = useMemo(() => {
+    const rows: { key: string; label: string; value: number; detail: string; status: string }[] = []
+    let watchingMin = 0
+    let plannedMin = 0
+
+    for (const entry of entries.values()) {
+      if (entry.status !== 'watching' && entry.status !== 'planned') continue
+      const media = mediaMap.get(entry.animeId)
+      const total = media?.episodes ?? 0
+      if (!media || total <= 0) continue
+      const seen = watchedMap.get(entry.animeId)?.size ?? 0
+      const left = Math.max(0, total - seen)
+      if (left === 0) continue
+
+      const minutes = left * (media.duration || defaultRuntime)
+      if (entry.status === 'watching') watchingMin += minutes
+      else plannedMin += minutes
+
+      rows.push({
+        key: String(media.id),
+        label: titleOf(media, lang),
+        value: minutes,
+        detail: `${left} épisode${left > 1 ? 's' : ''} · ${minutesToHuman(minutes)}`,
+        status: entry.status
+      })
+    }
+
+    rows.sort((a, b) => b.value - a.value)
+    const total = watchingMin + plannedMin
+    // Le rythme vient de tes journées actives, pas d'une moyenne sur l'année :
+    // les jours sans rien regarder ne disent rien de ta vitesse.
+    const perActiveDay = stats.activeDays ? stats.livedMinutes / stats.activeDays : 0
+    return {
+      rows,
+      watchingMin,
+      plannedMin,
+      total,
+      days: perActiveDay > 0 ? Math.ceil(total / perActiveDay) : null,
+      perActiveDay: Math.round(perActiveDay),
+      // Une moyenne sur trois journées n'est pas une vitesse de croisière. Le
+      // dire vaut mieux que d'annoncer un nombre de jours avec assurance.
+      thin: stats.activeDays > 0 && stats.activeDays < 7
+    }
+  }, [entries, mediaMap, watchedMap, defaultRuntime, lang, stats.activeDays, stats.livedMinutes])
+
   if (stats.episodes === 0) {
     return (
       <div className="mx-auto max-w-[900px] px-7 py-16">
@@ -1336,6 +1405,34 @@ export default function StatsPage(): React.JSX.Element {
           icon={<Clock size={22} />}
         />
       </div>
+
+      {backlog.rows.length > 0 && (
+        <Section
+          title="Ce qu'il te reste"
+          subtitle={
+            backlog.days === null
+              ? `${minutesToHuman(backlog.total)} en attente`
+              : `${minutesToHuman(backlog.total)} en attente · environ ${backlog.days} jour${backlog.days > 1 ? 's' : ''} à ton rythme${backlog.thin ? ', sur trop peu de séances pour être fiable' : ''}`
+          }
+        >
+          <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile label="En cours" value={minutesToHuman(backlog.watchingMin)} icon={<Hourglass size={15} />} />
+            <StatTile label="Dans la pile" value={minutesToHuman(backlog.plannedMin)} icon={<ListTodo size={15} />} />
+            <StatTile label="Séries concernées" value={num(backlog.rows.length)} icon={<Layers size={15} />} />
+            <StatTile
+              label="Ton rythme"
+              value={`${num(backlog.perActiveDay)} min`}
+              hint={`par journée où tu regardes · mesuré sur ${num(stats.activeDays)} journée${stats.activeDays > 1 ? 's' : ''}`}
+              icon={<Gauge size={15} />}
+            />
+          </div>
+          <RankedBars
+            rows={backlog.rows.slice(0, 10)}
+            suffix=""
+            onSelect={(key) => navigate({ name: 'anime', id: Number(key) })}
+          />
+        </Section>
+      )}
 
       <Section
         title="Activité"

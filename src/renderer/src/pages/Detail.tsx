@@ -286,6 +286,7 @@ function EpisodeGrid({
         episode={editing}
         title={editing ? (episodes[editing - 1]?.title ?? null) : null}
         url={editing ? (episodes[editing - 1]?.url ?? null) : null}
+        thumbnail={editing ? (episodes[editing - 1]?.thumbnail ?? null) : null}
         onClose={() => setEditing(null)}
       />
 
