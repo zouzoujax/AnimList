@@ -971,7 +971,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               </button>
             )}
             <div className="flex flex-col gap-1.5">
-              {watchLinks(media, detail, animeSama, knownMedia).map((link) => (
+              {watchLinks(media, detail, animeSama, knownMedia, next).map((link) => (
                 <button
                   key={link.id}
                   onClick={() => link.url && window.api.app.openExternal(link.url)}
@@ -983,7 +983,10 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                     className="h-2 w-2 shrink-0 rounded-full"
                     style={{ background: link.color, boxShadow: `0 0 10px ${link.color}` }}
                   />
-                  <span className="min-w-0 flex-1 truncate text-[0.82rem] font-semibold">{link.label}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[0.82rem] font-semibold">{link.label}</span>
+                    {link.pick && <span className="block truncate text-[0.66rem] text-faint">{link.pick}</span>}
+                  </span>
                   <span
                     className="shrink-0 text-[0.62rem] font-bold uppercase tracking-wider"
                     style={{ color: WATCH_BADGE[link.kind].color }}

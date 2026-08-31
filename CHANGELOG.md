@@ -14,6 +14,7 @@ le code.
 ### Ajouts
 
 - Un lien vers l'épisode lui-même, et plus seulement vers la série : dans le panneau « Regarder » pour l'épisode en cours, et sur chaque épisode ouvert depuis la grille
+- La rangée Anime-Sama indique l'épisode à choisir dans le menu du lecteur : le site n'a pas d'adresse par épisode, autant dire lequel prendre
 
 ### Corrections
 

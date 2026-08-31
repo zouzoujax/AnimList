@@ -19,6 +19,16 @@ export interface WatchLink {
   kind: WatchKind
   hint: string
   color: string
+  /**
+   * Ce que le site ne sait pas faire à notre place.
+   *
+   * Anime-Sama n'a pas d'adresse par épisode : le lecteur retient le numéro
+   * dans le stockage local du navigateur, et `?episode=5` renvoie la page
+   * saison mot pour mot. Vérifié — les formes en chemin répondent 404, les
+   * formes en paramètre servent des octets identiques à la page nue. Faute de
+   * pouvoir viser l'épisode, on dit lequel choisir une fois sur place.
+   */
+  pick: string | null
 }
 
 export interface AnimeSamaTarget {
@@ -95,7 +105,9 @@ export function watchLinks(
   media: Media,
   detail: MediaDetail | null,
   animeSama?: AnimeSamaTarget | null,
-  known: Media[] = []
+  known: Media[] = [],
+  /** L'épisode où on en est, pour les sites qui ne savent pas y mener. */
+  episode?: number | null
 ): WatchLink[] {
   const term = searchTerm(media)
   const q = encodeURIComponent(term)
@@ -113,7 +125,7 @@ export function watchLinks(
         { id: 'franime', label: 'FrAnime', color: '#34d399' },
         { id: 'adn', label: 'ADN', color: '#00b0f0' }
       ] as const
-    ).map((row) => ({ ...row, url: '', kind: 'unreleased' as const, hint }))
+    ).map((row) => ({ ...row, url: '', kind: 'unreleased' as const, hint, pick: null }))
   }
 
   const franimeFixed = override && 'franime' in override ? override.franime : undefined
@@ -128,6 +140,10 @@ export function watchLinks(
             hint: 'URL déduite du titre — le site bloque toute vérification automatique'
           }
 
+  // Le lecteur d'Anime-Sama s'ouvre sur le dernier épisode vu par le visiteur,
+  // pas sur celui qu'on visait : autant dire lequel prendre dans le menu.
+  const pick = episode ? `Épisode ${episode} à choisir dans le menu du lecteur` : null
+
   return [
     {
       id: 'crunchyroll',
@@ -135,7 +151,8 @@ export function watchLinks(
       url: crunchyroll ? toFrenchCrunchyroll(crunchyroll.url) : CRUNCHYROLL_SEARCH + q,
       kind: crunchyroll ? 'direct' : 'search',
       hint: crunchyroll ? 'Lien officiel fourni par AniList' : 'AniList ne connaît pas de lien : recherche',
-      color: '#f47521'
+      color: '#f47521',
+      pick: null
     },
     {
       id: 'anime-sama',
@@ -147,16 +164,18 @@ export function watchLinks(
         : animeSama?.direct
           ? 'URL vérifiée dans le catalogue du site'
           : 'Titre introuvable dans le catalogue : recherche',
-      color: '#8b5cf6'
+      color: '#8b5cf6',
+      pick: animeSama?.direct ? pick : null
     },
-    { id: 'franime', label: 'FrAnime', color: '#34d399', ...franime },
+    { id: 'franime', label: 'FrAnime', color: '#34d399', pick: null, ...franime },
     {
       id: 'adn',
       label: 'ADN',
       url: ADN_SEARCH + q,
       kind: 'search',
       hint: 'Recherche — paramètre non vérifiable, le site bloque les requêtes',
-      color: '#00b0f0'
+      color: '#00b0f0',
+      pick: null
     }
   ]
 }
