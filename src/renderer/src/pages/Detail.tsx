@@ -283,22 +283,34 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
           const isNext = ep.number === next
           const isFiller = filler.has(ep.number)
           const notOut = unaired(ep.number)
+          // Interdire de cocher un épisode à venir, oui ; interdire de le
+          // décocher enferme la coche qui a réussi à passer. La porte doit
+          // s'ouvrir dans les deux sens.
+          const locked = notOut && !watched
           const label = ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`
-          const note = notOut ? ' · pas encore diffusé' : isFiller ? ' · hors intrigue' : ''
+          const note = notOut
+            ? watched
+              ? ' · pas encore diffusé — clic pour décocher'
+              : ' · pas encore diffusé'
+            : isFiller
+              ? ' · hors intrigue'
+              : ''
           return (
             <button
               key={ep.number}
-              disabled={notOut}
+              disabled={locked}
               onMouseEnter={() => setHovered(ep.number)}
               onMouseLeave={() => setHovered(null)}
-              onClick={(e) => (e.shiftKey ? markUpTo(detail.id, ep.number) : toggleEpisode(detail.id, ep.number))}
+              onClick={(e) =>
+                e.shiftKey && !notOut ? markUpTo(detail.id, ep.number) : toggleEpisode(detail.id, ep.number)
+              }
               onContextMenu={(e) => {
                 e.preventDefault()
                 if (!notOut) setEditing(ep.number)
               }}
               title={`${label}${note}`}
               className={`relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 ${
-                notOut ? 'cursor-not-allowed' : 'hover:scale-110'
+                locked ? 'cursor-not-allowed' : 'hover:scale-110'
               }`}
               style={
                 watched
