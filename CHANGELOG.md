@@ -15,7 +15,8 @@ le code.
 
 - Le lecteur de fichiers locaux ne se fermait pas : ses boutons tombaient dans la bande de déplacement de la fenêtre, qui capture la souris avant eux
 - Cliquer à côté de la vidéo ferme le lecteur, comme on s'y attend
-- La vidéo occupe toute la fenêtre du lecteur : une source plus petite que l'écran restait à sa taille d'origine
+- La vidéo occupe l'espace du lecteur sans le dévorer : une source plus petite restait à sa taille d'origine, une grande prenait tout l'écran
+- Le bouton « Fermer » du lecteur était caché derrière les boutons de la fenêtre Windows
 
 ## 0.3.11 — 1er septembre 2026
 

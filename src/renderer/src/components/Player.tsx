@@ -86,7 +86,10 @@ export default function Player({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <header className="flex shrink-0 items-center gap-3 px-5 py-3">
+        {/* `pr-[152px]` comme la barre de titre : les boutons de Windows sont
+            dessinés par le système en haut à droite, et tout ce qu'on pose
+            dessous disparaît. « Fermer » était juste derrière la croix. */}
+        <header className="flex shrink-0 items-center gap-3 py-3 pl-5 pr-[152px]">
           <div className="min-w-0 flex-1">
             <p className="truncate text-[0.9rem] font-semibold text-white">
               {file.episode !== null ? `Épisode ${file.episode} · ` : ''}
@@ -138,7 +141,10 @@ export default function Player({
                  petite que la fenêtre restait à sa taille d'origine, perdue au
                  milieu. Elle occupe maintenant toute la place disponible, ses
                  proportions gardées. */
-              className="h-full w-full rounded-[14px] object-contain"
+              /* Une largeur maximale, sinon la vidéo mange tout l'écran sur un
+                 grand moniteur. `object-contain` garde ses proportions dans
+                 cette boîte, et les côtés restent cliquables pour fermer. */
+              className="h-full w-full max-w-[1280px] rounded-[14px] object-contain"
             >
               {file.subtitleUrl && (
                 <track kind="subtitles" srcLang="fr" label="Sous-titres" src={file.subtitleUrl} default />
