@@ -17,7 +17,13 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()],
     resolve: { alias: { '@shared': shared } },
     build: {
-      rollupOptions: { input: { index: resolve(__dirname, 'src/preload/index.ts') } }
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/preload/index.ts'),
+          // Injecté dans la fenêtre Anime-Sama, avant les scripts du site.
+          watch: resolve(__dirname, 'src/preload/watch.ts')
+        }
+      }
     }
   },
   renderer: {

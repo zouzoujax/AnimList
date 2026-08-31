@@ -86,7 +86,14 @@ const api = {
   },
   watch: {
     animeSama: (animeId: number, titles: string[]): Promise<{ url: string; direct: boolean; absent?: boolean }> =>
-      ipcRenderer.invoke('watch:anime-sama', animeId, titles)
+      ipcRenderer.invoke('watch:anime-sama', animeId, titles),
+    /**
+     * Ouvre un épisode d'Anime-Sama dans une fenêtre de l'app, positionnée sur
+     * le bon épisode — leur site n'ayant pas d'adresse par épisode. Faux si
+     * l'URL ne vient pas de chez eux.
+     */
+    openEpisode: (url: string, episode: number | null): Promise<boolean> =>
+      ipcRenderer.invoke('watch:open-episode', url, episode)
   },
   lists: {
     create: (name: string, emoji?: string): Promise<CustomList | null> =>

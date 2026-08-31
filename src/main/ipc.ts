@@ -10,6 +10,7 @@ import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
 import { chooseFolder, forgetFolder, openInSystemPlayer, scanFolder } from './videos'
+import { openAnimeSamaEpisode } from './watch-window'
 import { sweepSequels } from './sequels'
 import {
   cacheMedia,
@@ -134,6 +135,9 @@ export function registerIpc(): void {
   ipcMain.handle('data:cancel-tvtime', () => cancelImport())
   ipcMain.handle('data:reset', () => resetAll())
   ipcMain.handle('data:reveal', () => revealDataFolder())
+
+  // ---- lecture chez une plateforme -------------------------------------
+  ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null) => openAnimeSamaEpisode(url, episode))
 
   // ---- caches disque ---------------------------------------------------
   ipcMain.handle('cache:stats', () => anilist.cacheStats())

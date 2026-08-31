@@ -140,9 +140,9 @@ export function watchLinks(
             hint: 'URL déduite du titre — le site bloque toute vérification automatique'
           }
 
-  // Le lecteur d'Anime-Sama s'ouvre sur le dernier épisode vu par le visiteur,
-  // pas sur celui qu'on visait : autant dire lequel prendre dans le menu.
-  const pick = episode ? `Épisode ${episode} à choisir dans le menu du lecteur` : null
+  // Le site n'a pas d'adresse par épisode : c'est l'app qui pose le numéro dans
+  // sa propre fenêtre avant que leur page ne le lise. Voir src/main/watch-window.ts.
+  const pick = episode ? `Ouvre l'épisode ${episode}` : null
 
   return [
     {

@@ -974,7 +974,20 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               {watchLinks(media, detail, animeSama, knownMedia, next).map((link) => (
                 <button
                   key={link.id}
-                  onClick={() => link.url && window.api.app.openExternal(link.url)}
+                  onClick={() => {
+                    if (!link.url) return
+                    // Anime-Sama n'a pas d'adresse par épisode : une fenêtre de
+                    // l'app peut poser le numéro avant que leur page ne le
+                    // lise, ce que le navigateur système ne permet pas. Si
+                    // l'ouverture est refusée, on retombe sur le navigateur.
+                    if (link.id === 'anime-sama' && link.pick) {
+                      void window.api.watch.openEpisode(link.url, next).then((ok) => {
+                        if (!ok && link.url) void window.api.app.openExternal(link.url)
+                      })
+                      return
+                    }
+                    void window.api.app.openExternal(link.url)
+                  }}
                   disabled={isWatchDisabled(link.kind)}
                   title={link.url ? `${link.hint}\n${link.url}` : link.hint}
                   className="group flex items-center gap-2.5 rounded-[12px] border border-white/8 bg-white/5 px-3 py-2.5 text-left transition enabled:hover:border-white/20 enabled:hover:bg-white/10 disabled:cursor-default disabled:opacity-45"
