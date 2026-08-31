@@ -16,6 +16,7 @@ le code.
 - Un lien vers l'épisode lui-même, et plus seulement vers la série : dans le panneau « Regarder » pour l'épisode en cours, et sur chaque épisode ouvert depuis la grille
 - Anime-Sama s'ouvre directement sur le bon épisode, dans une fenêtre de l'app : le site n'a pas d'adresse par épisode, l'app pose le numéro avant que sa page ne le lise
 - Le lien Anime-Sama mène à la page des épisodes et non plus à la fiche de la série : le hub répondait 200 sans contenir un seul épisode, ce qui suffisait à le faire retenir
+- Chaque épisode diffusé de la grille porte un bouton de lecture au survol, qui ouvre directement ce numéro-là
 
 ### Corrections
 

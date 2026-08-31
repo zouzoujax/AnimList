@@ -134,7 +134,17 @@ function SeasonStrip({ animeId }: { animeId: number }): React.JSX.Element | null
   )
 }
 
-function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): React.JSX.Element {
+function EpisodeGrid({
+  detail,
+  glow,
+  watchUrl
+}: {
+  detail: MediaDetail
+  glow: string
+  /** Page d'épisodes d'Anime-Sama, quand il y en a une : chaque case diffusée
+   *  gagne alors un bouton qui l'ouvre au bon numéro. */
+  watchUrl: string | null
+}): React.JSX.Element {
   const seen = useApp((s) => s.watched.get(detail.id))
   const next = useApp((s) => nextEpisodeOf(s, detail.id, detail.episodes))
   const entry = useApp((s) => s.entries.get(detail.id))
@@ -265,7 +275,7 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
             <span className="text-faint">
               {hideFiller
                 ? `${episodes.length - shown.length} épisode${episodes.length - shown.length > 1 ? 's' : ''} hors intrigue masqué${episodes.length - shown.length > 1 ? 's' : ''}`
-                : 'Clic pour cocher · Maj+clic jusque-là · Clic droit pour éditer'}
+                : `Clic pour cocher · Maj+clic jusque-là · Clic droit pour éditer${watchUrl ? ' · ▶ pour regarder' : ''}`}
             </span>
           )}
         </p>
@@ -311,7 +321,7 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
                 if (!notOut) setEditing(ep.number)
               }}
               title={`${label}${note}`}
-              className={`relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 ${
+              className={`group relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 ${
                 locked ? 'cursor-not-allowed' : 'hover:scale-110'
               }`}
               style={
@@ -353,6 +363,23 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
                   style={{ background: watched ? '#07080f' : glow }}
                   title="Cet épisode a une note"
                 />
+              )}
+              {/* Coin bas-droit : le haut-droit porte déjà la pastille des
+                  notes. Absent des épisodes à venir — il n'y a rien à ouvrir. */}
+              {watchUrl && !notOut && (
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  title={`Ouvrir l'épisode ${ep.number} sur Anime-Sama`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    void window.api.watch.openEpisode(watchUrl, ep.number)
+                  }}
+                  className="absolute -bottom-1.5 -right-1.5 grid h-[17px] w-[17px] place-items-center rounded-full opacity-0 transition group-hover:opacity-100"
+                  style={{ background: glow, color: '#07080f', boxShadow: '0 2px 6px rgba(0,0,0,.5)' }}
+                >
+                  <Play size={9} fill="currentColor" strokeWidth={0} className="ml-[1px]" />
+                </span>
               )}
             </button>
           )
@@ -782,7 +809,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             {loading && !detail ? (
               <Skeleton className="h-28 w-full" />
             ) : detail ? (
-              <EpisodeGrid detail={detail} glow={glow} />
+              <EpisodeGrid detail={detail} glow={glow} watchUrl={animeSama?.episodes ? animeSama.url : null} />
             ) : null}
           </Section>
 
