@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { CalendarClock, Clock, Trash2 } from 'lucide-react'
+import { CalendarClock, Clock, Play, Trash2 } from 'lucide-react'
 import { EMOTIONS, type EmotionId, type WatchEvent } from '@shared/types'
 import { useApp } from '../store/app'
 import { Modal } from './ui'
@@ -167,11 +167,14 @@ export default function EpisodeEditor({
   animeId,
   episode,
   title,
+  url,
   onClose
 }: {
   animeId: number
   episode: number | null
   title: string | null
+  /** Lien vers **cet** épisode chez la plateforme, quand AniList en donne un. */
+  url: string | null
   onClose: () => void
 }): React.JSX.Element {
   const events = useApp((s) => s.events)
@@ -183,9 +186,19 @@ export default function EpisodeEditor({
 
   return (
     <Modal open={episode !== null} onClose={onClose} width={560}>
-      <div className="border-b px-5 py-4" style={{ borderColor: 'var(--line)' }}>
-        <p className="text-[0.95rem] font-semibold">Épisode {episode}</p>
-        {title && <p className="mt-0.5 text-[0.8rem] text-muted">{title}</p>}
+      <div className="flex items-start gap-3 border-b px-5 py-4" style={{ borderColor: 'var(--line)' }}>
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.95rem] font-semibold">Épisode {episode}</p>
+          {title && <p className="mt-0.5 text-[0.8rem] text-muted">{title}</p>}
+        </div>
+        {/* Le lien vise l'épisode lui-même, pas la série : c'est AniList qui le
+            fournit, personne ne saurait le deviner. */}
+        {url && (
+          <button className="btn shrink-0 !h-8" onClick={() => void window.api.app.openExternal(url)} title={url}>
+            <Play size={13} fill="currentColor" strokeWidth={0} />
+            Regarder
+          </button>
+        )}
       </div>
 
       {viewings.length === 0 ? (

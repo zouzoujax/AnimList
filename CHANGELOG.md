@@ -9,6 +9,16 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.7 — 31 août 2026
+
+### Ajouts
+
+- Un lien vers l'épisode lui-même, et plus seulement vers la série : dans le panneau « Regarder » pour l'épisode en cours, et sur chaque épisode ouvert depuis la grille
+
+### Corrections
+
+- Les titres et vignettes d'épisodes étaient décalés : ils étaient appariés par position alors qu'AniList ne les renvoie ni dans l'ordre ni au complet. Sur One Piece, l'épisode 1 affichait le titre du 130
+
 ## 0.3.6 — 31 août 2026
 
 ### Modifications

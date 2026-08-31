@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
 import { applyBudget } from '@shared/cache-budget'
+import { matchStreamEpisodes } from '@shared/stream-episodes'
 import { createQueue, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -463,13 +464,10 @@ function buildEpisodeMeta(m: RawDetail): MediaDetail['episodeMeta'] {
   const scheduled = (m.airingSchedule?.nodes ?? []).reduce((max, node) => Math.max(max, node.episode), 0)
   const known = Math.max(m.nextAiringEpisode?.episode ?? 0, scheduled)
   const total = m.episodes ?? Math.max(listed.length, known)
-  const out: MediaDetail['episodeMeta'] = []
-  for (let n = 1; n <= total; n += 1) {
-    const src = listed[n - 1]
-    const label = src?.title?.replace(/^Episode\s*\d+\s*[-–—]\s*/i, '').trim() || null
-    out.push({ number: n, title: label, thumbnail: src?.thumbnail ?? null, url: src?.url ?? null })
-  }
-  return out
+  // L'appariement se fait sur le numéro écrit dans le libellé, jamais sur la
+  // position : la liste d'AniList n'est ni forcément complète ni forcément
+  // croissante.
+  return matchStreamEpisodes(listed, total)
 }
 
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {

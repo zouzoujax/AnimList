@@ -275,6 +275,7 @@ function EpisodeGrid({ detail, glow }: { detail: MediaDetail; glow: string }): R
         animeId={detail.id}
         episode={editing}
         title={editing ? (episodes[editing - 1]?.title ?? null) : null}
+        url={editing ? (episodes[editing - 1]?.url ?? null) : null}
         onClose={() => setEditing(null)}
       />
 
@@ -570,6 +571,12 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   }
 
   const detail = data
+
+  // L'épisode où on en est, s'il a un lien direct chez une plateforme. Une
+  // simple lecture de tableau : un mémo ici serait un hook après un retour
+  // anticipé, et coûterait plus cher que le calcul.
+  const found = detail?.episodeMeta[(next ?? 1) - 1]
+  const nextLink = found?.url ? found : null
   const others = otherPlatforms(detail)
   const knownMedia = [...mediaCache.values()]
   // Films get their own row below, so they don't belong in the relations rail.
@@ -945,6 +952,24 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
 
           <div className="glass rounded-[20px] p-4">
             <h3 className="label mb-2.5">Regarder</h3>
+            {/* Les rangées suivantes visent la série ; celle-ci vise l'épisode
+                où tu en es. C'est AniList qui fournit l'adresse exacte —
+                l'identifiant d'un épisode Crunchyroll ne se devine pas. */}
+            {nextLink && (
+              <button
+                onClick={() => void window.api.app.openExternal(nextLink.url as string)}
+                title={nextLink.url ?? undefined}
+                className="mb-2.5 flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left transition hover:brightness-110"
+                style={{ background: rgba(glow, 0.16), border: `1px solid ${rgba(glow, 0.4)}` }}
+              >
+                <Play size={14} fill="currentColor" strokeWidth={0} style={{ color: rgba(glow, 1) }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[0.8rem] font-semibold">Épisode {nextLink.number}</span>
+                  {nextLink.title && <span className="block truncate text-[0.68rem] text-faint">{nextLink.title}</span>}
+                </span>
+                <ExternalLink size={13} className="shrink-0 text-faint" />
+              </button>
+            )}
             <div className="flex flex-col gap-1.5">
               {watchLinks(media, detail, animeSama, knownMedia).map((link) => (
                 <button
