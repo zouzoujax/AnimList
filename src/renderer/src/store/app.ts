@@ -53,6 +53,17 @@ interface AppState {
   toast: (message: string, kind?: Toast['kind']) => void
   dismissToast: (id: number) => void
 
+  /**
+   * La dernière action sur la progression, et de quoi la défaire.
+   *
+   * Seuls les gestes qui peuvent effacer du visionnage sont réversibles :
+   * cocher, cocher jusqu'ici, tout réinitialiser. Ce sont les seuls qu'un clic
+   * de travers rend coûteux, et l'historique est ce que ce projet promet de ne
+   * jamais perdre.
+   */
+  undoable: { label: string; run: () => Promise<void> } | null
+  runUndo: () => Promise<void>
+
   saveEntry: (animeId: number, patch: EntryPatch, media?: Media) => Promise<void>
   removeEntry: (animeId: number) => Promise<void>
   toggleEpisode: (animeId: number, episode: number) => Promise<void>
@@ -121,6 +132,7 @@ export const useApp = create<AppState>((set, get) => ({
   toasts: [],
   paletteOpen: false,
   helpOpen: false,
+  undoable: null,
 
   init: async () => {
     const [snapshot, prefs] = await Promise.all([window.api.library.snapshot(), window.api.prefs.get()])
@@ -188,6 +200,17 @@ export const useApp = create<AppState>((set, get) => ({
     await window.api.library.removeEntry(animeId)
   },
 
+  runUndo: async () => {
+    const held = get().undoable
+    if (!held) {
+      get().toast('Rien à annuler.', 'info')
+      return
+    }
+    set({ undoable: null })
+    await held.run()
+    get().toast(`Annulé : ${held.label}`, 'ok')
+  },
+
   // Optimistic: ticking an episode must feel instant, the echo reconciles it.
   toggleEpisode: async (animeId, episode) => {
     const watched = new Map(get().watched)
@@ -196,23 +219,63 @@ export const useApp = create<AppState>((set, get) => ({
     if (next) set0.add(episode)
     else set0.delete(episode)
     watched.set(animeId, set0)
-    set({ watched })
+    set({
+      watched,
+      undoable: {
+        label: next ? `épisode ${episode} coché` : `épisode ${episode} décoché`,
+        run: async () => {
+          await get().toggleEpisode(animeId, episode)
+          // Défaire ne doit pas devenir l'action à défaire.
+          set({ undoable: null })
+        }
+      }
+    })
     await window.api.library.setWatched(animeId, episode, next)
   },
 
   markUpTo: async (animeId, episode) => {
     const watched = new Map(get().watched)
     const set0 = new Set(watched.get(animeId) ?? [])
-    for (let ep = 1; ep <= episode; ep += 1) set0.add(ep)
+    // Ceux qui n'y étaient pas : ce sont les seuls à retirer si on annule.
+    const added: number[] = []
+    for (let ep = 1; ep <= episode; ep += 1) {
+      if (!set0.has(ep)) added.push(ep)
+      set0.add(ep)
+    }
     watched.set(animeId, set0)
-    set({ watched })
+    set({
+      watched,
+      undoable: added.length
+        ? {
+            label: `${added.length} épisode${added.length > 1 ? 's' : ''} coché${added.length > 1 ? 's' : ''}`,
+            run: async () => {
+              for (const ep of added) await window.api.library.setWatched(animeId, ep, false)
+              set({ undoable: null })
+            }
+          }
+        : null
+    })
     await window.api.library.setWatchedUpTo(animeId, episode)
   },
 
   clearProgress: async (animeId) => {
     const watched = new Map(get().watched)
+    // La liste effacée est le seul moyen de la remettre : le disque, lui, ne
+    // la connaît déjà plus.
+    const lost = [...(watched.get(animeId) ?? [])]
     watched.set(animeId, new Set())
-    set({ watched })
+    set({
+      watched,
+      undoable: lost.length
+        ? {
+            label: `progression effacée (${lost.length} épisode${lost.length > 1 ? 's' : ''})`,
+            run: async () => {
+              for (const ep of lost) await window.api.library.setWatched(animeId, ep, true)
+              set({ undoable: null })
+            }
+          }
+        : null
+    })
     await window.api.library.clearWatched(animeId)
   },
 

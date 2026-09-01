@@ -1,4 +1,4 @@
-import { ArrowUpRight, Clock, Compass, Play, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Clock, Compass, Dices, Play, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { Media } from '@shared/types'
@@ -324,6 +324,23 @@ export default function HomePage(): React.JSX.Element {
           <Section
             title="À rattraper"
             subtitle={`${behindTotal} épisode${behindTotal > 1 ? 's' : ''} déjà sorti${behindTotal > 1 ? 's' : ''} que tu n'as pas vu${behindTotal > 1 ? 's' : ''}`}
+            action={
+              behindList.length > 1 ? (
+                <button
+                  className="chip shrink-0"
+                  title="Ouvre une série au hasard parmi celles-ci"
+                  onClick={() => {
+                    // Choisir est un travail aussi : trente-trois séries en
+                    // retard, ce sont trente-trois décisions avant de regarder.
+                    const pick = behindList[Math.floor(Math.random() * behindList.length)]
+                    navigate({ name: 'anime', id: pick.media.id })
+                  }}
+                >
+                  <Dices size={13} />
+                  Au hasard
+                </button>
+              ) : undefined
+            }
           >
             <RowScroller>
               {behindList.map((row, i) => (

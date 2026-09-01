@@ -82,6 +82,7 @@ export default function App(): React.JSX.Element {
   // un raccourci qu'on ne trouve que par hasard n'existe qu'à moitié.
   const helpOpen = useApp((s) => s.helpOpen)
   const setHelp = useApp((s) => s.setHelp)
+  const runUndo = useApp((s) => s.runUndo)
   useShortcutsKey(useCallback(() => setHelp(true), [setHelp]))
 
   useEffect(() => {
@@ -94,10 +95,20 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         back()
       }
+      // Ctrl+Z sur la progression, jamais dans un champ : on y attend l'annulation
+      // de la frappe, pas celle d'un épisode coché il y a dix minutes.
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        const el = document.activeElement
+        const typing =
+          el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || (el as HTMLElement)?.isContentEditable
+        if (typing) return
+        e.preventDefault()
+        void runUndo()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [back, setPalette, paletteOpen])
+  }, [back, setPalette, paletteOpen, runUndo])
 
   const routeKey =
     route.name === 'anime'

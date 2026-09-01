@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.14 — 1er septembre 2026
+
+### Ajouts
+
+- `Ctrl+Z` annule la dernière coche : cocher, cocher jusque-là, réinitialiser une progression
+- Un bouton « Au hasard » sur « À rattraper », pour les soirs où choisir est déjà un effort
+
 ## 0.3.13 — 1er septembre 2026
 
 ### Ajouts

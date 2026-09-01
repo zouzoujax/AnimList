@@ -1,6 +1,6 @@
 {
   "name": "animelist",
-  "version": "0.3.13",
+  "version": "0.3.14",
   "description": "Suivi d'animes local-first, sans compte",
   "main": "./out/main/index.js",
   "private": true,
