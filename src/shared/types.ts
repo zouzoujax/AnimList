@@ -151,6 +151,14 @@ export interface WatchEvent {
    */
   imported?: boolean
   /**
+   * Épisode marqué « à revoir ».
+   *
+   * Distinct d'une note : on n'a rien à en dire, on veut juste le retrouver.
+   * Absent plutôt que `false` — la grande majorité des lignes ne le sont pas,
+   * et le journal est réécrit en entier à chaque correction.
+   */
+  pinned?: boolean
+  /**
    * Which viewing this belongs to: absent or `0` is the first watch, `1` the
    * first rewatch, and so on. Only the pass matching the entry's `rewatches`
    * counts as "currently seen"; earlier passes stay in the history so watch
@@ -170,7 +178,7 @@ export interface WatchEventRef {
   pass: number
 }
 
-export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note' | 'emotions'>>
+export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note' | 'emotions' | 'pinned'>>
 
 export interface Prefs {
   titleLang: TitleLang

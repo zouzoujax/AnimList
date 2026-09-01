@@ -8,7 +8,7 @@
  */
 
 import { useState } from 'react'
-import { CalendarClock, Clock, Play, Trash2 } from 'lucide-react'
+import { CalendarClock, Clock, Play, Star, Trash2 } from 'lucide-react'
 import { EMOTIONS, type EmotionId, type WatchEvent } from '@shared/types'
 import { useApp } from '../store/app'
 import { Modal } from './ui'
@@ -80,8 +80,18 @@ function ViewingForm({
             importé
           </span>
         )}
+        {/* Marquer sans rien écrire : on n'a pas toujours quelque chose à dire
+            d'un épisode, on veut juste pouvoir le retrouver. */}
         <button
-          className="btn ml-auto !h-7 text-[0.72rem]"
+          data-on={!!event.pinned}
+          className="chip ml-auto !h-7 text-[0.72rem]"
+          title={event.pinned ? 'Retirer des épisodes à revoir' : 'Marquer comme à revoir'}
+          onClick={() => void updateEvent(ref, { pinned: !event.pinned })}
+        >
+          <Star size={12} fill={event.pinned ? 'currentColor' : 'none'} />À revoir
+        </button>
+        <button
+          className="btn !h-7 text-[0.72rem]"
           style={{ color: '#ff8080', borderColor: 'rgba(255,128,128,.3)' }}
           onClick={() => {
             void removeEvent(ref)

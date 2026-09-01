@@ -15,6 +15,7 @@ le code.
 
 - `Ctrl+Z` annule la dernière coche : cocher, cocher jusque-là, réinitialiser une progression
 - Un bouton « Au hasard » sur « À rattraper », pour les soirs où choisir est déjà un effort
+- Marquer un épisode « à revoir » depuis son éditeur : il se retrouve sur l'accueil, et sa case porte une pastille
 
 ## 0.3.13 — 1er septembre 2026
 

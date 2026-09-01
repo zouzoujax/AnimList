@@ -178,6 +178,9 @@ function EpisodeGrid({
   const annotated = new Set(
     events.filter((e) => e.animeId === detail.id && (e.note || e.emotions?.length)).map((e) => e.episode)
   )
+  // Marqué « à revoir » : la pastille sert aussi à ça, sinon il faudrait le
+  // chercher à l'œil dans trois cent cinquante-neuf cases.
+  const pinned = new Set(events.filter((e) => e.animeId === detail.id && e.pinned).map((e) => e.episode))
 
   // Recaps are filler for the purpose of skipping: neither advances the story.
   const filler = new Set([...(fillerInfo?.filler ?? []), ...(fillerInfo?.recap ?? [])])
@@ -358,11 +361,11 @@ function EpisodeGrid({
               }
             >
               {watched ? <Check size={14} strokeWidth={3} /> : ep.number}
-              {annotated.has(ep.number) && (
+              {(annotated.has(ep.number) || pinned.has(ep.number)) && (
                 <span
                   className="absolute right-1 top-1 h-[5px] w-[5px] rounded-full"
                   style={{ background: watched ? '#07080f' : glow }}
-                  title="Cet épisode a une note"
+                  title={pinned.has(ep.number) ? 'À revoir' : 'Cet épisode a une note'}
                 />
               )}
               {/* Coin bas-droit : le haut-droit porte déjà la pastille des

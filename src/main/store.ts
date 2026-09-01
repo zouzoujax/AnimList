@@ -535,6 +535,12 @@ export function updateEvent(ref: WatchEventRef, patch: WatchEventPatch): boolean
     if (patch.emotions.length) ev.emotions = patch.emotions
     else delete ev.emotions
   }
+  // Absent plutôt que `false` : le journal est réécrit en entier à chaque
+  // correction, et une clé posée sur trois mille lignes pour rien les alourdit.
+  if (patch.pinned !== undefined) {
+    if (patch.pinned) ev.pinned = true
+    else delete ev.pinned
+  }
 
   changed()
   return true

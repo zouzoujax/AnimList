@@ -2,7 +2,7 @@ import { ArrowUpRight, Clock, Compass, Dices, Play, Sparkles } from 'lucide-reac
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import type { Media } from '@shared/types'
-import { AnimeCard, ContinueCard } from '@/components/AnimeCard'
+import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
@@ -194,6 +194,7 @@ export default function HomePage(): React.JSX.Element {
   const mediaMap = useApp((s) => s.media)
   const events = useApp((s) => s.events)
   const watchedMap = useApp((s) => s.watched)
+  const lang = useApp((s) => s.prefs.titleLang)
   const state = useApp()
   const refreshed = useRef(false)
   const now = useNow()
@@ -248,6 +249,24 @@ export default function HomePage(): React.JSX.Element {
   }, [entries, mediaMap, watchedMap])
 
   const behindTotal = behindList.reduce((sum, row) => sum + row.behind, 0)
+
+  /**
+   * Les épisodes mis de côté pour y revenir.
+   *
+   * Marquer ne sert à rien si on ne peut pas retrouver : la marque se pose sur
+   * la fiche, elle se relit ici, sans avoir à se souvenir de quelle série il
+   * s'agissait.
+   */
+  const pinned = useMemo(
+    () =>
+      events
+        .filter((ev) => ev.pinned)
+        .sort((a, b) => b.at - a.at)
+        .map((ev) => ({ ev, media: mediaMap.get(ev.animeId) }))
+        .filter((row): row is { ev: (typeof events)[number]; media: Media } => !!row.media)
+        .slice(0, 12),
+    [events, mediaMap]
+  )
 
   const continueList = useMemo(() => {
     return [...entries.values()]
@@ -350,6 +369,23 @@ export default function HomePage(): React.JSX.Element {
                   index={i}
                   note={`${row.behind} en retard`}
                   onHover={lightUp}
+                />
+              ))}
+            </RowScroller>
+          </Section>
+        )}
+
+        {pinned.length > 0 && (
+          <Section title="À revoir" subtitle="Les épisodes que tu as mis de côté">
+            <RowScroller>
+              {pinned.map((row, i) => (
+                <MiniCard
+                  key={`${row.ev.animeId}:${row.ev.episode}:${row.ev.pass ?? 0}`}
+                  id={row.media.id}
+                  title={titleOf(row.media, lang)}
+                  cover={row.media.cover.large}
+                  caption={`Épisode ${row.ev.episode}`}
+                  index={i}
                 />
               ))}
             </RowScroller>
