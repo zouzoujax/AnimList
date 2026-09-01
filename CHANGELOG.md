@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.16 — 2 septembre 2026
+
+### Corrections
+
+- « Regarder » ouvrait parfois une saison qui n'existe pas, sur une page vide : un chiffre appartenant au nom de la série — « Kaiju No. 8 » — était compté comme un numéro de saison, et le site répondait à cette adresse sans rien avoir à y montrer. Les liens déjà mémorisés sont refaits
+
 ## 0.3.15 — 1er septembre 2026
 
 ### Corrections
