@@ -510,6 +510,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }): R
 }
 
 export default function DetailPage({ id }: { id: number }): React.JSX.Element {
+  const navigate = useApp((s) => s.navigate)
   const { data, loading, error, retry } = useDetail(id)
   const mediaCache = useApp((s) => s.media)
   const cached = mediaCache.get(id)
@@ -862,9 +863,29 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                         />
                       )}
                     </div>
-                    <p className="clamp-2 mt-2 text-[0.75rem] font-semibold leading-snug">{c.name}</p>
+                    {/* « Où l'ai-je déjà entendu ? » est l'une des questions
+                        qu'on se pose le plus souvent devant un anime, et rien
+                        ici n'était cliquable. */}
+                    <button
+                      className="clamp-2 mt-2 text-left text-[0.75rem] font-semibold leading-snug transition hover:text-white"
+                      onClick={() => navigate({ name: 'person', kind: 'character', id: c.id })}
+                      title="Voir ses autres apparitions"
+                    >
+                      {c.name}
+                    </button>
                     <p className="mt-0.5 text-[0.67rem] text-faint">{c.role}</p>
-                    {c.va && <p className="clamp-2 mt-1 text-[0.67rem] text-muted">{c.va}</p>}
+                    {c.va &&
+                      (c.vaId ? (
+                        <button
+                          className="clamp-2 mt-1 text-left text-[0.67rem] text-muted transition hover:text-white"
+                          onClick={() => navigate({ name: 'person', kind: 'staff', id: c.vaId as number })}
+                          title="Voir ses autres rôles"
+                        >
+                          {c.va}
+                        </button>
+                      ) : (
+                        <p className="clamp-2 mt-1 text-[0.67rem] text-muted">{c.va}</p>
+                      ))}
                   </motion.div>
                 ))}
               </RowScroller>

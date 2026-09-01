@@ -18,6 +18,7 @@ le code.
 - Marquer un épisode « à revoir » depuis son éditeur : il se retrouve sur l'accueil, et sa case porte une pastille
 - Un bilan de santé de la bibliothèque dans les Réglages : fiches manquantes, visionnages orphelins, épisodes au-delà du total, doublons, fichiers résiduels — avec de quoi nettoyer ce qui peut l'être
 - Une frise dans les statistiques : chaque mois de visionnage, avec les séries qui l'ont occupé
+- Les personnages et leurs doubleurs sont cliquables : leur page rassemble tout ce qu'AniList leur connaît, en signalant ce que tu as déjà
 
 ## 0.3.13 — 1er septembre 2026
 

@@ -13,6 +13,7 @@ import type {
   Media,
   MediaDetail,
   Paged,
+  PersonWorks,
   Prefs,
   SeasonEntry,
   SeasonName,
@@ -76,6 +77,9 @@ const api = {
      */
     recommended: (seeds: number[], exclude: number[]): Promise<Suggestion[]> =>
       ipcRenderer.invoke('anime:recommended', seeds, exclude),
+    /** Les autres rôles d'un personnage ou d'un doubleur. */
+    person: (kind: 'character' | 'staff', id: number): Promise<PersonWorks | null> =>
+      ipcRenderer.invoke('anime:person', kind, id),
     currentSeason: (): Promise<{ season: SeasonName; year: number }> => ipcRenderer.invoke('anime:season'),
     returning: (): Promise<Media[]> => ipcRenderer.invoke('anime:returning'),
     films: (title: string): Promise<Media[]> => ipcRenderer.invoke('anime:films', title),

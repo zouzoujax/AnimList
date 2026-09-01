@@ -19,6 +19,7 @@ import { useApp } from '@/store/app'
 const DiscoverPage = lazy(() => import('@/pages/Discover'))
 const LibraryPage = lazy(() => import('@/pages/Library'))
 const StudioPage = lazy(() => import('@/pages/Studio'))
+const PersonPage = lazy(() => import('@/pages/Person'))
 const CalendarPage = lazy(() => import('@/pages/Calendar'))
 const StatsPage = lazy(() => import('@/pages/Stats'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
@@ -111,13 +112,15 @@ export default function App(): React.JSX.Element {
   }, [back, setPalette, paletteOpen, runUndo])
 
   const routeKey =
-    route.name === 'anime'
-      ? `anime-${route.id}`
-      : route.name === 'studio'
-        ? `studio-${route.studio}`
-        : route.name === 'library'
-          ? `library-${route.genre ?? ''}`
-          : route.name
+    route.name === 'person'
+      ? `person-${route.kind}-${route.id}`
+      : route.name === 'anime'
+        ? `anime-${route.id}`
+        : route.name === 'studio'
+          ? `studio-${route.studio}`
+          : route.name === 'library'
+            ? `library-${route.genre ?? ''}`
+            : route.name
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 })
@@ -152,6 +155,7 @@ export default function App(): React.JSX.Element {
                     {route.name === 'discover' && <DiscoverPage initialSearch={route.search} />}
                     {route.name === 'library' && <LibraryPage initialGenre={route.genre} />}
                     {route.name === 'studio' && <StudioPage studio={route.studio} />}
+                    {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
                     {route.name === 'calendar' && <CalendarPage />}
                     {route.name === 'stats' && <StatsPage />}
                     {route.name === 'settings' && <SettingsPage />}

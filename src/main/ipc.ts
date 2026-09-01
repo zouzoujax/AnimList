@@ -122,6 +122,7 @@ export function registerIpc(): void {
   ipcMain.handle('anime:recommended', (_e, seeds: number[], exclude: number[]) =>
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
+  ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))
   ipcMain.handle('anime:films', (_e, title: string) => anilist.franchiseFilms(title, getPrefs().showAdult))

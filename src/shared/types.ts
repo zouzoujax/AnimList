@@ -92,6 +92,18 @@ export interface CharacterRef {
   role: string
   va: string | null
   vaImage: string | null
+  /** Identifiant du doubleur, pour ouvrir ses autres rôles. */
+  vaId: number | null
+}
+
+/** Un personnage ou un doubleur, et les séries où on le retrouve. */
+export interface PersonWorks {
+  id: number
+  kind: 'character' | 'staff'
+  name: string
+  image: string | null
+  /** Chaque série, avec le rôle qui y est tenu. */
+  roles: { media: Media; role: string | null }[]
 }
 
 export interface MediaRef {

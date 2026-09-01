@@ -22,6 +22,7 @@ export type Route =
   | { name: 'settings' }
   | { name: 'anime'; id: number }
   | { name: 'studio'; studio: string }
+  | { name: 'person'; kind: 'character' | 'staff'; id: number }
 
 export interface Toast {
   id: number

@@ -15,6 +15,7 @@ import type {
   MediaDetail,
   Paged,
   PageInfo,
+  PersonWorks,
   StudioWorks,
   SeasonEntry,
   SeasonName
@@ -90,7 +91,7 @@ query Detail($id: Int) {
       edges {
         role
         node { id name { full } image { large } }
-        voiceActors(language: JAPANESE, sort: [RELEVANCE]) { name { full } image { large } }
+        voiceActors(language: JAPANESE, sort: [RELEVANCE]) { id name { full } image { large } }
       }
     }
     relations {
@@ -407,7 +408,7 @@ interface RawDetail extends RawMedia {
     edges: {
       role: string
       node: { id: number; name: { full: string }; image: { large: string | null } | null }
-      voiceActors: { name: { full: string }; image: { large: string | null } | null }[]
+      voiceActors: { id: number; name: { full: string }; image: { large: string | null } | null }[]
     }[]
   } | null
   relations: {
@@ -547,6 +548,88 @@ export async function recommended(seeds: number[], exclude: number[], showAdult:
   return [...found.values()].sort((a, b) => b.from.length - a.from.length || b.score - a.score).slice(0, 24)
 }
 
+/**
+ * Les autres rôles d'un personnage ou d'un doubleur.
+ *
+ * AniList sait répondre aux deux, mais pas de la même façon : un personnage
+ * porte ses séries directement, un doubleur les porte à travers les
+ * personnages qu'il incarne. D'où deux requêtes plutôt qu'un paramètre.
+ */
+const CHARACTER_QUERY = `
+query Person($id: Int) {
+  Character(id: $id) {
+    id
+    name { full }
+    image { large }
+    media(sort: POPULARITY_DESC, perPage: 30) {
+      edges { characterRole node { type ${MEDIA_FIELDS} } }
+    }
+  }
+}`
+
+const STAFF_QUERY = `
+query Person($id: Int) {
+  Staff(id: $id) {
+    id
+    name { full }
+    image { large }
+    characterMedia(sort: POPULARITY_DESC, perPage: 30) {
+      edges { characters { name { full } } node { type ${MEDIA_FIELDS} } }
+    }
+  }
+}`
+
+interface RawPerson {
+  id: number
+  name: { full: string }
+  image?: { large: string | null } | null
+  media?: { edges: { characterRole: string | null; node: RawMedia & { type?: string | null } }[] } | null
+  characterMedia?: {
+    edges: { characters: { name: { full: string } }[]; node: RawMedia & { type?: string | null } }[]
+  } | null
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  MAIN: 'Rôle principal',
+  SUPPORTING: 'Second rôle',
+  BACKGROUND: 'Apparition'
+}
+
+export async function personWorks(kind: 'character' | 'staff', id: number): Promise<PersonWorks | null> {
+  const key = `person:${kind}:${id}`
+  const { data } = await cached(key, TTL.detail, () =>
+    request<{ Character?: RawPerson | null; Staff?: RawPerson | null }>(
+      kind === 'character' ? CHARACTER_QUERY : STAFF_QUERY,
+      { id },
+      'interactive',
+      key
+    )
+  )
+
+  const person = kind === 'character' ? data.Character : data.Staff
+  if (!person) return null
+
+  // Une même série peut revenir : un doubleur y tient parfois deux rôles.
+  const seen = new Set<number>()
+  const roles: PersonWorks['roles'] = []
+  const edges = kind === 'character' ? (person.media?.edges ?? []) : (person.characterMedia?.edges ?? [])
+
+  for (const edge of edges) {
+    if (edge.node.type && edge.node.type !== 'ANIME') continue
+    if (seen.has(edge.node.id)) continue
+    seen.add(edge.node.id)
+    const role =
+      'characterRole' in edge && edge.characterRole
+        ? (ROLE_LABELS[edge.characterRole] ?? edge.characterRole)
+        : 'characters' in edge
+          ? (edge.characters?.[0]?.name.full ?? null)
+          : null
+    roles.push({ media: toMedia(edge.node), role })
+  }
+
+  return { id: person.id, kind, name: person.name.full, image: person.image?.large ?? null, roles }
+}
+
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {
   const { data, stale } = await cached(`detail:${id}`, TTL.detail, () =>
     request<{ Media: RawDetail }>(DETAIL_QUERY, { id }, 'interactive', `detail:${id}`)
@@ -570,7 +653,8 @@ export async function detail(id: number): Promise<MediaDetail & { stale: boolean
       image: e.node.image?.large ?? null,
       role: e.role === 'MAIN' ? 'Principal' : e.role === 'SUPPORTING' ? 'Secondaire' : 'Apparition',
       va: e.voiceActors?.[0]?.name.full ?? null,
-      vaImage: e.voiceActors?.[0]?.image?.large ?? null
+      vaImage: e.voiceActors?.[0]?.image?.large ?? null,
+      vaId: e.voiceActors?.[0]?.id ?? null
     })),
     relations: (m.relations?.edges ?? [])
       .filter((e) => e.node.type === 'ANIME')
