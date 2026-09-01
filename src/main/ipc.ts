@@ -118,6 +118,9 @@ export function registerIpc(): void {
     cacheMedia(fresh, true)
     return fresh
   })
+  ipcMain.handle('anime:recommended', (_e, seeds: number[], exclude: number[]) =>
+    anilist.recommended(seeds, exclude, getPrefs().showAdult)
+  )
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))
   ipcMain.handle('anime:films', (_e, title: string) => anilist.franchiseFilms(title, getPrefs().showAdult))

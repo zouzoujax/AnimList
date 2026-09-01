@@ -365,6 +365,15 @@ export type UpdatePhase =
 
 export type { ReleaseNote, NoteKind, NoteSection } from './release-notes'
 
+/** Une série qu'AniList conseille à partir de ce que tu as déjà aimé. */
+export interface Suggestion {
+  media: Media
+  /** Poids cumulé des recommandations de la communauté. */
+  score: number
+  /** Les titres de ta bibliothèque qui ont mené jusqu'à celle-ci. */
+  from: string[]
+}
+
 /** Un fichier vidéo trouvé dans le dossier associé à une série. */
 export interface LocalEpisode {
   /** Numéro lu dans le nom du fichier, ou `null` s'il est illisible. */

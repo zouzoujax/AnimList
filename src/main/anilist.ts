@@ -470,6 +470,83 @@ function buildEpisodeMeta(m: RawDetail): MediaDetail['episodeMeta'] {
   return matchStreamEpisodes(listed, total)
 }
 
+/**
+ * Ce qu'AniList conseille à partir de ce que tu as aimé.
+ *
+ * Les recommandations sont attachées à une œuvre, pas à une personne : il
+ * n'existe pas de « recommande-moi quelque chose » côté serveur. On interroge
+ * donc plusieurs séries d'un coup — par alias, une seule requête — et on
+ * additionne.
+ *
+ * Le vote de la communauté (`rating`) sert de poids : une série conseillée
+ * depuis trois de tes favoris avec de bons scores remonte devant une
+ * suggestion isolée. Deux graines valent mieux qu'une, et on le dit dans le
+ * résultat : savoir *pourquoi* une série est là vaut mieux qu'un classement
+ * opaque.
+ */
+export interface Suggestion {
+  media: Media
+  /** Poids cumulé des recommandations. */
+  score: number
+  /** Titres de la bibliothèque qui ont mené jusqu'à celle-ci. */
+  from: string[]
+}
+
+const RECO_FIELDS = `
+  recommendations(sort: RATING_DESC, perPage: 10) {
+    nodes { rating mediaRecommendation { isAdult ${MEDIA_FIELDS} } }
+  }`
+
+interface RawReco {
+  title?: { romaji: string | null; english: string | null } | null
+  recommendations: {
+    nodes: { rating: number | null; mediaRecommendation: (RawMedia & { isAdult?: boolean | null }) | null }[]
+  } | null
+}
+
+export async function recommended(seeds: number[], exclude: number[], showAdult: boolean): Promise<Suggestion[]> {
+  const ids = seeds.slice(0, 8)
+  if (!ids.length) return []
+
+  // La clé porte les graines : changer de favoris doit changer la réponse.
+  const key = `reco:${ids.join(',')}:${showAdult}`
+  const query = `query { ${ids
+    .map((id) => `m${id}: Media(id: ${id}) { title { romaji english } ${RECO_FIELDS} }`)
+    .join(' ')} }`
+
+  const { data } = await cached(key, TTL.list, () =>
+    request<Record<string, RawReco | null>>(query, {}, 'background', key)
+  )
+
+  const skip = new Set(exclude)
+  const found = new Map<number, Suggestion>()
+
+  for (const seed of Object.values(data)) {
+    // Le titre sans son numéro de saison : « parce que tu as aimé MASHLE,
+    // MASHLE » n'apprend rien à personne.
+    const full = seed?.title?.english ?? seed?.title?.romaji ?? ''
+    const seedTitle = full ? baseAndSeason(full).base : ''
+    for (const node of seed?.recommendations?.nodes ?? []) {
+      const raw = node.mediaRecommendation
+      if (!raw || skip.has(raw.id)) continue
+      if (raw.isAdult && !showAdult) continue
+
+      // Une recommandation mal notée par la communauté n'en est pas vraiment
+      // une : elle dit surtout que quelqu'un a cliqué.
+      const weight = Math.max(1, node.rating ?? 1)
+      const held = found.get(raw.id)
+      if (held) {
+        held.score += weight
+        if (seedTitle && !held.from.includes(seedTitle)) held.from.push(seedTitle)
+      } else {
+        found.set(raw.id, { media: toMedia(raw), score: weight, from: seedTitle ? [seedTitle] : [] })
+      }
+    }
+  }
+
+  return [...found.values()].sort((a, b) => b.from.length - a.from.length || b.score - a.score).slice(0, 24)
+}
+
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {
   const { data, stale } = await cached(`detail:${id}`, TTL.detail, () =>
     request<{ Media: RawDetail }>(DETAIL_QUERY, { id }, 'interactive', `detail:${id}`)

@@ -16,6 +16,7 @@ le code.
 - Une aide des raccourcis dans l'app, ouverte par `?` ou depuis les Réglages : clavier et souris, y compris les gestes qu'on ne devine pas seul comme le clic droit sur un épisode
 - « Ce qu'il te reste » dans les statistiques : les heures en cours, celles en pile, et une estimation en jours à ton rythme réel
 - La fiche d'un anime dit combien d'épisodes il reste et le temps que ça représente
+- « Pour toi » sur la page Découvrir : ce qu'AniList conseille à partir de ce que tu as aimé, moins ce que tu suis déjà, avec la série qui a mené jusqu'à chaque suggestion
 - La vignette d'un épisode s'affiche quand on l'ouvre depuis la grille
 
 ## 0.3.12 — 1er septembre 2026

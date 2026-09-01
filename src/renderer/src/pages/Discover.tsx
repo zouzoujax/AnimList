@@ -7,13 +7,17 @@ import {
   FORMAT_LABELS,
   type BrowseKind,
   type BrowseQuery,
+  type Entry,
   type Media,
-  type MediaFormat
+  type MediaFormat,
+  type Suggestion
 } from '@shared/types'
 import { AnimeCard } from '@/components/AnimeCard'
 import { ErrorBox, PosterSkeletons, Spinner } from '@/components/ui'
 import { monthBucket, premiereLabel, premiereOf, premiereSort } from '@/lib/format'
 import { useBrowse, useDebounced, useInView } from '@/lib/hooks'
+import { baseAndSeason, compact } from '@shared/titles'
+import { useApp } from '@/store/app'
 
 const TABS: { kind: BrowseKind; label: string; icon: typeof Flame }[] = [
   { kind: 'trending', label: 'Tendances', icon: Flame },
@@ -75,6 +79,8 @@ function UpcomingSchedule({ items }: { items: Media[] }): React.JSX.Element {
 }
 
 export default function DiscoverPage({ initialSearch }: { initialSearch?: string }): React.JSX.Element {
+  const entries = useApp((s) => s.entries)
+  const mediaMap = useApp((s) => s.media)
   const [tab, setTab] = useState<BrowseKind>('trending')
   // La saisie appartient à la recherche qui a ouvert la page. Arriver avec une
   // autre — depuis la palette, par exemple — rend la précédente caduque sans
@@ -113,6 +119,50 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
       alive = false
     }
   }, [showSchedule])
+
+  /**
+   * Les graines : ce que tu as le plus aimé.
+   *
+   * Les favoris d'abord, puis les mieux notées, puis les terminées récentes.
+   * AniList n'a pas de « recommande-moi quelque chose » : ses recommandations
+   * sont attachées à une œuvre, alors il faut lui dire à partir de quoi.
+   */
+  const seeds = useMemo(() => {
+    const list = [...entries.values()]
+    const rank = (e: Entry): number =>
+      (e.favorite ? 1000 : 0) + (e.score ?? 0) * 10 + (e.status === 'completed' ? 5 : 0)
+    // Une franchise ne compte qu'une fois : deux saisons de la même série
+    // mangeraient deux places sur huit pour un seul goût.
+    const seen = new Set<string>()
+    const picked: number[] = []
+    for (const entry of list
+      .filter((e) => e.favorite || e.score !== null || e.status === 'completed')
+      .sort((a, b) => rank(b) - rank(a) || b.updatedAt - a.updatedAt)) {
+      const media = mediaMap.get(entry.animeId)
+      if (!media) continue
+      const family = compact(baseAndSeason(media.title.english ?? media.title.romaji).base)
+      if (seen.has(family)) continue
+      seen.add(family)
+      picked.push(entry.animeId)
+      if (picked.length === 8) break
+    }
+    return picked
+  }, [entries, mediaMap])
+
+  const [picks, setPicks] = useState<Suggestion[] | null>(null)
+  useEffect(() => {
+    if (!seeds.length) return
+    let alive = true
+    // Tout ce qui est déjà suivi est exclu : conseiller ce qu'on a déjà n'est
+    // pas un conseil.
+    void window.api.anime
+      .recommended(seeds, [...entries.keys()])
+      .then((res) => alive && setPicks(res))
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [seeds, entries])
 
   const scheduleItems = useMemo(() => {
     if (!showSchedule) return items
@@ -193,6 +243,31 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
 
       {stale && (
         <p className="mb-4 text-[0.76rem] text-amber-300/80">Hors ligne — affichage de la dernière version en cache.</p>
+      )}
+
+      {/* Avant le catalogue : ce qui vient de ta bibliothèque passe devant ce
+          qui vient du classement mondial. Absente en recherche, où l'on sait
+          déjà ce qu'on cherche. */}
+      {!searching && tab === 'trending' && picks && picks.length > 0 && (
+        <section className="mb-9">
+          <div className="mb-3.5 px-1">
+            <h2 className="title-xl text-[1.32rem] leading-tight">Pour toi</h2>
+            <p className="mt-0.5 text-[0.8rem] text-muted">
+              D’après {seeds.length} série{seeds.length > 1 ? 's' : ''} que tu as aimées, et que tu ne suis pas encore
+            </p>
+          </div>
+          <div className="card-grid">
+            {picks.slice(0, 12).map((pick, i) => (
+              <div key={pick.media.id}>
+                <AnimeCard media={pick.media} width="100%" index={i} />
+                <p className="clamp-2 mt-1 px-0.5 text-[0.68rem] text-faint" title={pick.from.join(', ')}>
+                  parce que tu as aimé {pick.from.slice(0, 2).join(', ')}
+                  {pick.from.length > 2 ? ` +${pick.from.length - 2}` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
 
       {loading ? (

@@ -17,6 +17,7 @@ import type {
   SeasonName,
   Snapshot,
   StudioWorks,
+  Suggestion,
   TvTimeProgress,
   TvTimeReport,
   UpdateStatus,
@@ -68,6 +69,12 @@ const api = {
       ipcRenderer.invoke('anime:airing', ids, from, to),
     airingAll: (from: number, to: number): Promise<AiringEntry[]> => ipcRenderer.invoke('anime:airing-all', from, to),
     refresh: (ids: number[]): Promise<Media[]> => ipcRenderer.invoke('anime:refresh', ids),
+    /**
+     * Ce qu'AniList conseille à partir des séries passées en graine, moins ce
+     * qui est déjà suivi.
+     */
+    recommended: (seeds: number[], exclude: number[]): Promise<Suggestion[]> =>
+      ipcRenderer.invoke('anime:recommended', seeds, exclude),
     currentSeason: (): Promise<{ season: SeasonName; year: number }> => ipcRenderer.invoke('anime:season'),
     returning: (): Promise<Media[]> => ipcRenderer.invoke('anime:returning'),
     films: (title: string): Promise<Media[]> => ipcRenderer.invoke('anime:films', title),
