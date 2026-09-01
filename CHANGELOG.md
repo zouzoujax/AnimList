@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.15 — 1er septembre 2026
+
+### Corrections
+
+- Une série cochée jusqu'au bout restait parfois « en cours » pour toujours, proposée dans « Continuer » alors qu'elle était finie : son statut est désormais revu dès que le nombre d'épisodes est connu, et les fiches déjà dans cet état sont rattrapées au lancement, à la date de leur dernier épisode vu
+- Sur les cartes de « Continuer », « x / y épisodes » passait à la ligne quand un compte à rebours l'accompagnait, et chassait la barre de progression hors de la carte
+
 ## 0.3.14 — 1er septembre 2026
 
 ### Ajouts
