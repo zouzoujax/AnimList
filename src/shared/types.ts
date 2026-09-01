@@ -288,6 +288,33 @@ export interface BrowseQuery {
   seasonYear?: number
 }
 
+/**
+ * Un manga, tel qu'AniList le décrit.
+ *
+ * Volontairement à part de `Media` : un manga n'a ni épisodes, ni durée, ni
+ * diffusion. Les fondre dans le même type obligerait à répondre « null » à la
+ * moitié des questions que l'app pose d'une série, et à s'en souvenir partout.
+ */
+export interface Manga {
+  id: number
+  title: { romaji: string; english: string | null; native: string | null }
+  cover: { large: string; xl: string; color: string | null }
+  banner: string | null
+  description: string | null
+  chapters: number | null
+  volumes: number | null
+  status: string | null
+  genres: string[]
+  averageScore: number | null
+  popularity: number
+  startYear: number | null
+  /** Auteurs et dessinateurs, dans cet ordre. */
+  staff: string[]
+  siteUrl: string
+}
+
+export type MangaKind = 'trending' | 'popular' | 'top' | 'search'
+
 export interface AiringItem {
   mediaId: number
   episode: number

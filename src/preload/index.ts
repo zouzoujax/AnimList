@@ -10,6 +10,8 @@ import type {
   HealthReport,
   ImportReport,
   LocalFolder,
+  Manga,
+  MangaKind,
   Media,
   MediaDetail,
   Paged,
@@ -96,6 +98,12 @@ const api = {
       return () => ipcRenderer.off('sequels:added', handler)
     }
   },
+  manga: {
+    /** Le catalogue manga d'AniList. Lecture seule : rien n'est suivi. */
+    browse: (kind: MangaKind, page: number, search: string, genre?: string): Promise<Paged<Manga>> =>
+      ipcRenderer.invoke('manga:browse', kind, page, search, genre)
+  },
+
   watch: {
     animeSama: (
       animeId: number,
@@ -171,6 +179,15 @@ const api = {
       schema: { version: number; expected: number; readOnly: boolean; applied: string[] }
     }> => ipcRenderer.invoke('app:info'),
     openExternal: (url: string): Promise<void> => ipcRenderer.invoke('app:open-external', url),
+    /**
+     * Enregistre en PNG la zone de la fenêtre décrite par `rect`.
+     *
+     * La zone doit être visible à l'écran : la fenêtre capture ce qu'elle
+     * affiche. Renvoie le nom du fichier écrit, ou null si l'utilisateur a
+     * renoncé.
+     */
+    saveCard: (rect: { x: number; y: number; width: number; height: number }, name: string): Promise<string | null> =>
+      ipcRenderer.invoke('card:save', rect, name),
     /**
      * Loopback URL to put in an iframe, or null when the trailer cannot be
      * served. See src/main/trailer.ts for why an iframe on file:// needs this.

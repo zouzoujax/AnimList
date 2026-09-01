@@ -1,5 +1,5 @@
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
-import type { BrowseQuery, EntryPatch, Media, Prefs, WatchEventPatch, WatchEventRef } from '@shared/types'
+import type { BrowseQuery, EntryPatch, MangaKind, Media, Prefs, WatchEventPatch, WatchEventRef } from '@shared/types'
 import * as anilist from './anilist'
 import { resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
@@ -12,6 +12,7 @@ import { fillerFor } from './filler'
 import { chooseFolder, forgetFolder, openInSystemPlayer, scanFolder } from './videos'
 import { openAnimeSamaEpisode } from './watch-window'
 import { cleanOrphans, health, removeStray } from './health'
+import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
 import {
   cacheMedia,
@@ -122,6 +123,9 @@ export function registerIpc(): void {
   ipcMain.handle('anime:recommended', (_e, seeds: number[], exclude: number[]) =>
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
+  ipcMain.handle('manga:browse', (_e, kind: MangaKind, page: number, search: string, genre?: string) =>
+    anilist.mangas(kind, page, search, genre, getPrefs().showAdult)
+  )
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))
@@ -143,6 +147,9 @@ export function registerIpc(): void {
 
   // ---- lecture chez une plateforme -------------------------------------
   ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null) => openAnimeSamaEpisode(url, episode))
+
+  // ---- image d'une carte -----------------------------------------------
+  ipcMain.handle('card:save', (_e, rect: CardRect, name: string) => saveCard(rect, name))
 
   // ---- santé de la bibliothèque ----------------------------------------
   ipcMain.handle('health:report', () => health())

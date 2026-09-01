@@ -13,6 +13,8 @@ import type {
   BrowseQuery,
   Media,
   MediaDetail,
+  Manga,
+  MangaKind,
   Paged,
   PageInfo,
   PersonWorks,
@@ -346,6 +348,104 @@ export function currentSeason(date = new Date()): { season: SeasonName; year: nu
 }
 
 // ---------------------------------------------------------------- public API
+
+/**
+ * Le catalogue manga.
+ *
+ * Une requête à part plutôt qu'un paramètre sur celle des animes : les champs
+ * utiles ne sont pas les mêmes — chapitres et volumes au lieu d'épisodes et de
+ * durée, auteurs au lieu de studios — et mêler les deux ferait demander à
+ * chaque appel la moitié de ce qui ne le concerne pas.
+ */
+const MANGA_FIELDS = `
+  id
+  title { romaji english native }
+  coverImage { large extraLarge color }
+  bannerImage
+  description(asHtml: false)
+  chapters
+  volumes
+  status
+  genres
+  averageScore
+  popularity
+  startDate { year }
+  siteUrl
+  staff(perPage: 2, sort: [RELEVANCE]) { nodes { name { full } } }`
+
+const MANGA_QUERY = `
+query Manga($page: Int, $perPage: Int, $sort: [MediaSort], $search: String, $genre: String, $isAdult: Boolean) {
+  Page(page: $page, perPage: $perPage) {
+    pageInfo { currentPage hasNextPage total }
+    media(type: MANGA, sort: $sort, search: $search, genre: $genre, isAdult: $isAdult) { ${MANGA_FIELDS} }
+  }
+}`
+
+interface RawManga {
+  id: number
+  title: { romaji: string; english: string | null; native: string | null }
+  coverImage: { large: string; extraLarge: string | null; color: string | null }
+  bannerImage: string | null
+  description: string | null
+  chapters: number | null
+  volumes: number | null
+  status: string | null
+  genres: string[] | null
+  averageScore: number | null
+  popularity: number | null
+  startDate?: { year: number | null } | null
+  siteUrl: string
+  staff?: { nodes: { name: { full: string } }[] } | null
+}
+
+const MANGA_SORTS: Record<MangaKind, string[]> = {
+  trending: ['TRENDING_DESC'],
+  popular: ['POPULARITY_DESC'],
+  top: ['SCORE_DESC'],
+  search: ['SEARCH_MATCH']
+}
+
+function toManga(m: RawManga): Manga {
+  return {
+    id: m.id,
+    title: m.title,
+    cover: { large: m.coverImage.large, xl: m.coverImage.extraLarge ?? m.coverImage.large, color: m.coverImage.color },
+    banner: m.bannerImage,
+    // AniList renvoie du HTML même en `asHtml: false` — les balises de saut de
+    // ligne survivent. Le même nettoyage que pour les animes.
+    description: m.description ? stripHtml(m.description) : null,
+    chapters: m.chapters,
+    volumes: m.volumes,
+    status: m.status,
+    genres: m.genres ?? [],
+    averageScore: m.averageScore,
+    popularity: m.popularity ?? 0,
+    startYear: m.startDate?.year ?? null,
+    staff: (m.staff?.nodes ?? []).map((n) => n.name.full),
+    siteUrl: m.siteUrl
+  }
+}
+
+export async function mangas(
+  kind: MangaKind,
+  page: number,
+  search: string,
+  genre: string | undefined,
+  showAdult: boolean
+): Promise<Paged<Manga>> {
+  const vars: Record<string, unknown> = { page, perPage: 30, sort: MANGA_SORTS[kind] }
+  if (kind === 'search' && search) vars.search = search
+  if (genre) vars.genre = genre
+  if (!showAdult) vars.isAdult = false
+
+  const key = `manga:${kind}:${page}:${search}:${genre ?? ''}:${showAdult}`
+  const ttl = kind === 'search' ? TTL.search : TTL.list
+  const { data, stale } = await cached(key, ttl, () =>
+    request<{ Page: { pageInfo: PageInfo; media: RawManga[] } }>(MANGA_QUERY, vars, 'interactive', key)
+  )
+
+  return { items: data.Page.media.map(toManga), pageInfo: data.Page.pageInfo, stale }
+}
 
 export async function browse(q: BrowseQuery, showAdult: boolean): Promise<Paged<Media>> {
   const page = q.page ?? 1

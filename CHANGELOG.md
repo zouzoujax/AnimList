@@ -19,6 +19,8 @@ le code.
 - Un bilan de santé de la bibliothèque dans les Réglages : fiches manquantes, visionnages orphelins, épisodes au-delà du total, doublons, fichiers résiduels — avec de quoi nettoyer ce qui peut l'être
 - Une frise dans les statistiques : chaque mois de visionnage, avec les séries qui l'ont occupé
 - Les personnages et leurs doubleurs sont cliquables : leur page rassemble tout ce qu'AniList leur connaît, en signalant ce que tu as déjà
+- « Ton année » dans les statistiques : une carte à enregistrer en image, avec le temps, les épisodes et les affiches de l'année
+- Un onglet Manga : le catalogue AniList, en lecture seule
 
 ## 0.3.13 — 1er septembre 2026
 

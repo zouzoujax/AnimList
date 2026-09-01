@@ -17,6 +17,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'discover'; search?: string }
   | { name: 'library'; genre?: string }
+  | { name: 'manga' }
   | { name: 'calendar' }
   | { name: 'stats' }
   | { name: 'settings' }

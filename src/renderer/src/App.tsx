@@ -20,6 +20,7 @@ const DiscoverPage = lazy(() => import('@/pages/Discover'))
 const LibraryPage = lazy(() => import('@/pages/Library'))
 const StudioPage = lazy(() => import('@/pages/Studio'))
 const PersonPage = lazy(() => import('@/pages/Person'))
+const MangaPage = lazy(() => import('@/pages/Manga'))
 const CalendarPage = lazy(() => import('@/pages/Calendar'))
 const StatsPage = lazy(() => import('@/pages/Stats'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
@@ -156,6 +157,7 @@ export default function App(): React.JSX.Element {
                     {route.name === 'library' && <LibraryPage initialGenre={route.genre} />}
                     {route.name === 'studio' && <StudioPage studio={route.studio} />}
                     {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
+                    {route.name === 'manga' && <MangaPage />}
                     {route.name === 'calendar' && <CalendarPage />}
                     {route.name === 'stats' && <StatsPage />}
                     {route.name === 'settings' && <SettingsPage />}

@@ -1,4 +1,14 @@
-import { CalendarDays, ChartColumn, ChevronLeft, Compass, House, LibraryBig, Search, Settings } from 'lucide-react'
+import {
+  BookOpen,
+  CalendarDays,
+  ChartColumn,
+  ChevronLeft,
+  Compass,
+  House,
+  LibraryBig,
+  Search,
+  Settings
+} from 'lucide-react'
 import { motion } from 'motion/react'
 import { useMemo } from 'react'
 import { minutesToHuman } from '@/lib/format'
@@ -162,6 +172,7 @@ const NAV: { route: Route; label: string; icon: typeof House }[] = [
   { route: { name: 'home' }, label: 'Accueil', icon: House },
   { route: { name: 'discover' }, label: 'Découvrir', icon: Compass },
   { route: { name: 'library' }, label: 'Bibliothèque', icon: LibraryBig },
+  { route: { name: 'manga' }, label: 'Manga', icon: BookOpen },
   { route: { name: 'calendar' }, label: 'Calendrier', icon: CalendarDays },
   { route: { name: 'stats' }, label: 'Statistiques', icon: ChartColumn },
   { route: { name: 'settings' }, label: 'Réglages', icon: Settings }

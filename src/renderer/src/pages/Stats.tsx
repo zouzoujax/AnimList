@@ -40,6 +40,7 @@ import {
   HeartHandshake,
   History,
   Hourglass,
+  ImageDown,
   Layers,
   Leaf,
   Library,
@@ -99,7 +100,7 @@ import {
   Infinity as InfinityIcon
 } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { GENRE_LABELS, type Media } from '@shared/types'
 import { ActivityHeatmap, MonthlyColumns, RankedBars, StatTile, type DayCount } from '@/components/Charts'
 import { EmptyState, Poster, RowScroller, Section } from '@/components/ui'
@@ -204,6 +205,7 @@ export default function StatsPage(): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const listCount = useApp((s) => s.lists.length)
   const watchedMap = useApp((s) => s.watched)
+  const toast = useApp((s) => s.toast)
   const defaultRuntime = useApp((s) => s.prefs.defaultRuntime)
 
   const stats = useMemo(() => {
@@ -425,6 +427,54 @@ export default function StatsPage(): React.JSX.Element {
   const activeYear = years.includes(year) ? year : years[0]
 
   const heatDays = useMemo(() => yearGrid(activeYear, stats.perDay), [activeYear, stats.perDay])
+
+  /**
+   * L'année en une carte.
+   *
+   * Tout est déjà calculé ailleurs, mais éparpillé sur toute la page : ici on
+   * ne retient que ce qui se raconte — le temps, les épisodes, la meilleure
+   * journée, et les affiches qui ont occupé l'année.
+   */
+  const yearCard = useMemo(() => {
+    let minutes = 0
+    let episodes = 0
+    const days = new Set<number>()
+    const series = new Map<number, number>()
+
+    for (const ev of events) {
+      if (ev.imported) continue
+      const date = new Date(ev.at)
+      if (date.getFullYear() !== activeYear) continue
+      minutes += ev.minutes
+      episodes += 1
+      days.add(startOfDay(ev.at))
+      series.set(ev.animeId, (series.get(ev.animeId) ?? 0) + 1)
+    }
+
+    const top = [...series.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([id, count]) => ({ media: mediaMap.get(id), count }))
+      .filter((row): row is { media: Media; count: number } => !!row.media)
+
+    return { minutes, episodes, days: days.size, series: series.size, top }
+  }, [events, activeYear, mediaMap])
+
+  const cardRef = useRef<HTMLDivElement>(null)
+  const saveYearCard = async (): Promise<void> => {
+    const el = cardRef.current
+    if (!el) return
+    // La fenêtre capture ce qu'elle affiche : la carte doit être à l'écran,
+    // et le navigateur a besoin d'une image pour finir de la faire défiler.
+    el.scrollIntoView({ block: 'center' })
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)))
+    const box = el.getBoundingClientRect()
+    const name = await window.api.app.saveCard(
+      { x: box.x, y: box.y, width: box.width, height: box.height },
+      `animelist-${activeYear}.png`
+    )
+    if (name) toast(`Image enregistrée dans ${name}.`, 'ok')
+  }
 
   const monthly = useMemo(() => {
     const buckets = Array.from({ length: 12 }, () => 0)
@@ -1464,6 +1514,67 @@ export default function StatsPage(): React.JSX.Element {
               hint={`par journée où tu regardes · mesuré sur ${num(stats.activeDays)} journée${stats.activeDays > 1 ? 's' : ''}`}
               icon={<Gauge size={15} />}
             />
+          </div>
+        </Section>
+      )}
+
+      {yearCard.episodes > 0 && (
+        <Section
+          title={`Ton année ${activeYear}`}
+          subtitle="À enregistrer et à partager"
+          action={
+            <button className="chip shrink-0" onClick={() => void saveYearCard()}>
+              <ImageDown size={13} />
+              Enregistrer l’image
+            </button>
+          }
+        >
+          {/* Capturée telle quelle par la fenêtre : c'est la carte affichée qui
+              devient l'image, pas un second rendu à maintenir en parallèle. */}
+          <div
+            ref={cardRef}
+            className="relative overflow-hidden rounded-[22px] p-6"
+            style={{
+              background: `linear-gradient(140deg, ${rgba(accent, 0.22)}, rgba(8,9,17,.9) 60%)`,
+              border: `1px solid ${rgba(accent, 0.3)}`
+            }}
+          >
+            <p className="label" style={{ color: rgba(accent, 1) }}>
+              AnimeList · {activeYear}
+            </p>
+            <p className="title-xl mt-1 text-[2rem] leading-tight">{minutesToHuman(yearCard.minutes)} d’anime</p>
+
+            <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
+              {[
+                { label: 'Épisodes', value: num(yearCard.episodes) },
+                { label: 'Séries', value: num(yearCard.series) },
+                { label: 'Journées', value: num(yearCard.days) },
+                {
+                  label: 'Par journée',
+                  value: yearCard.days ? minutesToHuman(Math.round(yearCard.minutes / yearCard.days)) : '—'
+                }
+              ].map((tile) => (
+                <div key={tile.label}>
+                  <p className="text-[1.35rem] font-semibold tabular-nums leading-none">{tile.value}</p>
+                  <p className="label mt-1 !text-[0.6rem]">{tile.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {yearCard.top.length > 0 && (
+              <>
+                <p className="label mb-2 mt-5">Ce qui a occupé l’année</p>
+                <div className="flex gap-2.5">
+                  {yearCard.top.map((row) => (
+                    <div key={row.media.id} className="w-[86px]">
+                      <Poster src={row.media.cover.large} alt="" className="h-[122px] w-[86px]" />
+                      <p className="clamp-2 mt-1 text-[0.66rem] leading-snug">{titleOf(row.media, lang)}</p>
+                      <p className="text-[0.62rem] tabular-nums text-faint">{row.count} ép.</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </Section>
       )}
