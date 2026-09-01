@@ -134,6 +134,14 @@ export function initStore(): MigrationReport | null {
         enqueueWrite()
       }
 
+      // Rattrape les fiches laissées « en cours » par une promotion sautée.
+      const settled = readOnly ? 0 : settleFinished()
+      if (settled > 0) {
+        console.warn(`[store] ${settled} série(s) terminée(s) restée(s) « en cours » — statut corrigé`)
+        coreDirty = true
+        enqueueWrite()
+      }
+
       return lastReport
     } catch (err) {
       console.error('[store] fichier illisible, tentative suivante', candidate, err)
@@ -349,6 +357,9 @@ export function cacheMedia(list: Media[], onlyIfTracked = false): void {
     if (onlyIfTracked && !db.entries[id]) continue
     db.media[id] = media
     touched = true
+    // Le total arrive parfois après les épisodes : c'est le moment où l'on
+    // peut enfin trancher.
+    if (db.entries[id]) promoteIfFinished(media.id)
   }
   if (touched) changed()
 }
@@ -605,6 +616,51 @@ function syncProgress(animeId: number): void {
   }
   entry.updatedAt = Date.now()
   db.entries[id] = entry
+}
+
+/**
+ * Termine une série dont tous les épisodes sont cochés.
+ *
+ * `syncProgress` ne s'exécute qu'au moment où l'on coche. Si le nombre
+ * d'épisodes n'est pas connu à cet instant précis — la fiche AniList n'est pas
+ * encore en cache, ou la série n'annonçait pas de total — la promotion est
+ * sautée, et plus rien ne repasse jamais dessus : la série reste « en cours »
+ * pour toujours, affichée dans « Continuer » alors qu'elle est finie. On rejoue
+ * donc la décision dès que le total se présente.
+ *
+ * Seul « en cours » est concerné. « Abandonné » et « prévu » sont des choix, et
+ * rien ici ne les défait.
+ */
+function promoteIfFinished(animeId: number): boolean {
+  const id = String(animeId)
+  const entry = db.entries[id]
+  if (!entry || entry.status !== 'watching') return false
+
+  const total = db.media[id]?.episodes ?? null
+  if (!total || watchedCount(animeId) < total) return false
+
+  entry.status = 'completed'
+  // La date du dernier épisode vu, pas celle du rattrapage : sinon une série
+  // finie en août atterrirait dans le bilan de septembre.
+  entry.finishedAt ??= lastWatchAt(animeId) ?? Date.now()
+  entry.updatedAt = Date.now()
+  return true
+}
+
+function lastWatchAt(animeId: number): number | null {
+  const pass = currentPass(animeId)
+  let at = 0
+  for (const ev of db.history) {
+    if (ev.animeId === animeId && passOf(ev) === pass && ev.at > at) at = ev.at
+  }
+  return at || null
+}
+
+/** Rejoue la promotion sur toute la bibliothèque, au chargement. */
+function settleFinished(): number {
+  let n = 0
+  for (const id of Object.keys(db.entries)) if (promoteIfFinished(Number(id))) n += 1
+  return n
 }
 
 export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): void {

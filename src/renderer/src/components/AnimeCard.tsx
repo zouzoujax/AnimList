@@ -227,7 +227,7 @@ export function ContinueCard({
         <Poster src={media.cover.large} alt="" className="h-full w-[110px] shrink-0" rounded="rounded-[13px]" />
 
         <div className="flex h-full min-w-0 flex-1 flex-col">
-          <p className="label flex items-center gap-1.5" style={{ color: rgba(glow, 0.95) }}>
+          <p className="label flex items-center gap-1.5 pr-[52px]" style={{ color: rgba(glow, 0.95) }}>
             {next ? `${pending ? 'Prochain épisode' : 'Épisode'} ${next}` : 'Terminé'}
             {note && (
               <span
@@ -238,11 +238,16 @@ export function ContinueCard({
               </span>
             )}
           </p>
-          <h3 className="clamp-2 mt-1 text-[0.98rem] font-semibold leading-snug">{titleOf(media, lang)}</h3>
+          <h3 className="clamp-2 mt-1 pr-[52px] text-[0.98rem] font-semibold leading-snug">{titleOf(media, lang)}</h3>
 
           <div className="mt-auto flex items-end justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <div className="mb-1.5 flex items-baseline gap-1.5 text-[0.72rem] text-muted">
+              {/*
+               * Sur une seule ligne, quoi qu'il arrive : le compte qui passe à
+               * la ligne pousse la barre hors de la carte, alors qu'un compte
+               * rogné de quelques pixels ne se remarque pas.
+               */}
+              <div className="mb-1.5 flex items-baseline gap-1.5 overflow-hidden whitespace-nowrap text-[0.72rem] text-muted">
                 <span className="font-semibold tabular-nums text-white">{seen}</span>
                 <span>/ {total ?? '?'} épisodes</span>
               </div>
@@ -284,9 +289,18 @@ export function ContinueCard({
           </div>
         </div>
 
-        <ProgressRing value={ratio} size={40} stroke={3}>
-          <span className="text-[0.6rem] font-bold tabular-nums">{Math.round(ratio * 100)}</span>
-        </ProgressRing>
+        {/*
+         * Posé par-dessus plutôt qu'à côté : en colonne, ses 40 px se
+         * retiraient de la ligne « x / y épisodes », qui passait alors à la
+         * ligne et chassait la barre de progression hors de la carte. Il reste
+         * au même pixel, il ne coûte plus de place — le texte lui cède le
+         * passage par un `pr` au lieu d'une colonne.
+         */}
+        <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2">
+          <ProgressRing value={ratio} size={40} stroke={3}>
+            <span className="text-[0.6rem] font-bold tabular-nums">{Math.round(ratio * 100)}</span>
+          </ProgressRing>
+        </div>
       </div>
     </motion.button>
   )

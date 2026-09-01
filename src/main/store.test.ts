@@ -181,6 +181,43 @@ describe('progress keeps the status in sync', () => {
   })
 })
 
+// Une série cochée jusqu'au bout avant que son total soit connu restait « en
+// cours » à vie : la décision n'était prise qu'au moment de cocher.
+describe('a total arriving late still finishes the series', () => {
+  it('completes the entry when the episode count shows up', () => {
+    setEntry(1, { status: 'planned' }, media(1, null))
+    setWatchedUpTo(1, 25)
+    expect(entryOf(1)?.status).toBe('watching')
+
+    cacheMedia([media(1, 25)])
+    expect(entryOf(1)?.status).toBe('completed')
+  })
+
+  it('dates the end on the last episode, not on the catch-up', () => {
+    setEntry(1, { status: 'planned' }, media(1, null))
+    setWatchedUpTo(1, 25)
+    const seen = snapshot().history.filter((h) => h.animeId === 1)
+    const last = Math.max(...seen.map((h) => h.at))
+
+    cacheMedia([media(1, 25)])
+    expect(entryOf(1)?.finishedAt).toBe(last)
+  })
+
+  it('leaves a shorter total alone', () => {
+    setEntry(1, { status: 'planned' }, media(1, null))
+    setWatchedUpTo(1, 10)
+    cacheMedia([media(1, 25)])
+    expect(entryOf(1)?.status).toBe('watching')
+  })
+
+  it('still respects a dropped status', () => {
+    setEntry(1, { status: 'dropped' }, media(1, null))
+    setWatchedUpTo(1, 25)
+    cacheMedia([media(1, 25)])
+    expect(entryOf(1)?.status).toBe('dropped')
+  })
+})
+
 describe('removeEntry', () => {
   it('takes the history with it', () => {
     setEntry(1, { status: 'watching' }, media(1, 12))
