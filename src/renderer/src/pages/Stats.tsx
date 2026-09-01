@@ -104,7 +104,7 @@ import { GENRE_LABELS, type Media } from '@shared/types'
 import { ActivityHeatmap, MonthlyColumns, RankedBars, StatTile, type DayCount } from '@/components/Charts'
 import { EmptyState, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba } from '@/lib/color'
-import { dayLabel, durationParts, hoursOf, minutesToHuman, num, startOfDay, titleOf } from '@/lib/format'
+import { dayLabel, durationParts, hoursOf, minutesToHuman, monthLabel, num, startOfDay, titleOf } from '@/lib/format'
 import { useApp } from '@/store/app'
 
 const DAY_MS = 86_400_000
@@ -1261,6 +1261,50 @@ export default function StatsPage(): React.JSX.Element {
    * Seuls les épisodes d'une série au total connu sont comptés : une saison en
    * cours sans nombre annoncé donnerait un chiffre inventé.
    */
+  /**
+   * La frise : chaque mois où tu as regardé quelque chose, du plus récent au
+   * plus ancien.
+   *
+   * La carte de chaleur dit *combien*, mois par mois ; elle ne dit pas *quoi*.
+   * Ici on retrouve les séries — c'est ce qu'on cherche en remontant le temps.
+   *
+   * Seuls les épisodes cochés dans l'app y figurent : une ligne importée porte
+   * la date de son pointage ailleurs, et rangerait mille épisodes sous le mois
+   * de l'import.
+   */
+  const timeline = useMemo(() => {
+    const months = new Map<string, { label: string; minutes: number; episodes: number; series: Map<number, number> }>()
+    for (const ev of events) {
+      if (ev.imported) continue
+      const date = new Date(ev.at)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      const held = months.get(key) ?? {
+        label: monthLabel(date),
+        minutes: 0,
+        episodes: 0,
+        series: new Map<number, number>()
+      }
+      held.minutes += ev.minutes
+      held.episodes += 1
+      held.series.set(ev.animeId, (held.series.get(ev.animeId) ?? 0) + 1)
+      months.set(key, held)
+    }
+
+    return [...months.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([key, m]) => ({
+        key,
+        label: m.label,
+        minutes: m.minutes,
+        episodes: m.episodes,
+        top: [...m.series.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([id, count]) => ({ media: mediaMap.get(id), count }))
+          .filter((row): row is { media: Media; count: number } => !!row.media)
+      }))
+  }, [events, mediaMap])
+
   const backlog = useMemo(() => {
     // Le détail par série vit sur la fiche de l'anime, pas ici : cette section
     // répond à « combien de temps », pas à « quelle série ».
@@ -1420,6 +1464,47 @@ export default function StatsPage(): React.JSX.Element {
               hint={`par journée où tu regardes · mesuré sur ${num(stats.activeDays)} journée${stats.activeDays > 1 ? 's' : ''}`}
               icon={<Gauge size={15} />}
             />
+          </div>
+        </Section>
+      )}
+
+      {timeline.length > 0 && (
+        <Section title="Ta frise" subtitle={`${timeline.length} mois de visionnage, du plus récent au plus ancien`}>
+          <div className="flex flex-col">
+            {timeline.map((month) => (
+              <div
+                key={month.key}
+                className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t py-3 first:border-t-0"
+                style={{ borderColor: 'var(--line)' }}
+              >
+                <div className="w-[150px] shrink-0">
+                  <p className="text-[0.86rem] font-semibold capitalize">{month.label}</p>
+                  <p className="mt-0.5 text-[0.72rem] tabular-nums text-faint">
+                    {month.episodes} ép. · {minutesToHuman(month.minutes)}
+                  </p>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                  {month.top.map((row) => (
+                    <button
+                      key={row.media.id}
+                      onClick={() => navigate({ name: 'anime', id: row.media.id })}
+                      className="flex items-center gap-2 rounded-[10px] py-1 pl-1 pr-2.5 text-left transition hover:bg-white/6"
+                    >
+                      <Poster
+                        src={row.media.cover.large}
+                        alt=""
+                        className="h-[38px] w-[26px] shrink-0"
+                        rounded="rounded-[6px]"
+                      />
+                      <span className="min-w-0">
+                        <span className="block max-w-[180px] truncate text-[0.76rem]">{titleOf(row.media, lang)}</span>
+                        <span className="text-[0.68rem] tabular-nums text-faint">{row.count} ép.</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </Section>
       )}

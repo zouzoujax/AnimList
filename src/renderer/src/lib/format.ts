@@ -158,6 +158,11 @@ export function seasonsAhead(count: number): { season: SeasonName; year: number;
 
 const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
+/** « septembre 2026 », capitale en tête comme un titre. */
+export function monthLabel(date: Date): string {
+  return monthFmt.format(date).replace(/^./, (c) => c.toUpperCase())
+}
+
 export interface Premiere {
   year: number | null
   month: number | null
