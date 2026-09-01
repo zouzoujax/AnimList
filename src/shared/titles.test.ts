@@ -18,6 +18,27 @@ describe('baseAndSeason', () => {
     expect(baseAndSeason('Dr. STONE: STONE WARS')).toEqual({ base: 'Dr. STONE: STONE WARS', season: 1 })
   })
 
+  // « Kaiju No. 8 » partait chercher une saison 8 : le chiffre du nom était lu
+  // comme un numéro de saison.
+  it.each([
+    'Kaiju No. 8',
+    'Kaiju No.8',
+    'Sakamoto Days n°2',
+    'Cyborg 009',
+    'Trigger #3'
+  ])('keeps a numbered name whole: %s', (title) => {
+    expect(baseAndSeason(title)).toEqual({ base: title, season: 1 })
+  })
+
+  // Le garde-fou ne doit pas avaler les vraies saisons pour autant.
+  it('still reads the season of a numbered name', () => {
+    expect(baseAndSeason('Kaiju No. 8 Season 2')).toEqual({ base: 'Kaiju No. 8', season: 2 })
+  })
+
+  it('still splits a title that merely ends in "no"', () => {
+    expect(baseAndSeason('Kino 2')).toEqual({ base: 'Kino', season: 2 })
+  })
+
   // A title that says "Final Season" gives no usable number, and guessing 1
   // would send the resolver to the wrong /saisonN/ URL. 0 means "unknown".
   it.each([

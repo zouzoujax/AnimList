@@ -33,13 +33,14 @@ interface Row extends WatchTarget {
   /**
    * Version de la règle qui a produit cette réponse. Jusqu'à la 2, on s'arrêtait
    * au hub de la série — `/catalogue/<slug>/` — qui répond 200 sans contenir le
-   * moindre épisode. Les réponses d'avant doivent être refaites, pas attendues
-   * trente jours.
+   * moindre épisode ; jusqu'à la 3, une saison inexistante suffisait pourvu
+   * qu'elle réponde 200. Les réponses d'avant doivent être refaites, pas
+   * attendues trente jours.
    */
   v?: number
 }
 
-const RULE_VERSION = 2
+const RULE_VERSION = 3
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -70,6 +71,17 @@ export function searchUrl(term: string): string {
 async function text(url: string): Promise<{ status: number; body: string }> {
   const res = await fetch(url, { redirect: 'follow' })
   return { status: res.status, body: res.status === 200 ? await res.text() : '' }
+}
+
+/**
+ * Une vraie page d'épisodes déclare ses lecteurs : `var eps1 = ['https://…']`.
+ *
+ * Une saison qui n'existe pas répond 200 elle aussi, avec `//` pour tout
+ * contenu — le code seul ne prouve donc rien. C'est ainsi que « Kaiju No. 8 »
+ * ouvrait une huitième saison vide au lieu de la première.
+ */
+export function listsEpisodes(body: string): boolean {
+  return /var\s+eps\w*\s*=\s*\[\s*["']https?:/i.test(body)
 }
 
 /** Catalogue links appear in the search page markup as /catalogue/<slug>/. */
@@ -147,7 +159,8 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
    * contenir un seul épisode. Un simple code 200 ne prouvait donc rien — d'où
    * des liens qui tombaient sur la fiche de la série.
    *
-   * `episodes.js` tranche : 404 sur le hub, 200 sur une vraie page d'épisodes.
+   * `episodes.js` tranche, à condition de le lire : il manque au hub, et il est
+   * vide sur une saison qui n'existe pas.
    *
    * VOSTFR d'abord, VF ensuite. Saison 0 veut dire que le titre n'a pas donné
    * de numéro exploitable (« Final Season ») : on tente la première saison,
@@ -165,7 +178,7 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
   for (const path of paths) {
     try {
       const probe = await text(`${ORIGIN}${path}episodes.js`)
-      if (probe.status !== 200) continue
+      if (probe.status !== 200 || !listsEpisodes(probe.body)) continue
     } catch {
       break
     }

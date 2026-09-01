@@ -31,6 +31,9 @@ export function compact(text: string): string {
     .replace(/[^a-z0-9]+/g, '')
 }
 
+/** Un numéro annoncé comme tel : « No. 8 », « n°8 », « #8 ». */
+const NUMBERED_NAME = /(?:\bn(?:o|°|º)\.?|\bnum(?:ber|éro)?\.?|#)\s*\d+\s*$/i
+
 /**
  * Streaming sites file every cour of a show under one entry, so "One-Punch Man
  * Season 2" has to become "One-Punch Man" + season 2 before it can be looked up.
@@ -46,6 +49,11 @@ export function baseAndSeason(title: string): { base: string; season: number } {
   if (final && final.index !== undefined) {
     return { base: base.slice(0, final.index).trim(), season: 0 }
   }
+
+  // « Kaiju No. 8 » : le chiffre final appartient au nom, il ne numérote pas une
+  // saison. Le marqueur juste devant le dit — sans lui, la série partait
+  // chercher une huitième saison qui n'a jamais existé.
+  if (NUMBERED_NAME.test(base)) return { base, season: 1 }
 
   const patterns: RegExp[] = [
     /[\s:,-]+season\s+(\d+).*$/i,
