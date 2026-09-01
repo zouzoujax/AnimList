@@ -260,7 +260,15 @@ export function MonthlyColumns({
 export interface RankedRow {
   key: string
   label: string
+  /** Sert à dimensionner la barre. Pas forcément lisible tel quel. */
   value: number
+  /**
+   * Ce qu'on écrit à la place du nombre brut.
+   *
+   * Une durée en minutes classe correctement mais ne se lit pas : « 8616 »
+   * n'apprend rien à personne. Quand la grandeur a une unité, elle s'écrit ici.
+   */
+  display?: string
   detail?: string
 }
 
@@ -304,9 +312,14 @@ export function RankedBars({
               }}
             />
           </div>
-          <span className="w-[86px] text-right text-[0.76rem] font-semibold tabular-nums">
-            {num(row.value)}
-            <span className="ml-1 font-normal text-faint">{row.detail ?? suffix}</span>
+          <span className="w-[96px] text-right text-[0.76rem] font-semibold tabular-nums">
+            {row.display ?? num(row.value)}
+            {/* Sur deux lignes seulement quand la valeur est une durée : « 5 j
+                23 h » et « 359 ép. » ne tiennent pas côte à côte, là où
+                « 142 ép. » se lit très bien d'un trait. */}
+            {(row.detail ?? suffix) && (
+              <span className={`font-normal text-faint ${row.display ? 'block' : 'ml-1'}`}>{row.detail ?? suffix}</span>
+            )}
           </span>
         </button>
       ))}

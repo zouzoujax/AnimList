@@ -1262,7 +1262,7 @@ export default function StatsPage(): React.JSX.Element {
    * cours sans nombre annoncé donnerait un chiffre inventé.
    */
   const backlog = useMemo(() => {
-    const rows: { key: string; label: string; value: number; detail: string; status: string }[] = []
+    const rows: { key: string; label: string; value: number; display: string; detail: string; status: string }[] = []
     let watchingMin = 0
     let plannedMin = 0
 
@@ -1283,7 +1283,10 @@ export default function StatsPage(): React.JSX.Element {
         key: String(media.id),
         label: titleOf(media, lang),
         value: minutes,
-        detail: `${left} épisode${left > 1 ? 's' : ''} · ${minutesToHuman(minutes)}`,
+        // La durée en tête, le compte d'épisodes en dessous : c'est le temps
+        // qu'on cherche dans cette section, pas le nombre.
+        display: minutesToHuman(minutes),
+        detail: `${left} ép.`,
         status: entry.status
       })
     }
