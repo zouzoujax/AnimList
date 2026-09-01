@@ -1262,7 +1262,9 @@ export default function StatsPage(): React.JSX.Element {
    * cours sans nombre annoncé donnerait un chiffre inventé.
    */
   const backlog = useMemo(() => {
-    const rows: { key: string; label: string; value: number; display: string; detail: string; status: string }[] = []
+    // Le détail par série vit sur la fiche de l'anime, pas ici : cette section
+    // répond à « combien de temps », pas à « quelle série ».
+    let series = 0
     let watchingMin = 0
     let plannedMin = 0
 
@@ -1279,25 +1281,15 @@ export default function StatsPage(): React.JSX.Element {
       if (entry.status === 'watching') watchingMin += minutes
       else plannedMin += minutes
 
-      rows.push({
-        key: String(media.id),
-        label: titleOf(media, lang),
-        value: minutes,
-        // La durée en tête, le compte d'épisodes en dessous : c'est le temps
-        // qu'on cherche dans cette section, pas le nombre.
-        display: minutesToHuman(minutes),
-        detail: `${left} ép.`,
-        status: entry.status
-      })
+      series += 1
     }
 
-    rows.sort((a, b) => b.value - a.value)
     const total = watchingMin + plannedMin
     // Le rythme vient de tes journées actives, pas d'une moyenne sur l'année :
     // les jours sans rien regarder ne disent rien de ta vitesse.
     const perActiveDay = stats.activeDays ? stats.livedMinutes / stats.activeDays : 0
     return {
-      rows,
+      series,
       watchingMin,
       plannedMin,
       total,
@@ -1307,7 +1299,7 @@ export default function StatsPage(): React.JSX.Element {
       // dire vaut mieux que d'annoncer un nombre de jours avec assurance.
       thin: stats.activeDays > 0 && stats.activeDays < 7
     }
-  }, [entries, mediaMap, watchedMap, defaultRuntime, lang, stats.activeDays, stats.livedMinutes])
+  }, [entries, mediaMap, watchedMap, defaultRuntime, stats.activeDays, stats.livedMinutes])
 
   if (stats.episodes === 0) {
     return (
@@ -1409,7 +1401,7 @@ export default function StatsPage(): React.JSX.Element {
         />
       </div>
 
-      {backlog.rows.length > 0 && (
+      {backlog.series > 0 && (
         <Section
           title="Ce qu'il te reste"
           subtitle={
@@ -1421,7 +1413,7 @@ export default function StatsPage(): React.JSX.Element {
           <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             <StatTile label="En cours" value={minutesToHuman(backlog.watchingMin)} icon={<Hourglass size={15} />} />
             <StatTile label="Dans la pile" value={minutesToHuman(backlog.plannedMin)} icon={<ListTodo size={15} />} />
-            <StatTile label="Séries concernées" value={num(backlog.rows.length)} icon={<Layers size={15} />} />
+            <StatTile label="Séries concernées" value={num(backlog.series)} icon={<Layers size={15} />} />
             <StatTile
               label="Ton rythme"
               value={`${num(backlog.perActiveDay)} min`}
@@ -1429,11 +1421,6 @@ export default function StatsPage(): React.JSX.Element {
               icon={<Gauge size={15} />}
             />
           </div>
-          <RankedBars
-            rows={backlog.rows.slice(0, 10)}
-            suffix=""
-            onSelect={(key) => navigate({ name: 'anime', id: Number(key) })}
-          />
         </Section>
       )}
 

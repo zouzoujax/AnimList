@@ -513,6 +513,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const entry = useApp((s) => s.entries.get(id))
   const lang = useApp((s) => s.prefs.titleLang)
   const seenCount = useApp((s) => s.watched.get(id)?.size ?? 0)
+  const defaultRuntime = useApp((s) => s.prefs.defaultRuntime)
   const next = useApp((s) => nextEpisodeOf(s, id, s.media.get(id)?.episodes ?? null))
   const saveEntry = useApp((s) => s.saveEntry)
   const removeEntry = useApp((s) => s.removeEntry)
@@ -611,6 +612,21 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
    * aux épisodes parus, leur code retombe sur le dernier disponible : la
    * fenêtre s'ouvrirait sur le 8 après avoir annoncé le 9.
    */
+  /**
+   * Ce qu'il reste à voir de cette série, en temps.
+   *
+   * Le compte d'épisodes ne dit pas la soirée qu'il faut y consacrer. La durée
+   * vient d'AniList quand elle est connue, du réglage par défaut sinon —
+   * comme partout ailleurs dans l'app.
+   */
+  const episodesSubtitle = ((): string => {
+    if (!total) return `${seenCount} épisodes vus`
+    const left = Math.max(0, total - seenCount)
+    if (left === 0) return `${seenCount} vus sur ${total} · terminé`
+    const minutes = left * (media.duration || defaultRuntime)
+    return `${seenCount} vus sur ${total} · ${left} à voir, ${minutesToHuman(minutes)}`
+  })()
+
   const watchAt = next !== null && media && !isUnaired(media, next) ? next : null
   const found = watchAt === null ? undefined : detail?.episodeMeta[watchAt - 1]
   const nextLink = found?.url ? found : null
@@ -806,7 +822,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             </section>
           )}
 
-          <Section title="Épisodes" subtitle={total ? `${seenCount} vus sur ${total}` : `${seenCount} épisodes vus`}>
+          <Section title="Épisodes" subtitle={episodesSubtitle}>
             {loading && !detail ? (
               <Skeleton className="h-28 w-full" />
             ) : detail ? (
