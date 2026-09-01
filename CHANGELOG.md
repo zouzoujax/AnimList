@@ -16,6 +16,7 @@ le code.
 - `Ctrl+Z` annule la dernière coche : cocher, cocher jusque-là, réinitialiser une progression
 - Un bouton « Au hasard » sur « À rattraper », pour les soirs où choisir est déjà un effort
 - Marquer un épisode « à revoir » depuis son éditeur : il se retrouve sur l'accueil, et sa case porte une pastille
+- Un bilan de santé de la bibliothèque dans les Réglages : fiches manquantes, visionnages orphelins, épisodes au-delà du total, doublons, fichiers résiduels — avec de quoi nettoyer ce qui peut l'être
 
 ## 0.3.13 — 1er septembre 2026
 

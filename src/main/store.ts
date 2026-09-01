@@ -546,6 +546,26 @@ export function updateEvent(ref: WatchEventRef, patch: WatchEventPatch): boolean
   return true
 }
 
+/**
+ * Retire les visionnages dont la série n'est plus dans la bibliothèque.
+ *
+ * Supprimer une entrée ne touchait pas son historique : les lignes restaient,
+ * invisibles, et continuaient de peser dans le temps total. Le bilan de santé
+ * les débusque, cette fonction les efface — sur décision, jamais toute seule.
+ */
+export function dropOrphanEvents(): number {
+  const known = new Set(Object.keys(db.entries).map(Number))
+  const before = db.history.length
+  const kept = db.history.filter((h) => known.has(h.animeId))
+  if (kept.length === before) return 0
+
+  touchJournal()
+  db.history = kept
+  rebuildIndex()
+  changed()
+  return before - kept.length
+}
+
 /** Removes a single watch event, from any pass. */
 export function removeEvent(ref: WatchEventRef): boolean {
   touchJournal()

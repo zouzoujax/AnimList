@@ -7,6 +7,7 @@ import type {
   Entry,
   EntryPatch,
   FillerInfo,
+  HealthReport,
   ImportReport,
   LocalFolder,
   Media,
@@ -132,6 +133,14 @@ const api = {
     reset: (): Promise<void> => ipcRenderer.invoke('data:reset'),
     reveal: (): Promise<void> => ipcRenderer.invoke('data:reveal')
   },
+  health: {
+    /** Ce qui cloche dans la bibliothèque, sans rien réparer. */
+    report: (): Promise<HealthReport> => ipcRenderer.invoke('health:report'),
+    /** Efface les visionnages dont la série n'existe plus. Renvoie le nombre. */
+    cleanOrphans: (): Promise<number> => ipcRenderer.invoke('health:clean-orphans'),
+    removeStray: (name: string): Promise<boolean> => ipcRenderer.invoke('health:remove-stray', name)
+  },
+
   cache: {
     /** Poids du cache AniList sur le disque, tel qu'il serait écrit. */
     stats: (): Promise<{ entries: number; bytes: number }> => ipcRenderer.invoke('cache:stats'),

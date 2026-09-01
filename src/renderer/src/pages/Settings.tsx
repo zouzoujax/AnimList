@@ -5,6 +5,7 @@ import {
   FileUp,
   FolderOpen,
   Keyboard,
+  Stethoscope,
   HardDrive,
   Languages,
   Layers,
@@ -21,6 +22,7 @@ import TvTimeImport from '@/components/TvTimeImport'
 import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
 import { minutesToHuman } from '@/lib/format'
+import Health from '@/components/Health'
 import { useApp } from '@/store/app'
 
 /** Tiny wireframe so the option is legible without trying it. */
@@ -152,6 +154,7 @@ function CacheRow(): React.JSX.Element {
 export default function SettingsPage(): React.JSX.Element {
   const prefs = useApp((s) => s.prefs)
   const setHelp = useApp((s) => s.setHelp)
+  const [healthOpen, setHealthOpen] = useState(false)
   const setPrefs = useApp((s) => s.setPrefs)
   const toast = useApp((s) => s.toast)
   const entries = useApp((s) => s.entries)
@@ -509,6 +512,16 @@ export default function SettingsPage(): React.JSX.Element {
 
         <TvTimeImport />
 
+        <Row
+          label="Santé de la bibliothèque"
+          hint="Fiches manquantes, visionnages orphelins, doublons, fichiers résiduels"
+        >
+          <button className="btn" onClick={() => setHealthOpen(true)}>
+            <Stethoscope size={14} />
+            Examiner
+          </button>
+        </Row>
+
         <Row label="Raccourcis" hint="Clavier et souris, y compris les gestes qu'on ne devine pas seul">
           <button className="btn" onClick={() => setHelp(true)}>
             <Keyboard size={14} />
@@ -595,6 +608,7 @@ export default function SettingsPage(): React.JSX.Element {
           </div>
         </div>
       </Modal>
+      <Health open={healthOpen} onClose={() => setHealthOpen(false)} />
     </div>
   )
 }

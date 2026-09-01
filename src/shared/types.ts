@@ -373,6 +373,29 @@ export type UpdatePhase =
 
 export type { ReleaseNote, NoteKind, NoteSection } from './release-notes'
 
+/**
+ * Ce qui cloche dans la bibliothèque.
+ *
+ * Rien de tout cela n'empêche l'app de fonctionner — c'est pour ça que
+ * personne ne le voit jamais. Un compte qui dérive de trois épisodes, une
+ * fiche perdue depuis un import : ça se répare en une seconde quand c'est dit,
+ * et ça reste indéfiniment quand ça ne l'est pas.
+ */
+export interface HealthReport {
+  entries: number
+  events: number
+  /** Entrées suivies dont la fiche AniList manque : titre et jaquette absents. */
+  missingMedia: { animeId: number; episodes: number }[]
+  /** Visionnages rattachés à une série qui n'est plus dans la bibliothèque. */
+  orphanEvents: { animeId: number; count: number }[]
+  /** Épisodes cochés au-delà du total annoncé par AniList. */
+  beyondTotal: { animeId: number; title: string; total: number; highest: number }[]
+  /** Deux entrées différentes pour ce qui semble être la même œuvre. */
+  duplicates: { title: string; ids: number[] }[]
+  /** Fichiers du dossier de données qui ne servent plus. */
+  strayFiles: { name: string; bytes: number; age: number }[]
+}
+
 /** Une série qu'AniList conseille à partir de ce que tu as déjà aimé. */
 export interface Suggestion {
   media: Media

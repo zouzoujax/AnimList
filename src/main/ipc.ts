@@ -11,6 +11,7 @@ import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
 import { chooseFolder, forgetFolder, openInSystemPlayer, scanFolder } from './videos'
 import { openAnimeSamaEpisode } from './watch-window'
+import { cleanOrphans, health, removeStray } from './health'
 import { sweepSequels } from './sequels'
 import {
   cacheMedia,
@@ -141,6 +142,11 @@ export function registerIpc(): void {
 
   // ---- lecture chez une plateforme -------------------------------------
   ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null) => openAnimeSamaEpisode(url, episode))
+
+  // ---- santé de la bibliothèque ----------------------------------------
+  ipcMain.handle('health:report', () => health())
+  ipcMain.handle('health:clean-orphans', () => cleanOrphans())
+  ipcMain.handle('health:remove-stray', (_e, name: string) => removeStray(name))
 
   // ---- caches disque ---------------------------------------------------
   ipcMain.handle('cache:stats', () => anilist.cacheStats())
