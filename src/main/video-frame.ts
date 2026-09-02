@@ -69,7 +69,17 @@ export async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameM
 }
 
 /**
- * Demande le plein écran à la vidéo, et vérifie qu'elle l'a obtenu.
+ * Passe le lecteur en plein écran, et vérifie qu'il l'a obtenu.
+ *
+ * **Le conteneur, pas la vidéo.** Mettre l'élément `video` seul en plein écran
+ * marche — et fait disparaître toutes les commandes du lecteur : sa barre de
+ * progression, son volume, ses réglages vivent *à côté* de la vidéo dans le
+ * document, pas dedans. Seul le contenu de l'élément agrandi reste visible.
+ *
+ * Le conteneur, c'est la racine du document du lecteur quand il est dans son
+ * propre cadre — ce qui est le cas chez eux. Si la vidéo se trouvait dans la
+ * page principale, agrandir sa racine montrerait le site entier : on prend
+ * alors le parent direct de la vidéo, qui porte les commandes sans le reste.
  *
  * La demande peut être refusée — un cadre sans autorisation de plein écran, un
  * lecteur qui l'intercepte. Le plein écran arrivant de façon différée,
@@ -81,7 +91,15 @@ export async function videoFullscreen(win: BrowserWindow): Promise<boolean> {
   if (!video) return false
 
   const asked: unknown = await video.frame
-    .executeJavaScript(videoScript('if (!v.requestFullscreen) return false; v.requestFullscreen(); return true'), true)
+    .executeJavaScript(
+      videoScript(`
+        var root = window.parent !== window ? document.documentElement : v.parentElement || v
+        if (!root.requestFullscreen) return false
+        root.requestFullscreen()
+        return true
+      `),
+      true
+    )
     .catch(() => false)
   if (asked !== true) return false
 
