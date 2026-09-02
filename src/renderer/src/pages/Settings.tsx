@@ -31,6 +31,7 @@ import {
   type TitleLang
 } from '@shared/types'
 import { Modal } from '@/components/ui'
+import QrCode from '@/components/QrCode'
 import TvTimeImport from '@/components/TvTimeImport'
 import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
@@ -504,19 +505,23 @@ export default function SettingsPage(): React.JSX.Element {
         </Row>
 
         {remote?.on && remote.url && (
-          <Row
-            label="Adresse à ouvrir"
-            hint="Sur un téléphone connecté au même wifi. Le mot de passe est dans le lien."
-          >
-            <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <div className="mt-1 flex flex-wrap items-center gap-4 px-1 py-3">
+            {/* Scanner évite de recopier vingt caractères à la main sur un
+                clavier de téléphone — c'était le seul point pénible. */}
+            <QrCode text={remote.url} label="Adresse de la télécommande" />
+            <div className="min-w-[200px] flex-1">
+              <p className="text-[0.84rem] font-semibold">Scanne depuis ton téléphone</p>
+              <p className="mt-1 text-[0.78rem] leading-relaxed text-muted">
+                Il doit être sur le même wifi. Le mot de passe est dans le lien : rien d’autre à taper.
+              </p>
               <code
-                className="rounded-[8px] px-2 py-1 text-[0.72rem]"
+                className="mt-2 block break-all rounded-[8px] px-2 py-1.5 text-[0.7rem]"
                 style={{ background: 'var(--panel-2)', color: 'var(--color-muted)' }}
               >
                 {remote.url}
               </code>
               <button
-                className="chip"
+                className="chip mt-2"
                 onClick={() =>
                   void navigator.clipboard
                     .writeText(remote.url as string)
@@ -524,10 +529,10 @@ export default function SettingsPage(): React.JSX.Element {
                     .catch(() => toast('Copie refusée.', 'error'))
                 }
               >
-                Copier
+                Copier le lien
               </button>
             </div>
-          </Row>
+          </div>
         )}
 
         {remote?.error && !remote.on && (
