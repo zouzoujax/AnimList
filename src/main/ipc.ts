@@ -24,6 +24,7 @@ import { cleanOrphans, health, removeStray } from './health'
 import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
 import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
+import { forYou } from './foryou'
 import {
   cacheMedia,
   cancelRewatch,
@@ -134,6 +135,7 @@ export function registerIpc(): void {
   ipcMain.handle('anime:recommended', (_e, seeds: number[], exclude: number[]) =>
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
+  ipcMain.handle('anime:for-you', () => forYou())
   ipcMain.handle('manga:browse', (_e, kind: MangaKind, page: number, search: string, genre?: string) =>
     anilist.mangas(kind, page, search, genre, getPrefs().showAdult)
   )

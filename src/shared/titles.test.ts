@@ -20,15 +20,12 @@ describe('baseAndSeason', () => {
 
   // « Kaiju No. 8 » partait chercher une saison 8 : le chiffre du nom était lu
   // comme un numéro de saison.
-  it.each([
-    'Kaiju No. 8',
-    'Kaiju No.8',
-    'Sakamoto Days n°2',
-    'Cyborg 009',
-    'Trigger #3'
-  ])('keeps a numbered name whole: %s', (title) => {
-    expect(baseAndSeason(title)).toEqual({ base: title, season: 1 })
-  })
+  it.each(['Kaiju No. 8', 'Kaiju No.8', 'Sakamoto Days n°2', 'Cyborg 009', 'Trigger #3'])(
+    'keeps a numbered name whole: %s',
+    (title) => {
+      expect(baseAndSeason(title)).toEqual({ base: title, season: 1 })
+    }
+  )
 
   // Le garde-fou ne doit pas avaler les vraies saisons pour autant.
   it('still reads the season of a numbered name', () => {

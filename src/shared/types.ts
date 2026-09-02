@@ -1,4 +1,5 @@
 import type { ReleaseNote } from './release-notes'
+import type { TasteFacet } from './taste'
 export type MediaFormat = 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC'
 export type MediaStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS'
 export type SeasonName = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
@@ -471,6 +472,39 @@ export interface HealthReport {
 }
 
 /** Une série qu'AniList conseille à partir de ce que tu as déjà aimé. */
+/** Une recommandation, et ce qui la justifie. */
+export interface ForYouPick {
+  media: Media
+  /** Note du profil. Sert au classement, pas à l'affichage. */
+  score: number
+  /** Pourquoi elle est là, en clair : « tu notes haut drama et psychologique ». */
+  reasons: string[]
+  /** Les titres de la bibliothèque que la communauté a reliés à celle-ci. */
+  from: string[]
+}
+
+export interface ForYou {
+  profile: {
+    /**
+     * Les genres qui ont vraiment porté le classement, déjà triés.
+     *
+     * Calculés là où le tri a lieu : la fenêtre ne doit pas refaire le calcul
+     * de son côté, sinon elle finirait par annoncer un goût que le classement
+     * n'a pas suivi.
+     */
+    top: TasteFacet[]
+    genres: TasteFacet[]
+    studios: TasteFacet[]
+    /** Séries regardées qui ont servi à le construire. */
+    sample: number
+    /** Combien d'entre elles portent une note. Zéro change ce qu'on affiche. */
+    scored: number
+  }
+  /** Le profil repose sur trop peu de séries pour être présenté comme un goût. */
+  weak: boolean
+  picks: ForYouPick[]
+}
+
 export interface Suggestion {
   media: Media
   /** Poids cumulé des recommandations de la communauté. */

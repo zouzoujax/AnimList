@@ -7,16 +7,15 @@ import {
   FORMAT_LABELS,
   type BrowseKind,
   type BrowseQuery,
-  type Entry,
+  type ForYou,
+  type ForYouPick,
   type Media,
-  type MediaFormat,
-  type Suggestion
+  type MediaFormat
 } from '@shared/types'
 import { AnimeCard } from '@/components/AnimeCard'
 import { ErrorBox, PosterSkeletons, Spinner } from '@/components/ui'
 import { monthBucket, premiereLabel, premiereOf, premiereSort } from '@/lib/format'
 import { useBrowse, useDebounced, useInView } from '@/lib/hooks'
-import { baseAndSeason, compact } from '@shared/titles'
 import { useApp } from '@/store/app'
 
 const TABS: { kind: BrowseKind; label: string; icon: typeof Flame }[] = [
@@ -28,6 +27,22 @@ const TABS: { kind: BrowseKind; label: string; icon: typeof Flame }[] = [
 ]
 
 const FORMATS: MediaFormat[] = ['TV', 'MOVIE', 'OVA', 'ONA', 'SPECIAL', 'TV_SHORT']
+
+/**
+ * La phrase sous une carte.
+ *
+ * Le profil parle en premier — c'est lui qui a classé. À défaut, la
+ * communauté explique d'où vient le titre. Si ni l'un ni l'autre n'a rien à
+ * dire, mieux vaut se taire qu'inventer une raison.
+ */
+function reasonOf(pick: ForYouPick): string {
+  if (pick.reasons.length) return `parce que ${pick.reasons.join(' ')}`
+  if (pick.from.length) {
+    const extra = pick.from.length > 2 ? ` +${pick.from.length - 2}` : ''
+    return `parce que tu as aimé ${pick.from.slice(0, 2).join(', ')}${extra}`
+  }
+  return ''
+}
 
 /** Release schedule: grouped by premiere month, earliest first, TBA last. */
 function UpcomingSchedule({ items }: { items: Media[] }): React.JSX.Element {
@@ -80,7 +95,6 @@ function UpcomingSchedule({ items }: { items: Media[] }): React.JSX.Element {
 
 export default function DiscoverPage({ initialSearch }: { initialSearch?: string }): React.JSX.Element {
   const entries = useApp((s) => s.entries)
-  const mediaMap = useApp((s) => s.media)
   const [tab, setTab] = useState<BrowseKind>('trending')
   // La saisie appartient à la recherche qui a ouvert la page. Arriver avec une
   // autre — depuis la palette, par exemple — rend la précédente caduque sans
@@ -121,48 +135,27 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
   }, [showSchedule])
 
   /**
-   * Les graines : ce que tu as le plus aimé.
+   * Le profil de goût et ce qu'il conseille.
    *
-   * Les favoris d'abord, puis les mieux notées, puis les terminées récentes.
-   * AniList n'a pas de « recommande-moi quelque chose » : ses recommandations
-   * sont attachées à une œuvre, alors il faut lui dire à partir de quoi.
+   * Tout est calculé côté processus principal : c'est lui qui a la
+   * bibliothèque entière, les fiches en cache et le droit d'appeler AniList.
+   * La fenêtre ne fait que demander une fois et afficher — y compris la
+   * raison, sans laquelle une recommandation ne se vérifie pas.
    */
-  const seeds = useMemo(() => {
-    const list = [...entries.values()]
-    const rank = (e: Entry): number =>
-      (e.favorite ? 1000 : 0) + (e.score ?? 0) * 10 + (e.status === 'completed' ? 5 : 0)
-    // Une franchise ne compte qu'une fois : deux saisons de la même série
-    // mangeraient deux places sur huit pour un seul goût.
-    const seen = new Set<string>()
-    const picked: number[] = []
-    for (const entry of list
-      .filter((e) => e.favorite || e.score !== null || e.status === 'completed')
-      .sort((a, b) => rank(b) - rank(a) || b.updatedAt - a.updatedAt)) {
-      const media = mediaMap.get(entry.animeId)
-      if (!media) continue
-      const family = compact(baseAndSeason(media.title.english ?? media.title.romaji).base)
-      if (seen.has(family)) continue
-      seen.add(family)
-      picked.push(entry.animeId)
-      if (picked.length === 8) break
-    }
-    return picked
-  }, [entries, mediaMap])
-
-  const [picks, setPicks] = useState<Suggestion[] | null>(null)
+  const [rec, setRec] = useState<ForYou | null>(null)
   useEffect(() => {
-    if (!seeds.length) return
+    if (!entries.size) return
     let alive = true
-    // Tout ce qui est déjà suivi est exclu : conseiller ce qu'on a déjà n'est
-    // pas un conseil.
     void window.api.anime
-      .recommended(seeds, [...entries.keys()])
-      .then((res) => alive && setPicks(res))
+      .forYou()
+      .then((res) => alive && setRec(res))
       .catch(() => {})
     return () => {
       alive = false
     }
-  }, [seeds, entries])
+    // Une entrée ajoutée ou notée change le profil ; la relancer à chaque
+    // épisode coché, non — d'où la taille plutôt que la table elle-même.
+  }, [entries.size])
 
   const scheduleItems = useMemo(() => {
     if (!showSchedule) return items
@@ -248,21 +241,38 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
       {/* Avant le catalogue : ce qui vient de ta bibliothèque passe devant ce
           qui vient du classement mondial. Absente en recherche, où l'on sait
           déjà ce qu'on cherche. */}
-      {!searching && tab === 'trending' && picks && picks.length > 0 && (
+      {!searching && tab === 'trending' && rec && rec.picks.length > 0 && (
         <section className="mb-9">
           <div className="mb-3.5 px-1">
             <h2 className="title-xl text-[1.32rem] leading-tight">Pour toi</h2>
+            {/* La phrase dit sur quoi le classement repose. Sans note donnée,
+                il repose sur ce qui est le plus regardé — et le dire tient
+                lieu d'invitation à noter, ce qui l'affinerait vraiment. */}
             <p className="mt-0.5 text-[0.8rem] text-muted">
-              D’après {seeds.length} série{seeds.length > 1 ? 's' : ''} que tu as aimées, et que tu ne suis pas encore
+              {rec.weak
+                ? `Ton profil ne tient encore que sur ${rec.profile.sample} série${rec.profile.sample > 1 ? 's' : ''} regardée${rec.profile.sample > 1 ? 's' : ''} — il s’affinera à mesure que tu en ajoutes.`
+                : rec.profile.scored === 0
+                  ? `D’après les ${rec.profile.sample} séries que tu regardes. Note-les et le classement suivra tes notes plutôt que tes habitudes.`
+                  : `D’après tes ${rec.profile.scored} notes, sur les ${rec.profile.sample} séries que tu as regardées`}
             </p>
+            {/* Ce que l'app croit avoir compris, affiché : un classement dont
+                on ne voit pas la règle ne se conteste pas. */}
+            {rec.profile.top.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {rec.profile.top.map((facet) => (
+                  <span key={facet.name} className="chip !h-6 !cursor-default !text-[0.65rem]">
+                    {GENRE_LABELS[facet.name] ?? facet.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="card-grid">
-            {picks.slice(0, 12).map((pick, i) => (
+            {rec.picks.slice(0, 12).map((pick, i) => (
               <div key={pick.media.id}>
                 <AnimeCard media={pick.media} width="100%" index={i} />
                 <p className="clamp-2 mt-1 px-0.5 text-[0.68rem] text-faint" title={pick.from.join(', ')}>
-                  parce que tu as aimé {pick.from.slice(0, 2).join(', ')}
-                  {pick.from.length > 2 ? ` +${pick.from.length - 2}` : ''}
+                  {reasonOf(pick)}
                 </p>
               </div>
             ))}

@@ -6,7 +6,7 @@ import { listsEpisodes, searchUrl } from './animesama'
 // contenu. C'est elle que l'app ouvrait.
 describe('listsEpisodes', () => {
   it('accepts a real episode list', () => {
-    const body = ["var eps1 = [", "'https://video.sibnet.ru/shell.php?videoid=5503622',", "]"].join('\n')
+    const body = ['var eps1 = [', "'https://video.sibnet.ru/shell.php?videoid=5503622',", ']'].join('\n')
     expect(listsEpisodes(body)).toBe(true)
   })
 

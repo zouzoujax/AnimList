@@ -7,6 +7,7 @@ import type {
   Entry,
   EntryPatch,
   FillerInfo,
+  ForYou,
   Follow,
   FollowKind,
   FollowNews,
@@ -80,6 +81,8 @@ const api = {
      * Ce qu'AniList conseille à partir des séries passées en graine, moins ce
      * qui est déjà suivi.
      */
+    /** Le profil de goût et ce qu'il conseille, raisons comprises. */
+    forYou: (): Promise<ForYou> => ipcRenderer.invoke('anime:for-you'),
     recommended: (seeds: number[], exclude: number[]): Promise<Suggestion[]> =>
       ipcRenderer.invoke('anime:recommended', seeds, exclude),
     /** Les autres rôles d'un personnage ou d'un doubleur. */
