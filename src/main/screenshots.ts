@@ -58,7 +58,9 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
     },
     // The episode grid is the app's central interaction and lives below the fold.
     { name: 'episodes', route: { name: 'anime', id: animeId }, settleMs: 1600, scrollY: 1180 },
-    { name: 'decouvrir', route: { name: 'discover' }, settleMs: 2600 },
+    // « Pour toi » passe par la file d'arrière-plan : plusieurs requêtes
+    // espacées, et la rangée n'apparaît qu'une fois le vivier constitué.
+    { name: 'decouvrir', route: { name: 'discover' }, settleMs: 7000 },
     { name: 'calendrier', route: { name: 'calendar' }, settleMs: 2200 },
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
     // The badge wall sits under every chart, so its offset moves with the data.
@@ -76,6 +78,44 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
  * rate-limited queue, and a chart that has not finished laying out photographs
  * as an empty box.
  */
+/**
+ * Au-delà, on tire quand même : une page qui n'arrive jamais doit se voir.
+ *
+ * Généreux, parce qu'une prise de vue complète demande beaucoup à AniList en
+ * peu de temps — vingt-trois fiches, la saison, les recommandations — et qu'une
+ * limitation de débit fait attendre jusqu'à une minute avant de réessayer.
+ */
+const MAX_WAIT_MS = 75_000
+const POLL_MS = 500
+
+/**
+ * Attend qu'il ne reste plus rien en train de charger.
+ *
+ * Les délais fixes sont un pari sur la vitesse du réseau, et le pari se perd :
+ * une capture du calendrier est partie en dépôt avec « Récupération de la
+ * grille… » en plein milieu, parce que deux mille deux cents millisecondes ont
+ * suffi dix fois et pas la onzième.
+ *
+ * On regarde donc la page elle-même. Tant qu'un indicateur de chargement y est,
+ * on repasse ; passé vingt secondes, on tire quand même — une page qui n'arrive
+ * jamais est une information, et un script qui ne rend pas la main n'en est pas
+ * une.
+ */
+async function settled(win: BrowserWindow): Promise<void> {
+  const busy = `(() => {
+    if (document.querySelector('[data-loading], .animate-spin')) return true
+    // Les libellés d'attente de l'app, au cas où l'indicateur change de forme.
+    return /Chargement|Récupération/.test(document.getElementById('contenu')?.innerText ?? '')
+  })()`
+
+  for (let waited = 0; waited < MAX_WAIT_MS; waited += POLL_MS) {
+    const loading = (await win.webContents.executeJavaScript(busy).catch(() => false)) as boolean
+    if (!loading) return
+    await sleep(POLL_MS)
+  }
+  console.warn('  (toujours en chargement, capture quand même)')
+}
+
 export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotPlan[]): Promise<void> {
   const dir = join(app.getAppPath(), outDir)
   await fs.mkdir(dir, { recursive: true })
@@ -87,6 +127,7 @@ export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotP
   for (const shot of plan) {
     win.webContents.send('nav:goto', shot.route)
     await sleep(shot.settleMs ?? 1200)
+    await settled(win)
 
     if (shot.scrollY !== undefined || shot.scrollTo) {
       // The scroller is the <main> element, not the document.
