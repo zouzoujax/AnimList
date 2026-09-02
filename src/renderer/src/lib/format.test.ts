@@ -7,11 +7,36 @@ import {
   isUnaired,
   minutesToHuman,
   monthBucket,
+  otherTitles,
   premiereLabel,
   premiereOf,
   premiereSort,
   seasonLabel
 } from './format'
+
+describe('otherTitles', () => {
+  const kaiju = { title: { romaji: 'Kaijuu 8-gou', english: 'Kaiju No. 8', native: '怪獣8号' } }
+
+  it('gives the two original forms when the English name is shown', () => {
+    expect(otherTitles(kaiju, 'english')).toEqual(['Kaijuu 8-gou', '怪獣8号'])
+  })
+
+  it('gives the Japanese name under the romaji', () => {
+    expect(otherTitles(kaiju, 'romaji')).toEqual(['怪獣8号'])
+  })
+
+  // Le cas qui manquait : en japonais, le rōmaji disparaissait de la fiche.
+  it('gives the romaji under the Japanese name', () => {
+    expect(otherTitles(kaiju, 'native')).toEqual(['Kaijuu 8-gou'])
+  })
+
+  it('never repeats the title already on screen', () => {
+    const only = { title: { romaji: 'Bocchi the Rock!', english: null, native: null } }
+    expect(otherTitles(only, 'english')).toEqual([])
+    expect(otherTitles(only, 'native')).toEqual([])
+    expect(otherTitles(only, 'romaji')).toEqual([])
+  })
+})
 
 describe('durationParts', () => {
   it('stays in minutes below an hour', () => {

@@ -447,6 +447,25 @@ export async function mangas(
   return { items: data.Page.media.map(toManga), pageInfo: data.Page.pageInfo, stale }
 }
 
+/**
+ * Une fiche manga par son identifiant.
+ *
+ * Le catalogue ne sait servir que des listes : arriver depuis la relation d'un
+ * anime, c'est n'avoir qu'un numéro et rien d'autre à montrer.
+ */
+const MANGA_ONE_QUERY = `
+query MangaOne($id: Int) {
+  Media(id: $id, type: MANGA) { ${MANGA_FIELDS} }
+}`
+
+export async function mangaById(id: number): Promise<Manga> {
+  const key = `manga:one:${id}`
+  const { data } = await cached(key, TTL.list, () =>
+    request<{ Media: RawManga }>(MANGA_ONE_QUERY, { id }, 'interactive', key)
+  )
+  return toManga(data.Media)
+}
+
 export async function browse(q: BrowseQuery, showAdult: boolean): Promise<Paged<Media>> {
   const page = q.page ?? 1
   const perPage = q.perPage ?? 30
@@ -758,6 +777,19 @@ export async function detail(id: number): Promise<MediaDetail & { stale: boolean
     })),
     relations: (m.relations?.edges ?? [])
       .filter((e) => e.node.type === 'ANIME')
+      .map((e) => ({
+        id: e.node.id,
+        title: e.node.title.romaji ?? e.node.title.english ?? `#${e.node.id}`,
+        cover: e.node.coverImage?.large ?? PLACEHOLDER,
+        format: e.node.format,
+        extra: RELATION_LABELS[e.relationType] ?? e.relationType
+      })),
+    // La requête les ramenait déjà et on les jetait : le manga d'où la série
+    // sort n'était joignable nulle part, alors qu'une page entière lui est
+    // consacrée. Seuls la source et l'adaptation comptent — les produits
+    // dérivés n'ont pas leur place sur la fiche de l'anime.
+    manga: (m.relations?.edges ?? [])
+      .filter((e) => e.node.type === 'MANGA' && (e.relationType === 'SOURCE' || e.relationType === 'ADAPTATION'))
       .map((e) => ({
         id: e.node.id,
         title: e.node.title.romaji ?? e.node.title.english ?? `#${e.node.id}`,

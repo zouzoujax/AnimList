@@ -126,6 +126,11 @@ export interface MediaDetail extends Media {
   links: { site: string; url: string }[]
   characters: CharacterRef[]
   relations: MediaRef[]
+  /**
+   * Le manga dont la série est tirée, ou qu'elle a inspiré. À part des autres
+   * relations : celles-là s'ouvrent sur une fiche d'anime, celui-ci n'en a pas.
+   */
+  manga: MediaRef[]
   recommendations: MediaRef[]
   episodeMeta: EpisodeMeta[]
 }

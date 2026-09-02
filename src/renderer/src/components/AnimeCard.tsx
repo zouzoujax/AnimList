@@ -311,18 +311,21 @@ export function MiniCard({
   title,
   cover,
   caption,
-  index = 0
+  index = 0,
+  onOpen
 }: {
   id: number
   title: string
   cover: string
   caption?: string | null
   index?: number
+  /** Ouvre autre chose que la fiche de l'anime — un manga n'en a pas. */
+  onOpen?: () => void
 }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   return (
     <motion.button
-      onClick={() => navigate({ name: 'anime', id })}
+      onClick={() => (onOpen ? onOpen() : navigate({ name: 'anime', id }))}
       className="group w-[126px] shrink-0 text-left"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}

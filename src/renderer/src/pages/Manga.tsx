@@ -12,8 +12,9 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { BookOpen, ExternalLink, Flame, Search, Star, TrendingUp, X } from 'lucide-react'
+import { Flame, Search, Star, TrendingUp, X } from 'lucide-react'
 import type { Manga, MangaKind } from '@shared/types'
+import { MANGA_STATUS, MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, PosterSkeletons, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { useDebounced, useInView } from '@/lib/hooks'
@@ -23,14 +24,6 @@ const TABS: { kind: MangaKind; label: string; icon: typeof Flame }[] = [
   { kind: 'popular', label: 'Populaires', icon: TrendingUp },
   { kind: 'top', label: 'Mieux notés', icon: Star }
 ]
-
-const STATUS: Record<string, string> = {
-  FINISHED: 'Terminé',
-  RELEASING: 'En cours',
-  NOT_YET_RELEASED: 'À paraître',
-  CANCELLED: 'Annulé',
-  HIATUS: 'En pause'
-}
 
 function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: () => void }): React.JSX.Element {
   const glow = toneAccent(manga.cover.color)
@@ -48,7 +41,7 @@ function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: (
         {manga.title.english ?? manga.title.romaji}
       </p>
       <p className="mt-0.5 text-[0.7rem] text-faint">
-        {manga.chapters ? `${manga.chapters} chapitres` : (STATUS[manga.status ?? ''] ?? '—')}
+        {manga.chapters ? `${manga.chapters} chapitres` : (MANGA_STATUS[manga.status ?? ''] ?? '—')}
         {manga.startYear ? ` · ${manga.startYear}` : ''}
       </p>
       {manga.averageScore !== null && (
@@ -189,65 +182,8 @@ export default function MangaPage(): React.JSX.Element {
       )}
 
       <Modal open={open !== null} onClose={() => setOpen(null)} width={640}>
-        {open && <Sheet manga={open} onClose={() => setOpen(null)} />}
+        {open && <MangaSheet manga={open} onClose={() => setOpen(null)} />}
       </Modal>
     </div>
-  )
-}
-
-function Sheet({ manga, onClose }: { manga: Manga; onClose: () => void }): React.JSX.Element {
-  const glow = toneAccent(manga.cover.color)
-  return (
-    <>
-      <div className="flex gap-4 border-b p-5" style={{ borderColor: 'var(--line)' }}>
-        <Poster src={manga.cover.xl} alt="" className="h-[168px] w-[116px] shrink-0" rounded="rounded-[14px]" />
-        <div className="min-w-0 flex-1">
-          <p className="label" style={{ color: rgba(glow, 1) }}>
-            {STATUS[manga.status ?? ''] ?? 'Manga'}
-          </p>
-          <h2 className="title-xl mt-1 text-[1.3rem] leading-tight">{manga.title.english ?? manga.title.romaji}</h2>
-          {manga.title.native && <p className="mt-0.5 text-[0.78rem] text-faint">{manga.title.native}</p>}
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.76rem] text-muted">
-            {manga.averageScore !== null && (
-              <span className="font-semibold" style={{ color: rgba(glow, 1) }}>
-                {manga.averageScore}%
-              </span>
-            )}
-            {manga.chapters && <span>{manga.chapters} chapitres</span>}
-            {manga.volumes && <span>{manga.volumes} tomes</span>}
-            {manga.startYear && <span>{manga.startYear}</span>}
-          </div>
-
-          {manga.staff.length > 0 && <p className="mt-1.5 text-[0.76rem] text-faint">{manga.staff.join(' · ')}</p>}
-        </div>
-      </div>
-
-      <div className="max-h-[36vh] overflow-y-auto px-5 py-4">
-        {manga.genres.length > 0 && (
-          <div className="mb-3 flex flex-wrap gap-1.5">
-            {manga.genres.map((genre) => (
-              <span key={genre} className="chip !h-6 !cursor-default !text-[0.65rem]">
-                {genre}
-              </span>
-            ))}
-          </div>
-        )}
-        <p className="whitespace-pre-line text-[0.83rem] leading-relaxed text-muted">
-          {manga.description ?? 'Aucun résumé sur AniList.'}
-        </p>
-      </div>
-
-      <div className="flex justify-end gap-2 border-t px-5 py-3" style={{ borderColor: 'var(--line)' }}>
-        <button className="btn" onClick={onClose}>
-          Fermer
-        </button>
-        <button className="btn btn-primary" onClick={() => void window.api.app.openExternal(manga.siteUrl)}>
-          <BookOpen size={14} />
-          Voir sur AniList
-          <ExternalLink size={13} />
-        </button>
-      </div>
-    </>
   )
 }

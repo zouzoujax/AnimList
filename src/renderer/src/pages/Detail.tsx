@@ -18,13 +18,14 @@ import {
   Users
 } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   EMOTIONS,
   GENRE_LABELS,
   STATUS_LABELS,
   type EmotionId,
   type LibraryStatus,
+  type Manga,
   type Media,
   type MediaDetail
 } from '@shared/types'
@@ -32,9 +33,10 @@ import { MiniCard } from '@/components/AnimeCard'
 import EpisodeEditor from '@/components/EpisodeEditor'
 import ListPicker from '@/components/ListPicker'
 import LocalFiles from '@/components/LocalFiles'
-import { ErrorBox, Poster, ProgressRing, RowScroller, Section, Skeleton } from '@/components/ui'
+import { MangaSheet } from '@/components/MangaSheet'
+import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
-import { countdown, formatLabel, isUnaired, minutesToHuman, seasonLabel, titleOf } from '@/lib/format'
+import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonLabel, titleOf } from '@/lib/format'
 import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
@@ -528,6 +530,31 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const [draft, setDraft] = useState<{ animeId: number; text: string }>({ animeId: id, text: entry?.notes ?? '' })
   const [expanded, setExpanded] = useState(false)
   const [picking, setPicking] = useState(false)
+
+  /**
+   * Le manga s'ouvre par une requête à part : la relation ne porte qu'un
+   * identifiant et une couverture, de quoi faire une vignette et rien de plus.
+   * La fenêtre s'ouvre donc avant la réponse, sinon le clic ne fait rien
+   * pendant une seconde.
+   */
+  const [mangaId, setMangaId] = useState<number | null>(null)
+  const [mangaSheet, setMangaSheet] = useState<{ id: number; data: Manga | null; error: string | null }>({
+    id: 0,
+    data: null,
+    error: null
+  })
+
+  useEffect(() => {
+    if (mangaId === null) return
+    let alive = true
+    void window.api.manga
+      .detail(mangaId)
+      .then((data) => alive && setMangaSheet({ id: mangaId, data, error: null }))
+      .catch((err: Error) => alive && setMangaSheet({ id: mangaId, data: null, error: err.message }))
+    return () => {
+      alive = false
+    }
+  }, [mangaId])
   const lists = useApp((s) => s.lists)
 
   // Ranger une série demandait jusqu'ici de retourner dans la bibliothèque et
@@ -638,6 +665,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const knownMedia = [...mediaCache.values()]
   // Films get their own row below, so they don't belong in the relations rail.
   const relationRow = (detail?.relations ?? []).filter((r) => r.format !== 'MOVIE')
+  const mangaRow = detail?.manga ?? []
+  const alsoKnownAs = otherTitles(media, lang)
 
   return (
     <div className="pb-14">
@@ -681,9 +710,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             </div>
 
             <h1 className="title-xl text-[2.35rem] leading-[1.06]">{titleOf(media, lang)}</h1>
-            {media.title.native && lang !== 'native' && (
-              <p className="mt-1 text-[0.86rem] text-faint">{media.title.native}</p>
-            )}
+            {alsoKnownAs.length > 0 && <p className="mt-1 text-[0.86rem] text-faint">{alsoKnownAs.join(' · ')}</p>}
 
             {media.nextAiring && (
               <p
@@ -909,6 +936,26 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             </Section>
           )}
 
+          {/* Pas de sous-titre : chaque vignette dit déjà « Source » ou
+              « Adaptation », et en affirmer un ici se tromperait une fois sur deux. */}
+          {mangaRow.length > 0 && (
+            <Section title="Le manga">
+              <RowScroller>
+                {mangaRow.map((m, i) => (
+                  <MiniCard
+                    key={m.id}
+                    id={m.id}
+                    title={m.title}
+                    cover={m.cover}
+                    caption={m.extra}
+                    index={i}
+                    onOpen={() => setMangaId(m.id)}
+                  />
+                ))}
+              </RowScroller>
+            </Section>
+          )}
+
           {filmRow.length > 0 && (
             <Section title="Films de la série" subtitle={`${filmRow.length} longs métrages`}>
               <RowScroller>
@@ -1118,6 +1165,20 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
       </div>
 
       <ListPicker open={picking} onClose={() => setPicking(false)} animeIds={[id]} />
+
+      <Modal open={mangaId !== null} onClose={() => setMangaId(null)} width={640}>
+        {mangaSheet.id !== mangaId ? (
+          <div className="p-12">
+            <Spinner label="Chargement de la fiche…" />
+          </div>
+        ) : mangaSheet.data ? (
+          <MangaSheet manga={mangaSheet.data} onClose={() => setMangaId(null)} />
+        ) : (
+          <div className="p-5">
+            <ErrorBox message={mangaSheet.error ?? 'Fiche introuvable.'} />
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

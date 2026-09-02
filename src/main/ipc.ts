@@ -126,6 +126,7 @@ export function registerIpc(): void {
   ipcMain.handle('manga:browse', (_e, kind: MangaKind, page: number, search: string, genre?: string) =>
     anilist.mangas(kind, page, search, genre, getPrefs().showAdult)
   )
+  ipcMain.handle('manga:detail', (_e, id: number) => anilist.mangaById(id))
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))

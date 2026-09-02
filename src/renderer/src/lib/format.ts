@@ -6,6 +6,23 @@ export function titleOf(media: { title: Media['title'] }, lang: TitleLang): stri
   return media.title.romaji
 }
 
+/**
+ * Les autres noms de la série, celui affiché mis à part.
+ *
+ * Les trois formes sont en cache, le réglage n'en montre qu'une, et le nom
+ * d'origine se perd — en « 日本語 » on n'avait plus le rōmaji, et en anglais on
+ * n'avait pas les deux. On rend donc les formes originales dans l'ordre où on
+ * les lit, sans jamais répéter celle qui est déjà à l'écran.
+ */
+export function otherTitles(media: { title: Media['title'] }, lang: TitleLang): string[] {
+  const shown = titleOf(media, lang)
+  const out: string[] = []
+  for (const title of [media.title.romaji, media.title.native]) {
+    if (title && title !== shown && !out.includes(title)) out.push(title)
+  }
+  return out
+}
+
 export function formatLabel(format: string | null): string {
   return format ? (FORMAT_LABELS[format] ?? format) : '—'
 }
