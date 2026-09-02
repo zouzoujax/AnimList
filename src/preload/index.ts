@@ -203,7 +203,15 @@ const api = {
     remember: (path: string, at: number, duration: number): Promise<boolean> =>
       ipcRenderer.invoke('videos:remember', path, at, duration),
     /** Oublie la reprise : l'épisode est fini, ou on repart du début. */
-    forgetPosition: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:forget-position', path)
+    forgetPosition: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:forget-position', path),
+    /** Dit si un épisode est en cours : les touches multimédia en dépendent. */
+    playing: (active: boolean): Promise<void> => ipcRenderer.invoke('videos:playing', active),
+    /** Une touche multimédia pressée pendant la lecture. */
+    onCommand: (handler: (command: string) => void): (() => void) => {
+      const listener = (_e: unknown, command: string): void => handler(command)
+      ipcRenderer.on('player:command', listener)
+      return () => ipcRenderer.off('player:command', listener)
+    }
   },
 
   app: {

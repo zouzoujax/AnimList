@@ -9,10 +9,11 @@ import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { startFollowWatcher } from './follows'
+import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
 import { startUpdateWatcher } from './updater'
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
-import { flush, getPrefs, initStore } from './store'
+import { flush, getPrefs, initStore, store } from './store'
 
 const isDev = !app.isPackaged
 
@@ -159,6 +160,20 @@ void app.whenReady().then(() => {
     return
   }
 
+  // La liste de raccourcis suit la bibliothèque : l'épisode qu'elle annonce
+  // change à chaque case cochée.
+  refreshJumpList()
+  store.on('change', refreshJumpList)
+
+  // Lancée depuis un raccourci de la barre des tâches : on attend que la
+  // fenêtre soit prête, sinon le message part dans le vide.
+  const launched = openTargetFrom(process.argv)
+  if (launched !== null) {
+    mainWindow.webContents.once('did-finish-load', () => {
+      mainWindow?.webContents.send('nav:open-anime', launched)
+    })
+  }
+
   stopWatcher = startAiringWatcher(mainWindow)
   stopFollows = startFollowWatcher(mainWindow)
   stopUpdateCheck = startUpdateWatcher()
@@ -169,10 +184,15 @@ void app.whenReady().then(() => {
   })
 })
 
-app.on('second-instance', () => {
+app.on('second-instance', (_event, argv) => {
   if (!mainWindow || mainWindow.isDestroyed()) return
   if (mainWindow.isMinimized()) mainWindow.restore()
   mainWindow.focus()
+
+  // Un raccourci « Reprendre » relance l'exécutable ; l'instance déjà là
+  // récupère la ligne de commande et va sur la fiche.
+  const target = openTargetFrom(argv)
+  if (target !== null) mainWindow.webContents.send('nav:open-anime', target)
 })
 
 app.on('window-all-closed', () => {
@@ -188,6 +208,9 @@ app.on('before-quit', async (event) => {
   stopSequelWatcher = null
   stopFollows?.()
   stopFollows = null
+  // Une touche multimédia retenue après la sortie resterait prise pour toute
+  // la session Windows.
+  releaseMediaKeys()
   event.preventDefault()
   await flush()
   app.exit(0)

@@ -27,6 +27,7 @@ import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './f
 import { forYou } from './foryou'
 import { identifyImage } from './identify'
 import { importAniList, importKitsu } from './import-list'
+import { setPlayerActive } from './taskbar'
 import {
   cacheMedia,
   cancelRewatch,
@@ -204,6 +205,11 @@ export function registerIpc(): void {
     rememberPosition(path, at, duration)
   )
   ipcMain.handle('videos:forget-position', (_e, path: string) => forgetPosition(path))
+
+  // Les touches multimédia ne sont prises que pendant une lecture : un
+  // raccourci global posé en permanence volerait la touche « lecture » à tous
+  // les autres lecteurs de la machine.
+  ipcMain.handle('videos:playing', (e, active: boolean) => setPlayerActive(ownerOf(e), active))
 
   // ---- app -----------------------------------------------------------
   ipcMain.handle('app:info', () => ({

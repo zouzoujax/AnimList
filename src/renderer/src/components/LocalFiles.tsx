@@ -55,6 +55,21 @@ export default function LocalFiles({
     setFolder(null)
   }
 
+  /**
+   * Le fichier voisin, s'il existe.
+   *
+   * Rend `undefined` au bord de la liste plutôt qu'une fonction sans effet :
+   * le lecteur n'affiche alors pas le bouton, ce qui vaut mieux qu'un bouton
+   * qui ne fait rien.
+   */
+  const step = (delta: number): (() => void) | undefined => {
+    if (!playing || !folder) return undefined
+    const at = folder.episodes.findIndex((f) => f.path === playing.path)
+    const next = folder.episodes[at + delta]
+    if (at < 0 || !next) return undefined
+    return () => setPlaying(next)
+  }
+
   if (folder === undefined) return null
 
   if (!folder) {
@@ -170,6 +185,11 @@ export default function LocalFiles({
           file={playing}
           animeId={animeId}
           title={title}
+          /* Les voisins du dossier, dans l'ordre où ils sont affichés : c'est
+             ce qui donne un sens aux touches « suivant » et « précédent » du
+             clavier, et aux deux boutons de l'en-tête. */
+          onPrevious={step(-1)}
+          onNext={step(1)}
           /* Relire le dossier en fermant : la place que le lecteur vient
              d'enregistrer doit se voir sur la ligne, sans rien rafraîchir. */
           onClose={() => {

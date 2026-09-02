@@ -20,6 +20,7 @@ import { BrowserWindow, Notification, app } from 'electron'
 import type { ReleaseNote, UpdateStatus } from '@shared/types'
 import { parseReleaseNote } from '@shared/release-notes'
 import { getPrefs } from './store'
+import { setTaskbarProgress } from './taskbar'
 
 let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null, notes: [] }
 let started = false
@@ -100,9 +101,14 @@ async function attach(): Promise<Updater | null> {
     set({ phase: 'available', version: info.version, message: null, notes: notesOf(info) })
   )
   auto.on('update-not-available', () => set({ phase: 'current', version: null, message: null, notes: [] }))
-  auto.on('download-progress', (progress) => set({ phase: 'downloading', percent: Math.round(progress.percent) }))
+  auto.on('download-progress', (progress) => {
+    set({ phase: 'downloading', percent: Math.round(progress.percent) })
+    // L'app minimisée dit quand même où elle en est.
+    setTaskbarProgress(BrowserWindow.getAllWindows()[0] ?? null, progress.percent / 100)
+  })
   auto.on('update-downloaded', (info) => {
     set({ phase: 'ready', version: info.version, percent: 100, notes: notesOf(info) })
+    setTaskbarProgress(BrowserWindow.getAllWindows()[0] ?? null, null)
     announceReady(info.version)
   })
   auto.on('error', (err) => set({ phase: 'error', message: err.message }))

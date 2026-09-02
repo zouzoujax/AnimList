@@ -10,6 +10,10 @@
  * lecteur ne montre pas un carré noir : il le dit et propose le lecteur du
  * système, qui lui saura le lire.
  *
+ * Les touches multimédia du clavier le pilotent, mais seulement tant qu'il est
+ * ouvert — un raccourci global est global, et le garder posé volerait la
+ * touche « lecture » à tous les autres lecteurs de la machine.
+ *
  * Il retient aussi où on s'est arrêté, et rouvre le fichier à cette
  * seconde-là. La position part sur le disque toutes les cinq secondes et à la
  * fermeture : fermer la fenêtre est le geste normal, ce n'est pas à
@@ -19,7 +23,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ExternalLink, RotateCcw, TriangleAlert, X } from 'lucide-react'
+import { ExternalLink, PictureInPicture2, RotateCcw, SkipBack, SkipForward, TriangleAlert, X } from 'lucide-react'
 import type { LocalEpisode } from '@shared/types'
 import { clock } from '@shared/playback'
 import { useApp } from '../store/app'
@@ -34,12 +38,17 @@ export default function Player({
   file,
   animeId,
   title,
-  onClose
+  onClose,
+  onPrevious,
+  onNext
 }: {
   file: LocalEpisode
   animeId: number
   title: string
   onClose: () => void
+  /** Les fichiers voisins du dossier, quand il y en a. */
+  onPrevious?: () => void
+  onNext?: () => void
 }): React.JSX.Element {
   const video = useRef<HTMLVideoElement>(null)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
@@ -71,6 +80,47 @@ export default function Player({
       if (duration > 0) void window.api.videos.remember(path, at, duration)
     }
   }, [file.path])
+
+  /**
+   * Le processus principal doit savoir qu'une lecture est en cours : c'est ce
+   * qui lui fait prendre — et rendre — les touches multimédia du clavier. Un
+   * raccourci global posé en permanence les volerait à tous les autres
+   * lecteurs de la machine.
+   */
+  useEffect(() => {
+    void window.api.videos.playing(true)
+    return () => {
+      void window.api.videos.playing(false)
+    }
+  }, [])
+
+  /** Ce que fait chaque touche multimédia. */
+  useEffect(() => {
+    return window.api.videos.onCommand((command) => {
+      const el = video.current
+      if (command === 'stop') return onClose()
+      if (command === 'next') return onNext?.()
+      if (command === 'previous') return onPrevious?.()
+      if (!el) return
+      if (el.paused) void el.play()
+      else el.pause()
+    })
+  }, [onClose, onNext, onPrevious])
+
+  /**
+   * Le mini-lecteur flottant.
+   *
+   * C'est celui de Windows, pas un des nôtres : Chromium sait détacher une
+   * vidéo dans une fenêtre qui reste au-dessus des autres, redimensionnable et
+   * pilotable depuis la barre des tâches. En réécrire un serait long et moins
+   * bon.
+   */
+  const popOut = (): void => {
+    const el = video.current
+    if (!el || !document.pictureInPictureEnabled) return
+    if (document.pictureInPictureElement) void document.exitPictureInPicture()
+    else void el.requestPictureInPicture().catch(() => toast('Ce format ne se détache pas.', 'error'))
+  }
 
   /** Reprend là où on s'était arrêté, une fois la durée connue. */
   const onLoaded = (): void => {
@@ -164,6 +214,31 @@ export default function Player({
             </p>
             <p className="truncate text-[0.7rem] text-white/45">{file.name}</p>
           </div>
+          {onPrevious && (
+            <button
+              className="icon-btn !h-8 !w-8"
+              onClick={onPrevious}
+              title="Épisode précédent"
+              aria-label="Précédent"
+            >
+              <SkipBack size={15} />
+            </button>
+          )}
+          {onNext && (
+            <button className="icon-btn !h-8 !w-8" onClick={onNext} title="Épisode suivant" aria-label="Suivant">
+              <SkipForward size={15} />
+            </button>
+          )}
+          {!failed && document.pictureInPictureEnabled && (
+            <button
+              className="icon-btn !h-8 !w-8"
+              onClick={popOut}
+              title="Détacher dans une fenêtre flottante"
+              aria-label="Mini-lecteur"
+            >
+              <PictureInPicture2 size={15} />
+            </button>
+          )}
           {resumed !== null && (
             <button className="btn" onClick={restart} title="Repartir du début de l’épisode">
               <RotateCcw size={14} />
