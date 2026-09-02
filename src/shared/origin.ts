@@ -52,6 +52,27 @@ export function originOf(country: string | null | undefined, format?: string | n
   return BY_COUNTRY[country.toUpperCase()] ?? 'other'
 }
 
+/** « Le manga », « Le manhwa » — pour titrer une section qui n'en montre qu'un. */
+export const ORIGIN_THE: Record<MangaOrigin, string> = {
+  manga: 'Le manga',
+  manhwa: 'Le manhwa',
+  manhua: 'Le manhua',
+  novel: 'Le roman',
+  other: 'L’œuvre d’origine'
+}
+
+/**
+ * Le titre qui convient à un lot d'œuvres.
+ *
+ * Le mot juste quand elles s'accordent, le générique sinon : une série tirée
+ * d'un manhwa et d'un roman ne peut pas être titrée « Le manhwa », et se
+ * tromper de mot est exactement ce qu'on cherche à éviter.
+ */
+export function originTitle(origins: MangaOrigin[]): string {
+  const unique = [...new Set(origins)]
+  return unique.length === 1 ? ORIGIN_THE[unique[0]] : ORIGIN_THE.other
+}
+
 /** Les onglets proposés, et le code pays qu'ils demandent à AniList. */
 export const ORIGIN_FILTERS: { id: MangaOrigin; country: string }[] = [
   { id: 'manga', country: 'JP' },

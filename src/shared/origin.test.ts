@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { originOf, ORIGIN_FILTERS, ORIGIN_HINTS, ORIGIN_LABELS } from './origin'
+import { originOf, originTitle, ORIGIN_FILTERS, ORIGIN_HINTS, ORIGIN_LABELS } from './origin'
 
 describe('originOf', () => {
   it('reconnaît les trois traditions', () => {
@@ -44,5 +44,26 @@ describe('les libellés', () => {
 
   it('n’offrent en filtre que ce qu’AniList sait filtrer par pays', () => {
     for (const filter of ORIGIN_FILTERS) expect(originOf(filter.country)).toBe(filter.id)
+  })
+})
+
+describe('originTitle', () => {
+  it('nomme juste quand toutes les œuvres s’accordent', () => {
+    expect(originTitle(['manhwa'])).toBe('Le manhwa')
+    expect(originTitle(['manga', 'manga'])).toBe('Le manga')
+    expect(originTitle(['manhua'])).toBe('Le manhua')
+    expect(originTitle(['novel'])).toBe('Le roman')
+  })
+
+  // Le cas Solo Leveling : la section s’intitulait « Le manga » sous une série
+  // tirée d’un manhwa coréen.
+  it('ne dit « manga » que si c’en est un', () => {
+    expect(originTitle(['manhwa'])).not.toContain('manga')
+  })
+
+  it('reste générique dès que les origines divergent, ou qu’il n’y en a pas', () => {
+    expect(originTitle(['manga', 'novel'])).toBe('L’œuvre d’origine')
+    expect(originTitle([])).toBe('L’œuvre d’origine')
+    expect(originTitle(['other'])).toBe('L’œuvre d’origine')
   })
 })

@@ -36,6 +36,7 @@ import ListPicker from '@/components/ListPicker'
 import LocalFiles from '@/components/LocalFiles'
 import { MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, Spinner } from '@/components/ui'
+import { originTitle } from '@shared/origin'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonLabel, titleOf } from '@/lib/format'
 import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons } from '@/lib/hooks'
@@ -964,9 +965,12 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
           )}
 
           {/* Pas de sous-titre : chaque vignette dit déjà « Source » ou
-              « Adaptation », et en affirmer un ici se tromperait une fois sur deux. */}
+              « Adaptation », et en affirmer un ici se tromperait une fois sur deux.
+
+              Le titre, lui, suit le pays d'origine : « Le manga » sous Solo
+              Leveling, tiré d'un manhwa coréen, était simplement faux. */}
           {mangaRow.length > 0 && (
-            <Section title="Le manga">
+            <Section title={originTitle(mangaRow.map((m) => m.origin ?? 'other'))}>
               <RowScroller>
                 {mangaRow.map((m, i) => (
                   <MiniCard

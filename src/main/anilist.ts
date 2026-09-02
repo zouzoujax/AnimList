@@ -101,7 +101,9 @@ query Detail($id: Int) {
     relations {
       edges {
         relationType(version: 2)
-        node { id type format title { romaji english } coverImage { large } }
+        # Le pays sert à nommer l'œuvre d'origine : « Le manga » sous une série
+        # tirée d'un manhwa coréen est faux, et se voit tout de suite.
+        node { id type format countryOfOrigin title { romaji english } coverImage { large } }
       }
     }
     recommendations(sort: RATING_DESC, perPage: 12) {
@@ -300,7 +302,21 @@ function request<T>(
 }
 
 /** Serves cache first when fresh; on network failure falls back to stale cache. */
-async function cached<T>(k: string, ttl: number, run: () => Promise<T>): Promise<{ data: T; stale: boolean }> {
+/**
+ * Version de la forme des réponses en cache.
+ *
+ * À monter dès qu'une requête gagne un champ. Une réponse enregistrée avant
+ * ne le porte pas, et rien dans sa date ne le dit : une fiche gardée
+ * vingt-quatre heures aurait continué d'annoncer « Le manga » sous Solo
+ * Leveling jusqu'au lendemain. Changer la clé les périme toutes d'un coup, ce
+ * qui coûte une poignée de requêtes une seule fois.
+ *
+ * v2 — pays d'origine sur les mangas et sur les relations.
+ */
+const SHAPE = 'v2'
+
+async function cached<T>(key: string, ttl: number, run: () => Promise<T>): Promise<{ data: T; stale: boolean }> {
+  const k = `${SHAPE}:${key}`
   const hit = cache.get(k)
   if (hit && Date.now() - hit.at < ttl) return { data: hit.data as T, stale: false }
   try {
@@ -602,6 +618,7 @@ interface RawDetail extends RawMedia {
         id: number
         type: string
         format: string | null
+        countryOfOrigin: string | null
         title: { romaji: string | null; english: string | null }
         coverImage: { large: string | null } | null
       }
@@ -860,7 +877,8 @@ export async function detail(id: number): Promise<MediaDetail & { stale: boolean
         title: e.node.title.romaji ?? e.node.title.english ?? `#${e.node.id}`,
         cover: e.node.coverImage?.large ?? PLACEHOLDER,
         format: e.node.format,
-        extra: RELATION_LABELS[e.relationType] ?? e.relationType
+        extra: RELATION_LABELS[e.relationType] ?? e.relationType,
+        origin: originOf(e.node.countryOfOrigin, e.node.format)
       })),
     recommendations: (m.recommendations?.nodes ?? [])
       .map((n) => n.mediaRecommendation)

@@ -144,6 +144,12 @@ export interface MediaRef {
   cover: string
   format: string | null
   extra: string | null
+  /**
+   * Manga, manhwa ou manhua, pour les œuvres écrites seulement.
+   *
+   * Absente sur les relations d'anime : la question ne s'y pose pas.
+   */
+  origin?: MangaOrigin
 }
 
 export interface EpisodeMeta {
