@@ -28,7 +28,8 @@ const STYLE = `
   button { font:inherit; border:0; border-radius:12px; padding:11px 14px; font-weight:600; font-size:.82rem; color:#fff; background:var(--accent); }
   button.ghost { background:#1c1f2e; color:var(--muted); }
   button:active { transform:scale(.96); }
-  button[disabled] { opacity:.4; }
+  button[disabled] { opacity:.35; background:#1c1f2e; color:var(--muted); }
+  .wait { color:#ffb038; }
   .empty, .err { text-align:center; color:var(--muted); padding:40px 10px; font-size:.9rem; line-height:1.6; }
   .err { color:#ff8f8f; }
   form { display:flex; gap:8px; margin-top:20px; }
@@ -66,8 +67,10 @@ const SCRIPT = `
       body: body ? JSON.stringify(body) : undefined
     })
     if (res.status === 401) throw new Error('unauthorized')
-    if (!res.ok) throw new Error('Le PC a répondu ' + res.status)
-    return res.json()
+    const body = await res.json().catch(() => null)
+    // Le serveur explique ses refus : « pas encore sorti » vaut mieux que 409.
+    if (!res.ok) throw new Error((body && body.error) || 'Le PC a répondu ' + res.status)
+    return body
   }
 
   function askToken(message) {
@@ -91,6 +94,19 @@ const SCRIPT = `
     ))
   }
 
+  // « dans 2 j », « dans 5 h » : de quoi savoir s'il faut attendre ce soir ou
+  // la semaine prochaine, sans embarquer de bibliothèque de dates.
+  function when(airingAt) {
+    if (!airingAt) return 'pas encore sorti'
+    const left = airingAt * 1000 - Date.now()
+    if (left <= 0) return 'sort maintenant'
+    const days = Math.floor(left / 86400000)
+    if (days >= 1) return 'dans ' + days + ' j'
+    const hours = Math.floor(left / 3600000)
+    if (hours >= 1) return 'dans ' + hours + ' h'
+    return 'dans ' + Math.max(1, Math.floor(left / 60000)) + ' min'
+  }
+
   function render(state) {
     if (!state.series.length) {
       app.innerHTML = '<div class="empty">Rien en cours.<br>Commence une série sur le PC, elle apparaîtra ici.</div>'
@@ -98,14 +114,22 @@ const SCRIPT = `
     }
     app.innerHTML = state.series.map((s) => {
       const total = s.total ? ' sur ' + s.total : ''
+      // Un épisode à venir ne se coche pas : le bouton est éteint et la ligne
+      // dit pourquoi, plutôt que de laisser essayer et refuser après coup.
+      const meta = s.unaired
+        ? '<span class="wait">Épisode ' + s.episode + ' ' + when(s.airingAt) + '</span>'
+        : 'Épisode ' + s.episode + total + ' · ' + s.seen + ' vus'
+      const act = s.unaired
+        ? '<button disabled>Vu</button>'
+        : '<button onclick="tick(' + s.id + ',' + s.episode + ')">Vu</button>'
       return '<div class="row">' +
         '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
         '<div class="info">' +
           '<div class="title">' + esc(s.title) + '</div>' +
-          '<div class="meta">Épisode ' + s.episode + total + ' · ' + s.seen + ' vus</div>' +
+          '<div class="meta">' + meta + '</div>' +
         '</div>' +
         '<div class="acts">' +
-          '<button onclick="tick(' + s.id + ',' + s.episode + ')">Vu</button>' +
+          act +
           '<button class="ghost" onclick="open_(' + s.id + ')">Ouvrir</button>' +
         '</div>' +
       '</div>'
@@ -126,7 +150,9 @@ const SCRIPT = `
       render(await call('/api/tick', { id: id, episode: episode }))
       say('Épisode ' + episode + ' coché')
     } catch (err) {
-      say('Raté : ' + err.message)
+      say(err.message)
+      // Un refus veut souvent dire que la page date : on relit.
+      load()
     }
   }
 

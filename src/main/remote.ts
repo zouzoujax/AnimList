@@ -27,6 +27,7 @@ import { networkInterfaces } from 'node:os'
 import { BrowserWindow } from 'electron'
 import { makeToken, needsToken, REMOTE_PORT, remoteUrl, routeOf, safeEqual, tokenFrom } from '@shared/remote'
 import { nextEpisode } from '@shared/resume'
+import { canTick, isUnaired } from '@shared/airing'
 import { setWatched, snapshot } from './store'
 import { page } from './remote-page'
 
@@ -91,6 +92,10 @@ function remoteState(): unknown {
       episode,
       total: found.episodes,
       seen: seen.get(entry.animeId)?.size ?? 0,
+      // La série reste dans la liste, mais sans bouton : savoir qu'il n'y a
+      // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
+      unaired: isUnaired(found, episode),
+      airingAt: found.nextAiring?.airingAt ?? null,
       updatedAt: entry.updatedAt
     })
   }
@@ -158,6 +163,20 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (route === 'tick') {
     const episode = Number(body.episode)
     if (!Number.isInteger(episode) || episode <= 0) return json(res, 400, { error: 'Épisode inconnu.' })
+
+    /**
+     * Le refus est ici, pas seulement dans la page.
+     *
+     * Une page restée ouverte depuis hier propose encore l'épisode d'hier ; et
+     * rien n'oblige quiconque sur le réseau à passer par notre page. Un écran
+     * qui cache un bouton n'a jamais protégé une écriture.
+     */
+    const media = snapshot().media.find((m) => m.id === id)
+    const already = snapshot().history.some((ev) => ev.animeId === id && ev.episode === episode)
+    if (media && !canTick(media, episode, already)) {
+      return json(res, 409, { error: `L’épisode ${episode} n’est pas encore sorti.` })
+    }
+
     setWatched(id, episode, true)
     return json(res, 200, remoteState())
   }

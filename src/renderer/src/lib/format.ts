@@ -125,9 +125,14 @@ export function countdown(airingAtSeconds: number): string {
  * True when episode `n` has not been broadcast yet. `nextAiring.episode` is the
  * one still to come, so it and everything after it cannot have been watched.
  */
-export function isUnaired(media: Pick<Media, 'nextAiring'>, n: number): boolean {
-  return media.nextAiring !== null && n >= media.nextAiring.episode
-}
+/**
+ * Réexportée, plus définie ici.
+ *
+ * La télécommande écrit dans la bibliothèque depuis le processus principal, et
+ * une règle appliquée à un seul des deux endroits par lesquels on peut écrire
+ * n'est pas une règle. Voir `@shared/airing`.
+ */
+export { isUnaired } from '@shared/airing'
 
 /** Day and hour of an airing still to come: « Demain à 18:30 ». */
 export function airingLabel(airingAtSeconds: number): string {
