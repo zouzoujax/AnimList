@@ -9,6 +9,23 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.18 — 2 septembre 2026
+
+### Ajouts
+
+- Un épisode ouvert depuis l'app reprend là où tu l'avais laissé. La position est retenue pendant la lecture et à la fermeture, et la ligne du fichier affiche « reprendre à 12:34 » avec son avancement. Elle est oubliée dès que l'épisode est coché
+- Tu peux suivre un studio ou un doubleur depuis sa page. Leurs nouvelles sorties te sont annoncées et remontent sur l'accueil, dans « Chez ceux que tu suis ». Poser un suivi ne dit rien de ce qui existe déjà : seul ce qui arrive après compte
+- Manga, manhwa et manhua sont distingués dans le catalogue — AniList les mélange sous un seul mot, alors que sept des huit titres en tendance sont coréens. L'origine paraît sur chaque carte et en tête de chaque fiche, et trois onglets permettent de n'en voir qu'un à la fois
+- Un bouton « Retour » sur la fiche d'un anime, y compris quand elle n'a pas réussi à charger — c'était le seul écran sans autre issue qu'un message d'erreur
+
+### Modifications
+
+- « Pour toi » ne se contente plus de reprendre les votes de la communauté : les séries sont classées d'après ce que tu regardes et ce que tu notes, et chaque carte dit pourquoi elle est là. Tant que tu n'as rien noté, le classement suit ce que tu regardes le plus, et l'annonce plutôt que de faire semblant de lire des notes
+
+### Corrections
+
+- La fiche d'un anime intitulait sa source « Le manga » même quand c'en était un autre : sous Solo Leveling, tiré d'un manhwa coréen, c'était faux. Le titre suit maintenant le pays d'origine
+
 ## 0.3.17 — 2 septembre 2026
 
 ### Modifications
