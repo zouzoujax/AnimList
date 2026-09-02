@@ -39,3 +39,22 @@ describe('la page de la télécommande', () => {
     expect(html).not.toMatch(/src="https?:/)
   })
 })
+
+describe('les actions de la page', () => {
+  const html = page()
+
+  // Le bouton doit être passé explicitement : `window.event` est un vestige,
+  // et sa cible n'est plus renseignée une fois la fonction reprise après
+  // l'attente — le bouton serait rétabli sur `null`.
+  it('passe le bouton à ses gestionnaires plutôt que de le deviner', () => {
+    expect(html).toContain('onclick="watch(this,')
+    expect(html).toContain('onclick="trailer(this,')
+    expect(html).not.toContain('event.currentTarget')
+  })
+
+  it('déclare les gestionnaires que le balisage appelle', () => {
+    for (const name of ['tick', 'watch', 'trailer', 'open_']) {
+      expect(html).toContain(`window.${name} =`)
+    }
+  })
+})

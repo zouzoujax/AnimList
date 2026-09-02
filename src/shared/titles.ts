@@ -73,6 +73,18 @@ export function baseAndSeason(title: string): { base: string; season: number } {
 }
 
 /** Search terms sites actually index: no punctuation, no leading article. */
+/**
+ * Les titres à donner au résolveur d'Anime-Sama, dans l'ordre de préférence.
+ *
+ * En partage, et non dans la fenêtre : la télécommande demande la même
+ * résolution depuis le processus principal, et deux listes de titres
+ * différentes donneraient deux adresses différentes pour la même série — la
+ * première mise en cache gagnant, sans qu'on sache laquelle.
+ */
+export function searchTitles(title: { english: string | null; romaji: string }): string[] {
+  return [title.english, title.romaji].filter((t): t is string => !!t)
+}
+
 export function searchVariants(base: string): string[] {
   const out: string[] = []
   const push = (value: string): void => {

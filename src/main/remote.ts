@@ -28,6 +28,10 @@ import { BrowserWindow } from 'electron'
 import { makeToken, needsToken, REMOTE_PORT, remoteUrl, routeOf, safeEqual, tokenFrom } from '@shared/remote'
 import { nextEpisode } from '@shared/resume'
 import { canTick, isUnaired } from '@shared/airing'
+import { searchTitles } from '@shared/titles'
+import { resolve as resolveAnimeSama } from './animesama'
+import { openTrailerWindow } from './trailer'
+import { openAnimeSamaEpisode } from './watch-window'
 import { setWatched, snapshot } from './store'
 import { page } from './remote-page'
 
@@ -96,6 +100,9 @@ function remoteState(): unknown {
       // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
       unaired: isUnaired(found, episode),
       airingAt: found.nextAiring?.airingAt ?? null,
+      // La bande-annonce se sait d'avance ; l'adresse de lecture demande une
+      // résolution réseau, faite seulement au moment où on la réclame.
+      trailer: !!found.trailer?.id,
       updatedAt: entry.updatedAt
     })
   }
@@ -181,13 +188,45 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return json(res, 200, remoteState())
   }
 
-  // `open` : la seule action qui touche la fenêtre plutôt que les données.
+  // Les actions qui touchent la machine plutôt que les données. Toutes
+  // passent par le mot de passe : ouvrir une fenêtre sur le PC de quelqu'un
+  // est au moins aussi intrusif que lire sa liste.
   const win = BrowserWindow.getAllWindows()[0]
-  if (win && !win.isDestroyed()) {
-    if (win.isMinimized()) win.restore()
-    win.focus()
-    win.webContents.send('nav:open-anime', id)
+  if (!win || win.isDestroyed()) return json(res, 409, { error: 'Aucune fenêtre ouverte sur le PC.' })
+
+  const media = snapshot().media.find((m) => m.id === id)
+  if (!media) return json(res, 404, { error: 'Série inconnue.' })
+
+  if (route === 'trailer') {
+    const video = media.trailer?.id
+    if (!video) return json(res, 404, { error: 'Pas de bande-annonce pour cette série.' })
+    const opened = await openTrailerWindow(win, video, media.title.english ?? media.title.romaji)
+    return opened ? json(res, 200, { ok: true }) : json(res, 502, { error: 'La bande-annonce n’a pas pu s’ouvrir.' })
   }
+
+  if (route === 'watch') {
+    /**
+     * L'adresse est résolue ici, pas gardée dans l'état.
+     *
+     * La résolution interroge le site : la faire pour toute la liste à chaque
+     * rafraîchissement coûterait une requête par série toutes les vingt
+     * secondes, pour des adresses dont une seule sera ouverte.
+     */
+    const target = await resolveAnimeSama(id, searchTitles(media.title)).catch(() => null)
+    if (!target?.url) return json(res, 404, { error: 'Série introuvable sur Anime-Sama.' })
+
+    // Seule une adresse portant un menu d'épisodes peut être positionnée ;
+    // ailleurs on ouvre la page telle quelle plutôt que de viser à côté.
+    const episode = Number(body.episode)
+    const at = target.episodes && Number.isInteger(episode) && episode > 0 ? episode : null
+    const opened = openAnimeSamaEpisode(target.url, at)
+    return opened ? json(res, 200, { ok: true, at }) : json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
+  }
+
+  // `open` : la fiche, sur le PC.
+  if (win.isMinimized()) win.restore()
+  win.focus()
+  win.webContents.send('nav:open-anime', id)
   return json(res, 200, { ok: true })
 }
 

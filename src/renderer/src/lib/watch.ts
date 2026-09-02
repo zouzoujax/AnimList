@@ -1,5 +1,5 @@
 import type { Media, MediaDetail } from '@shared/types'
-import { baseAndSeason, compact, searchVariants, siteSlug } from '@shared/titles'
+import { baseAndSeason, compact, searchTitles as sharedSearchTitles, searchVariants, siteSlug } from '@shared/titles'
 import { overrideFor } from '@shared/watch-overrides'
 import { premiereLabel } from '@/lib/format'
 
@@ -59,9 +59,7 @@ export function searchTerm(media: Media): string {
 }
 
 /** Both titles, so a lookup can retry when the western one draws a blank. */
-export function searchTitles(media: Media): string[] {
-  return [media.title.english, media.title.romaji].filter((t): t is string => !!t)
-}
+export const searchTitles = (media: Media): string[] => sharedSearchTitles(media.title)
 
 /**
  * AniList still stores legacy Crunchyroll URLs (`http://`, no locale segment).

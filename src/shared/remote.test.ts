@@ -59,11 +59,13 @@ describe('tokenFrom', () => {
 })
 
 describe('routeOf', () => {
-  it('reconnaît les quatre adresses', () => {
+  it('reconnaît les adresses prévues', () => {
     expect(routeOf('/')).toBe('page')
     expect(routeOf('/api/state')).toBe('state')
     expect(routeOf('/api/tick')).toBe('tick')
     expect(routeOf('/api/open')).toBe('open')
+    expect(routeOf('/api/watch')).toBe('watch')
+    expect(routeOf('/api/trailer')).toBe('trailer')
   })
 
   it('tolère une barre en trop', () => {
@@ -81,10 +83,14 @@ describe('routeOf', () => {
 })
 
 describe('needsToken', () => {
-  it('protège tout ce qui touche à la bibliothèque', () => {
+  it('protège tout ce qui touche à la bibliothèque ou à la machine', () => {
     expect(needsToken('state')).toBe(true)
     expect(needsToken('tick')).toBe(true)
     expect(needsToken('open')).toBe(true)
+    // Ouvrir une fenêtre sur le PC de quelqu'un d'autre est au moins aussi
+    // intrusif que lire sa liste.
+    expect(needsToken('watch')).toBe(true)
+    expect(needsToken('trailer')).toBe(true)
   })
 
   it('laisse la page se charger : c’est elle qui demande le mot de passe', () => {

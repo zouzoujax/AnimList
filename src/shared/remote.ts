@@ -63,13 +63,13 @@ export function tokenFrom(url: string, header: string | null | undefined): strin
   return new URLSearchParams(url.slice(at + 1)).get('t')
 }
 
-export type RemoteRoute = 'page' | 'state' | 'tick' | 'open' | 'unknown'
+export type RemoteRoute = 'page' | 'state' | 'tick' | 'open' | 'watch' | 'trailer' | 'unknown'
 
 /**
  * Ce que demande une adresse.
  *
  * Une liste fermée, jamais un chemin traduit en fichier : c'est ce qui rend
- * impossible de faire servir autre chose que les quatre réponses prévues.
+ * impossible de faire servir autre chose que les réponses prévues.
  */
 export function routeOf(pathname: string): RemoteRoute {
   switch (pathname.replace(/\/+$/, '') || '/') {
@@ -81,6 +81,10 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'tick'
     case '/api/open':
       return 'open'
+    case '/api/watch':
+      return 'watch'
+    case '/api/trailer':
+      return 'trailer'
     default:
       return 'unknown'
   }

@@ -19,12 +19,14 @@ const STYLE = `
   body { margin:0; background:var(--bg); color:var(--text); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:16px 14px 40px; }
   h1 { font-size:1.35rem; margin:0 0 2px; letter-spacing:-.02em; }
   p.sub { margin:0 0 18px; color:var(--muted); font-size:.85rem; }
-  .row { display:flex; gap:12px; align-items:center; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:10px; margin-bottom:10px; }
+  .row { background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:10px; margin-bottom:10px; }
+  .head { display:flex; gap:12px; align-items:center; }
   .row img { width:52px; height:74px; object-fit:cover; border-radius:10px; flex:none; background:#1c1f2e; }
   .info { flex:1; min-width:0; }
+  .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .acts button { flex:1 1 auto; min-width:76px; }
   .title { font-weight:600; font-size:.95rem; line-height:1.25; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .meta { color:var(--muted); font-size:.78rem; margin-top:3px; }
-  .acts { display:flex; flex-direction:column; gap:6px; flex:none; }
   button { font:inherit; border:0; border-radius:12px; padding:11px 14px; font-weight:600; font-size:.82rem; color:#fff; background:var(--accent); }
   button.ghost { background:#1c1f2e; color:var(--muted); }
   button:active { transform:scale(.96); }
@@ -125,15 +127,24 @@ const SCRIPT = `
       const act = s.unaired
         ? '<button disabled>Vu</button>'
         : '<button onclick="tick(' + s.id + ',' + s.episode + ')">Vu</button>'
+      // La bande-annonce n'apparaît que s'il y en a une : un bouton qui
+      // répond « pas de bande-annonce » ne valait pas la place qu'il prend.
+      const ba = s.trailer
+        ? '<button class="ghost" onclick="trailer(this,' + s.id + ')">Bande-annonce</button>'
+        : ''
       return '<div class="row">' +
-        '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
-        '<div class="info">' +
-          '<div class="title">' + esc(s.title) + '</div>' +
-          '<div class="meta">' + meta + '</div>' +
+        '<div class="head">' +
+          '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
+          '<div class="info">' +
+            '<div class="title">' + esc(s.title) + '</div>' +
+            '<div class="meta">' + meta + '</div>' +
+          '</div>' +
         '</div>' +
         '<div class="acts">' +
           act +
-          '<button class="ghost" onclick="open_(' + s.id + ')">Ouvrir</button>' +
+          '<button class="ghost" onclick="watch(this,' + s.id + ',' + s.episode + ')">Regarder</button>' +
+          ba +
+          '<button class="ghost" onclick="open_(' + s.id + ')">Fiche</button>' +
         '</div>' +
       '</div>'
     }).join('')
@@ -157,6 +168,38 @@ const SCRIPT = `
       // Un refus veut souvent dire que la page date : on relit.
       load()
     }
+  }
+
+  /**
+   * Les actions qui ouvrent une fenêtre sur le PC.
+   *
+   * Le bouton est éteint le temps de la réponse : « Regarder » interroge
+   * Anime-Sama pour trouver l'adresse, ce qui prend parfois deux secondes, et
+   * sans retour on tape trois fois.
+   */
+  async function act(button, path, payload, done) {
+    const before = button.textContent
+    button.disabled = true
+    button.textContent = '…'
+    try {
+      await call(path, payload)
+      say(done)
+    } catch (err) {
+      say(err.message)
+    } finally {
+      button.disabled = false
+      button.textContent = before
+    }
+  }
+
+  // Le bouton est passé explicitement : window.event est un vestige, et sa
+  // cible n'est plus renseignée une fois la fonction asynchrone reprise.
+  window.watch = function (button, id, episode) {
+    act(button, '/api/watch', { id: id, episode: episode }, 'Lecteur ouvert sur le PC')
+  }
+
+  window.trailer = function (button, id) {
+    act(button, '/api/trailer', { id: id }, 'Bande-annonce lancée')
   }
 
   window.open_ = async function (id) {
