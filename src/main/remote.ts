@@ -264,7 +264,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const allowed: PlayerAction[] = ['play', 'pause', 'seek', 'volume', 'fullscreen', 'windowed', 'close']
     if (!allowed.includes(action)) return json(res, 400, { error: 'Commande inconnue.' })
 
-    const done = await playerCommand(action, Number(body.value))
+    const done = await playerCommand(action, { value: Number(body.value) })
     if (!done) return json(res, 409, { error: 'Rien à piloter, ou commande hors de portée de ce lecteur.' })
     return json(res, 200, { player: await nowPlaying() })
   }

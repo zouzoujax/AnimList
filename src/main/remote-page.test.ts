@@ -70,7 +70,10 @@ describe('les actions de la page', () => {
     expect(html).not.toContain('event.currentTarget')
   })
 
-  it('écoute les clics en un seul endroit', () => {
-    expect(script.match(/addEventListener\('click'/g)).toHaveLength(1)
+  // Un seul écouteur délégué pour toutes les actions. Les écouteurs posés sur
+  // un élément précis — le pavé tactile, les curseurs — ne comptent pas : ils
+  // ont besoin de la position ou de la valeur, qu'un bouton ne porte pas.
+  it('délègue toutes les actions à un écouteur unique', () => {
+    expect(script.match(/document\.addEventListener\('click'/g)).toHaveLength(1)
   })
 })

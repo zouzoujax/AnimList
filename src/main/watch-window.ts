@@ -48,6 +48,12 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
        * avait fini par étrangler leur page en version installée.
        */
       partition: 'persist:anime-sama',
+      /**
+       * Chromium refuse de démarrer une vidéo sans geste de l'utilisateur.
+       * Depuis un canapé, le geste a eu lieu — sur un téléphone, à l'autre
+       * bout de la pièce. Sans ça, « Regarder » ouvre la page et s'arrête là.
+       */
+      autoplayPolicy: 'no-user-gesture-required',
       preload: join(__dirname, '../preload/watch.js'),
       // Le préchargement écrit dans le stockage de la page : il doit partager
       // son monde. Il n'expose rien en retour, et Node reste hors de portée.

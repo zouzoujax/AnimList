@@ -10,17 +10,28 @@
  * position, volume, tout est atteignable.
  *
  * **Anime-Sama** est leur page, et leur lecteur vit dans une iframe d'un autre
- * domaine. La politique d'origine du navigateur interdit d'y toucher — ce
- * n'est pas une pudeur, c'est une impossibilité technique, et la contourner
- * demanderait précisément ce que cette app refuse de faire. Restent les
- * commandes qui s'adressent à la **fenêtre** et non au lecteur : plein écran
- * et fermeture.
+ * domaine. Une page ne peut rien y toucher — mais le processus principal, si :
+ * `framesInSubtree` énumère tous les cadres, y compris ceux d'un autre
+ * domaine, et `executeJavaScript` s'exécute *dedans*. La politique d'origine
+ * ne s'applique pas à un accès privilégié, et on retrouve l'élément `video`
+ * lui-même : lecture, pause, position, volume.
  *
- * D'où `canSeek` : le téléphone n'affiche que les boutons qui marchent, plutôt
- * que d'en proposer qui ne répondent pas.
+ * Deux voies écartées en chemin, mesurées et non supposées :
+ *
+ * - `webContents.sendInputEvent` n'atteint que le cadre principal. Vérifié :
+ *   le clic injecté arrive bien au parent, qui le voit « sur IFRAME », et le
+ *   cadre enfant ne reçoit rien — chaque cadre d'un autre domaine vit dans son
+ *   propre processus de rendu.
+ * - Désactiver cette isolation ferait tout marcher d'un coup, et affaiblirait
+ *   précisément la fenêtre qui en a le plus besoin : celle qui charge un site
+ *   tiers plein de régies.
+ *
+ * `canSeek` reste donc une constatation, pas une supposition : vrai quand un
+ * élément `video` a été trouvé, faux tant qu'il n'y en a pas — le lecteur
+ * n'est pas encore chargé, ou la page n'en contient pas.
  */
 
-import type { BrowserWindow } from 'electron'
+import type { BrowserWindow, WebFrameMain } from 'electron'
 import { closeTrailerWindow, trailerWindow } from './trailer'
 import { closeWatchWindow, watchWindow } from './watch-window'
 
@@ -42,6 +53,12 @@ export interface PlayerState {
 
 export type PlayerAction = 'play' | 'pause' | 'seek' | 'volume' | 'fullscreen' | 'windowed' | 'close'
 
+/** Ce qu'une commande transporte. Tout est facultatif : `close` n'a besoin de rien. */
+export interface PlayerParams {
+  /** Secondes pour `seek`, pourcentage pour `volume`. */
+  value?: number
+}
+
 /** La fenêtre qui joue, s'il y en a une. La bande-annonce passe devant. */
 function current(): { kind: PlayerKind; win: BrowserWindow } | null {
   const trailer = trailerWindow()
@@ -56,6 +73,44 @@ interface RawTrailerState {
   duration?: number
   volume?: number
   playing?: boolean
+}
+
+/**
+ * Le script qui trouve la vidéo dans un cadre, et agit dessus.
+ *
+ * La plus grande est la bonne : les lecteurs web posent souvent une vignette
+ * d'aperçu ou une publicité vidéo minuscule à côté de la vraie. Trier par
+ * surface visible évite de piloter la mauvaise.
+ */
+function videoScript(body: string): string {
+  return `(function () {
+    var all = Array.prototype.slice.call(document.querySelectorAll('video'))
+    var v = all.sort(function (a, b) {
+      return b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight
+    })[0]
+    if (!v) return null
+    ${body}
+  })()`
+}
+
+const PROBE = videoScript(`
+  return {
+    position: v.currentTime || 0,
+    duration: isFinite(v.duration) ? v.duration : 0,
+    volume: Math.round((v.muted ? 0 : v.volume) * 100),
+    playing: !v.paused
+  }
+`)
+
+/** Le premier cadre qui contient une vidéo, et ce qu'elle raconte. */
+async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameMain; state: RawTrailerState } | null> {
+  for (const frame of win.webContents.mainFrame.framesInSubtree) {
+    // Un cadre peut disparaître entre l'énumération et l'appel — une publicité
+    // qui se referme, une navigation. L'échec ne doit pas interrompre le tour.
+    const found: unknown = await frame.executeJavaScript(PROBE, true).catch(() => null)
+    if (found && typeof found === 'object') return { frame, state: found }
+  }
+  return null
 }
 
 /**
@@ -84,7 +139,19 @@ export async function playerState(): Promise<PlayerState | null> {
     canSeek: found.kind === 'trailer'
   }
 
-  if (found.kind !== 'trailer') return base
+  if (found.kind !== 'trailer') {
+    const video = await videoFrame(found.win)
+    if (!video) return base
+    return {
+      ...base,
+      position: video.state.position ?? 0,
+      duration: video.state.duration ?? 0,
+      volume: video.state.volume ?? 100,
+      playing: video.state.playing ?? true,
+      // Constaté, pas supposé : on a la main sur un élément `video` réel.
+      canSeek: true
+    }
+  }
 
   // La page expose son état ; une page pas encore chargée n'a pas la fonction,
   // et l'absence d'état ne doit pas faire disparaître les boutons.
@@ -103,7 +170,7 @@ export async function playerState(): Promise<PlayerState | null> {
   }
 }
 
-export async function playerCommand(action: PlayerAction, value?: number): Promise<boolean> {
+export async function playerCommand(action: PlayerAction, params: PlayerParams = {}): Promise<boolean> {
   const found = current()
   if (!found) return false
 
@@ -118,10 +185,29 @@ export async function playerCommand(action: PlayerAction, value?: number): Promi
     return true
   }
 
-  // Ce qui s'adresse au lecteur ne marche que sur le nôtre.
-  if (found.kind !== 'trailer') return false
+  // Ce qui s'adresse au lecteur passe par la vidéo du cadre, chez eux.
+  if (found.kind !== 'trailer') {
+    const video = await videoFrame(found.win)
+    if (!video) return false
 
-  const arg = Number.isFinite(value) ? Number(value) : 0
+    const arg = Number.isFinite(params.value) ? Number(params.value) : 0
+    const body =
+      action === 'play'
+        ? 'v.muted = false; v.play(); return true'
+        : action === 'pause'
+          ? 'v.pause(); return true'
+          : action === 'seek'
+            ? `v.currentTime = ${arg}; return true`
+            : action === 'volume'
+              ? `v.volume = ${arg} / 100; v.muted = ${arg} === 0; return true`
+              : null
+    if (!body) return false
+
+    const done: unknown = await video.frame.executeJavaScript(videoScript(body), true).catch(() => false)
+    return done === true
+  }
+
+  const arg = Number.isFinite(params.value) ? Number(params.value) : 0
   return (await found.win.webContents
     .executeJavaScript(`window.__cmd ? window.__cmd(${JSON.stringify(action)}, ${arg}) : false`, true)
     .catch(() => false)) as boolean

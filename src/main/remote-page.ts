@@ -323,6 +323,46 @@ const SCRIPT = `
     var label = p.kind === 'trailer' ? 'Bande-annonce' : 'Anime-Sama'
     var sub = p.episode ? '<div class="note">Épisode ' + p.episode + '</div>' : ''
     // Un lecteur hors d'atteinte le dit, plutôt que d'afficher des boutons muets.
+    // Tant qu'aucune vidéo n'a été trouvée dans la page, il n'y a rien à
+    // piloter — le lecteur charge encore, ou la page n'en contient pas.
+    var limit = p.canSeek
+      ? ''
+      : '<div class="note">Lecteur pas encore prêt : les commandes apparaîtront dès que la vidéo démarre.</div>'
+
+    var seek = p.canSeek && p.duration > 0
+      ? '<div class="seekline">' +
+          '<span class="time">' + mmss(p.position) + '</span>' +
+          '<input type="range" id="seek" min="0" max="' + Math.floor(p.duration) + '" ' +
+          'value="' + Math.floor(p.position) + '" aria-label="Position">' +
+          '<span class="time right">' + mmss(p.duration) + '</span>' +
+        '</div>' +
+        '<div class="volline">' + icon('volume') +
+          '<input type="range" id="vol" min="0" max="100" value="' + Math.round(p.volume) + '" aria-label="Volume">' +
+        '</div>'
+      : ''
+
+    playerEl.innerHTML = ''
+    countEl.textContent = ''
+    appEl.innerHTML =
+      '<div class="err">' + esc(message) + '</div>' +
+      '<form id="f"><input type="text" id="t" placeholder="mot de passe" autocapitalize="off" ' +
+      'autocomplete="off" spellcheck="false"><button>Entrer</button></form>'
+    document.getElementById('f').onsubmit = function (e) {
+      e.preventDefault()
+      token = document.getElementById('t').value.trim()
+      localStorage.setItem(KEY, token)
+      load()
+    }
+  }
+
+  function renderPlayer(p) {
+    if (!p) { playerEl.innerHTML = ''; return }
+    if (dragging) return
+
+    var cover = p.cover ? '<img src="' + esc(p.cover) + '" alt="">' : ''
+    var label = p.kind === 'trailer' ? 'Bande-annonce' : 'Anime-Sama'
+    var sub = p.episode ? '<div class="note">Épisode ' + p.episode + '</div>' : ''
+    // Un lecteur hors d'atteinte le dit, plutôt que d'afficher des boutons muets.
     var limit = p.canSeek
       ? ''
       : '<div class="note">Leur lecteur vit dans un cadre d’un autre site : seule la fenêtre se pilote d’ici.</div>'
@@ -338,6 +378,7 @@ const SCRIPT = `
           '<input type="range" id="vol" min="0" max="100" value="' + Math.round(p.volume) + '" aria-label="Volume">' +
         '</div>'
       : ''
+
 
     playerEl.innerHTML =
       '<div class="player">' +
@@ -513,13 +554,22 @@ const SCRIPT = `
 
   // ---------------------------------------------------------------- actions
 
-  async function control(action, value) {
+  async function send(action, extra) {
+    var payload = { action: action }
+    for (var k in extra) payload[k] = extra[k]
     try {
-      renderPlayer((await call('/api/control', { action: action, value: value })).player)
+      var answer = await call('/api/control', payload)
+      // Un clic ou une touche ne change pas la barre : la redessiner ferait
+      // se replier le pavé qu'on est en train d'utiliser.
+      if (answer.player && action !== 'click' && action !== 'key') renderPlayer(answer.player)
     } catch (err) {
       say(err.message)
       load()
     }
+  }
+
+  function control(action, value) {
+    return send(action, { value: value })
   }
 
   var CONTROLS = ['play', 'pause', 'fullscreen', 'windowed', 'close']
