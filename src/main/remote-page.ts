@@ -41,7 +41,7 @@ const STYLE = `
     background: var(--bg);
     color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    padding: 0 14px calc(28px + env(safe-area-inset-bottom));
+    padding: 0 14px calc(90px + env(safe-area-inset-bottom));
   }
 
   /* Un halo discret en haut, comme la une de l'app. */
@@ -146,12 +146,49 @@ const STYLE = `
 
   .flash {
     position: fixed; left: 50%; transform: translate(-50%, 12px);
-    bottom: calc(18px + env(safe-area-inset-bottom));
+    bottom: calc(86px + env(safe-area-inset-bottom));
     background: var(--accent); color: #fff; padding: 11px 18px; border-radius: 999px;
     font-size: .85rem; font-weight: 600; opacity: 0; pointer-events: none;
     transition: opacity .2s, transform .2s; box-shadow: 0 8px 24px -8px rgba(0,0,0,.8);
   }
   .flash.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---- onglets ---- */
+  /* En bas : c'est là que le pouce arrive sans changer la prise en main. */
+  nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; gap: 4px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: rgba(10,11,20,.92); backdrop-filter: blur(14px);
+    border-top: 1px solid var(--line);
+  }
+  nav button {
+    flex: 1; min-height: 50px; border-radius: 14px; background: none; border: 0;
+    color: var(--faint); font-size: .68rem; font-weight: 600; gap: 3px;
+    flex-direction: column; padding: 0;
+  }
+  nav button[aria-current='true'] { color: var(--accent); background: var(--accent-soft); }
+  nav svg { width: 19px; height: 19px; }
+
+  /* ---- filtres de la bibliothèque ---- */
+  .filters { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 12px; margin: 0 -14px; padding-inline: 14px; scrollbar-width: none; }
+  .filters::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; min-height: 34px; padding: 0 13px; border-radius: 99px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+    font-size: .78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip[aria-pressed='true'] { background: var(--accent-soft); border-color: rgba(124,92,255,.4); color: var(--accent); }
+  .chip small { opacity: .65; font-size: .92em; }
+
+  /* ---- catalogue ---- */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+  .tile img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 12px; background: var(--panel-2); display: block; }
+  .tile .title { font-size: .78rem; margin-top: 6px; }
+  .tile .meta { font-size: .7rem; margin-top: 2px; }
+  .tile button { width: 100%; margin-top: 6px; min-height: 36px; font-size: .74rem; }
+  .owned { color: var(--accent); font-size: .7rem; font-weight: 600; margin-top: 6px; display: block; text-align: center; min-height: 36px; line-height: 36px; }
+
+  .search { display: flex; gap: 8px; margin-bottom: 14px; }
 
   .skel { height: 138px; border-radius: 18px; background: var(--panel); margin-bottom: 12px; animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .5 } }
@@ -220,7 +257,12 @@ const SCRIPT = `
     shrink: 'M3 8h5V3M21 8h-5V3M21 16h-5v5M3 16h5v5',
     close: 'M18 6 6 18M6 6l12 12',
     volume: 'M11 5 6 9H3v6h3l5 4zM16 9a4 4 0 0 1 0 6',
-    clock: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'
+    clock: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+    home: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5',
+    books: 'M4 4h5v16H4zM11 4h4v16h-4zM17.5 5l3.2 15',
+    compass: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM15.5 8.5l-2 5-5 2 2-5z',
+    plus: 'M12 5v14M5 12h14',
+    search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3'
   }
   function icon(name) {
     return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -329,18 +371,34 @@ const SCRIPT = `
     }
   }
 
+  /** Les mots de l'app pour chaque statut, employés par la carte et par les filtres. */
+  var STATUS = {
+    watching: 'En cours',
+    planned: 'À voir',
+    completed: 'Terminé',
+    paused: 'En pause',
+    dropped: 'Abandonné'
+  }
+
   function card(s) {
     var total = s.total || 0
     var done = total ? Math.round((s.seen / total) * 100) : 0
-    var meta = s.unaired
-      ? '<span class="soon">Épisode ' + s.episode + ' ' + when(s.airingAt) + '</span>'
-      : '<b>Épisode ' + s.episode + '</b>' + (total ? ' sur ' + total : '') + ' · ' + s.seen + ' vus'
+    // Trois cas, et le premier n'existe que dans l'onglet Bibliothèque : une
+    // série dont tout est vu n'a plus d'épisode suivant. Sans ce cas, la carte
+    // annonçait « Épisode null » et offrait un bouton qui partait en erreur.
+    var meta = s.episode === null
+      ? STATUS[s.status] + ' · ' + s.seen + (s.seen > 1 ? ' épisodes vus' : ' épisode vu')
+      : s.unaired
+        ? '<span class="soon">Épisode ' + s.episode + ' ' + when(s.airingAt) + '</span>'
+        : '<b>Épisode ' + s.episode + '</b>' + (total ? ' sur ' + total : '') + ' · ' + s.seen + ' vus'
 
     // Un épisode à venir ne se coche pas : la place du bouton dit pourquoi,
     // plutôt que de laisser essayer et refuser après coup.
-    var first = s.unaired
-      ? '<span class="pill">' + icon('clock') + 'À venir</span>'
-      : btn('data-act="tick" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Vu', 'check', '')
+    var first = s.episode === null
+      ? ''
+      : s.unaired
+        ? '<span class="pill">' + icon('clock') + 'À venir</span>'
+        : btn('data-act="tick" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Vu', 'check', '')
 
     // La bande-annonce n'apparaît que s'il y en a une : un bouton qui répond
     // « il n'y en a pas » ne valait pas la place qu'il prend.
@@ -358,7 +416,7 @@ const SCRIPT = `
         '</div>' +
       '</div>' +
       '<div class="acts">' + first +
-        btn('data-act="watch" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Regarder', 'play', 'ghost') +
+        btn('data-act="watch" data-id="' + s.id + '" data-ep="' + (s.episode || 0) + '"', 'Regarder', 'play', 'ghost') +
         ba +
         btn('data-act="open" data-id="' + s.id + '"', 'Fiche', 'info', 'ghost') +
       '</div>' +
@@ -367,6 +425,7 @@ const SCRIPT = `
 
   function render(state) {
     renderPlayer(state.player)
+    if (tab !== 'home') return
     var n = state.series.length
     countEl.textContent = n ? n + (n > 1 ? ' séries en cours' : ' série en cours') : 'Rien en cours'
     if (!n) {
@@ -374,6 +433,82 @@ const SCRIPT = `
       return
     }
     appEl.innerHTML = state.series.map(card).join('')
+  }
+
+  // ---------------------------------------------------------------- onglets
+
+  var tab = 'home'
+  var filter = 'all'
+  var query = ''
+  var discoverTab = 'trending'
+
+  var TABS = [
+    { id: 'home', label: 'Accueil', icon: 'home' },
+    { id: 'library', label: 'Bibliothèque', icon: 'books' },
+    { id: 'discover', label: 'Découvrir', icon: 'compass' }
+  ]
+
+  function renderNav() {
+    document.getElementById('nav').innerHTML = TABS.map(function (t) {
+      return '<button data-act="tab" data-tab="' + t.id + '" aria-current="' + (tab === t.id) + '">' +
+        icon(t.icon) + t.label + '</button>'
+    }).join('')
+  }
+
+  function renderLibrary(rows) {
+    var counts = {}
+    rows.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1 })
+
+    var chips = '<button class="chip" data-act="filter" data-filter="all" aria-pressed="' + (filter === 'all') + '">' +
+      'Tout <small>' + rows.length + '</small></button>' +
+      Object.keys(STATUS).filter(function (k) { return counts[k] }).map(function (k) {
+        return '<button class="chip" data-act="filter" data-filter="' + k + '" aria-pressed="' + (filter === k) + '">' +
+          STATUS[k] + ' <small>' + counts[k] + '</small></button>'
+      }).join('')
+
+    var shown = filter === 'all' ? rows : rows.filter(function (r) { return r.status === filter })
+    countEl.textContent = rows.length + (rows.length > 1 ? ' séries suivies' : ' série suivie')
+    appEl.innerHTML = '<div class="filters">' + chips + '</div>' +
+      (shown.length ? shown.map(card).join('') : '<div class="empty">Rien dans cette liste.</div>')
+  }
+
+  function tile(m) {
+    var meta = [m.year, m.episodes ? m.episodes + ' ép.' : '', m.score ? m.score + ' %' : '']
+      .filter(Boolean).join(' · ')
+    // Une série déjà suivie le dit, plutôt que d'offrir un bouton qui ferait
+    // doublon avec ce qu'on a déjà.
+    var action = m.owned
+      ? '<span class="owned">Déjà suivie</span>'
+      : btn('data-act="add" data-id="' + m.id + '"', 'Ajouter', 'plus', 'ghost')
+    return '<div class="tile">' +
+      '<img src="' + esc(m.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + m.id + '">' +
+      '<div class="title">' + esc(m.title) + '</div>' +
+      (meta ? '<div class="meta">' + meta + '</div>' : '') +
+      action +
+    '</div>'
+  }
+
+  function renderDiscover(items) {
+    var tabs = [['trending', 'Tendances'], ['season', 'Cette saison']].map(function (t) {
+      return '<button class="chip" data-act="dtab" data-tab="' + t[0] + '" aria-pressed="' +
+        (!query && discoverTab === t[0]) + '">' + t[1] + '</button>'
+    }).join('')
+
+    countEl.textContent = query ? 'Résultats pour « ' + query + ' »' : 'Le catalogue AniList'
+    appEl.innerHTML =
+      '<div class="search">' +
+        '<input type="text" id="q" placeholder="Rechercher un titre…" value="' + esc(query) + '" ' +
+        'autocapitalize="off" autocomplete="off">' +
+        btn('data-act="search"', '', 'search', 'ghost') +
+      '</div>' +
+      '<div class="filters">' + tabs + '</div>' +
+      (items.length ? '<div class="grid">' + items.map(tile).join('') + '</div>'
+                    : '<div class="empty">Aucun titre ne correspond.</div>')
+
+    var q = document.getElementById('q')
+    q.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { query = q.value.trim(); load() }
+    })
   }
 
   // ---------------------------------------------------------------- actions
@@ -398,6 +533,16 @@ const SCRIPT = `
     var id = Number(el.getAttribute('data-id'))
     var ep = Number(el.getAttribute('data-ep'))
 
+    // Changer de vue ne demande rien au PC tant qu'on n'a pas les données.
+    if (action === 'tab') {
+      tab = el.getAttribute('data-tab')
+      appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
+      return load()
+    }
+    if (action === 'filter') { filter = el.getAttribute('data-filter'); return load() }
+    if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }
+    if (action === 'search') { query = (document.getElementById('q') || {}).value || ''; return load() }
+
     if (CONTROLS.indexOf(action) >= 0) {
       el.disabled = true
       await control(action, 0)
@@ -415,6 +560,11 @@ const SCRIPT = `
         render(await call('/api/tick', { id: id, episode: ep }))
         say('Épisode ' + ep + ' coché')
         return
+      }
+      if (action === 'add') {
+        await call('/api/add', { id: id })
+        say('Ajoutée à ta liste')
+        return load()
       }
       if (action === 'watch') {
         renderPlayer((await call('/api/watch', { id: id, episode: ep })).player)
@@ -437,7 +587,14 @@ const SCRIPT = `
   })
 
   async function load() {
+    renderNav()
     try {
+      if (tab === 'library') return renderLibrary((await call('/api/library')).rows)
+      if (tab === 'discover') {
+        appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
+        var q = query ? '&q=' + encodeURIComponent(query) : ''
+        return renderDiscover((await call('/api/discover?kind=' + discoverTab + q)).items)
+      }
       render(await call('/api/state'))
     } catch (err) {
       if (err.message === 'unauthorized') askToken('Mot de passe demandé.')
@@ -450,7 +607,11 @@ const SCRIPT = `
   // et le second passe par une adresse légère : relire les entrées, les fiches
   // et le journal entier toutes les deux secondes pour trois nombres serait
   // absurde.
-  setInterval(load, 20000)
+  //
+  // Le rafraîchissement de fond ne concerne que l'accueil : recharger le
+  // catalogue sous les doigts, ou remettre les filtres à zéro pendant qu'on
+  // lit, serait une nuisance.
+  setInterval(function () { if (tab === 'home') load() }, 20000)
   setInterval(async function () {
     if (dragging || !playerEl.innerHTML) return
     try { renderPlayer((await call('/api/player')).player) } catch (err) { /* rien à dire */ }
@@ -477,6 +638,7 @@ export function page(): string {
 <div id="player"></div>
 <div id="app"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 <div class="flash" id="flash"></div>
+<nav id="nav"></nav>
 <script>${SCRIPT}</script>
 </body>
 </html>`

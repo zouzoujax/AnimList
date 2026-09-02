@@ -68,6 +68,9 @@ describe('routeOf', () => {
     expect(routeOf('/api/trailer')).toBe('trailer')
     expect(routeOf('/api/control')).toBe('control')
     expect(routeOf('/api/player')).toBe('player')
+    expect(routeOf('/api/library')).toBe('library')
+    expect(routeOf('/api/discover')).toBe('discover')
+    expect(routeOf('/api/add')).toBe('add')
   })
 
   it('tolère une barre en trop', () => {
@@ -95,6 +98,9 @@ describe('needsToken', () => {
     expect(needsToken('trailer')).toBe(true)
     expect(needsToken('control')).toBe(true)
     expect(needsToken('player')).toBe(true)
+    expect(needsToken('library')).toBe(true)
+    expect(needsToken('discover')).toBe(true)
+    expect(needsToken('add')).toBe(true)
   })
 
   it('laisse la page se charger : c’est elle qui demande le mot de passe', () => {

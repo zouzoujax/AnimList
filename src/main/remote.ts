@@ -33,7 +33,9 @@ import { resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode } from './watch-window'
 import { playerCommand, playerState, type PlayerAction } from './playing'
-import { setWatched, snapshot } from './store'
+import { browse, refreshMedia } from './anilist'
+import { getPrefs } from './store'
+import { setEntry, setWatched, snapshot } from './store'
 import { page } from './remote-page'
 
 export interface RemoteStatus {
@@ -81,8 +83,16 @@ function json(res: ServerResponse, code: number, body: unknown): void {
   res.end(payload)
 }
 
-/** Ce que la télécommande montre : les séries en cours, et où on en est. */
-async function remoteState(): Promise<unknown> {
+/**
+ * Les séries de la bibliothèque, mises en forme pour le téléphone.
+ *
+ * Une seule fabrique pour l'accueil et pour la bibliothèque : deux mises en
+ * forme finiraient par diverger, et un bouton « Vu » qui n'annonce pas le même
+ * épisode d'un onglet à l'autre serait pire que pas de bouton du tout.
+ */
+function seriesRows(keep: (status: string) => boolean): {
+  rows: Record<string, unknown>[]
+} {
   const data = snapshot()
   const media = new Map(data.media.map((m) => [m.id, m]))
 
@@ -93,23 +103,24 @@ async function remoteState(): Promise<unknown> {
     seen.set(ev.animeId, held)
   }
 
-  const rows = []
+  const rows: Record<string, unknown>[] = []
   for (const entry of data.entries) {
-    if (entry.status !== 'watching') continue
+    if (!keep(entry.status)) continue
     const found = media.get(entry.animeId)
     if (!found) continue
     const episode = nextEpisode(seen.get(entry.animeId), found.episodes)
-    if (episode === null) continue
     rows.push({
       id: entry.animeId,
       title: found.title.english ?? found.title.romaji,
       cover: found.cover.large,
+      status: entry.status,
+      // `null` quand tout est vu : la série n'a plus d'épisode à reprendre.
       episode,
       total: found.episodes,
       seen: seen.get(entry.animeId)?.size ?? 0,
       // La série reste dans la liste, mais sans bouton : savoir qu'il n'y a
       // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
-      unaired: isUnaired(found, episode),
+      unaired: episode !== null && isUnaired(found, episode),
       airingAt: found.nextAiring?.airingAt ?? null,
       // La bande-annonce se sait d'avance ; l'adresse de lecture demande une
       // résolution réseau, faite seulement au moment où on la réclame.
@@ -118,7 +129,13 @@ async function remoteState(): Promise<unknown> {
     })
   }
 
-  rows.sort((a, b) => b.updatedAt - a.updatedAt)
+  rows.sort((a, b) => (b.updatedAt as number) - (a.updatedAt as number))
+  return { rows }
+}
+
+/** Ce que la télécommande montre en arrivant : les séries en cours. */
+async function remoteState(): Promise<unknown> {
+  const rows = seriesRows((status) => status === 'watching').rows.filter((r) => r.episode !== null)
   // Ce qui joue en ce moment sur le PC, pour que le téléphone puisse le
   // piloter sans avoir à demander séparément.
   return { series: rows, player: await nowPlaying() }
@@ -187,6 +204,52 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
    */
   if (route === 'player') return json(res, 200, { player: await nowPlaying() })
 
+  // La bibliothèque entière, tous statuts confondus. Le tri par onglet se fait
+  // sur le téléphone : cent lignes tiennent dans quelques dizaines de
+  // kilo-octets, et refaire un aller-retour à chaque changement d'onglet
+  // serait plus lent que de tout envoyer une fois.
+  if (route === 'library')
+    return json(
+      res,
+      200,
+      seriesRows(() => true)
+    )
+
+  if (route === 'discover') {
+    const params = new URLSearchParams(url.slice(url.indexOf('?') + 1))
+    const search = (params.get('q') ?? '').trim()
+    const tab = params.get('kind') === 'season' ? 'season' : 'trending'
+    const kind = search ? 'search' : tab
+
+    /**
+     * En file interactive : quelqu'un vient d'appuyer et regarde son
+     * téléphone. C'est le vivier de « Pour toi » qui n'avait rien à y faire —
+     * personne n'attendait celui-là.
+     */
+    const found = await browse(
+      { kind, page: 1, perPage: 30, search: search || undefined },
+      getPrefs().showAdult,
+      'interactive'
+    ).catch((err: Error) => err)
+
+    if (found instanceof Error) return json(res, 502, { error: `AniList : ${found.message}` })
+
+    const owned = new Set(snapshot().entries.map((e) => e.animeId))
+    return json(res, 200, {
+      items: found.items.map((m) => ({
+        id: m.id,
+        title: m.title.english ?? m.title.romaji,
+        cover: m.cover.large,
+        year: m.seasonYear,
+        format: m.format,
+        score: m.averageScore,
+        episodes: m.episodes,
+        trailer: !!m.trailer?.id,
+        owned: owned.has(m.id)
+      }))
+    })
+  }
+
   if (req.method !== 'POST') return json(res, 405, { error: 'Méthode refusée.' })
 
   let body: { id?: number; episode?: number; action?: string; value?: number }
@@ -208,6 +271,18 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   const id = Number(body.id)
   if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: 'Série inconnue.' })
+
+  if (route === 'add') {
+    const media = snapshot().media.find((m) => m.id === id)
+    // La fiche vient du catalogue qu'on vient d'afficher : elle n'est pas
+    // encore en cache. On la redemande plutôt que d'écrire une entrée sans
+    // titre ni jaquette, invisible partout ailleurs.
+    const fresh = media ?? (await refreshMedia([id]).catch(() => []))[0]
+    if (!fresh) return json(res, 404, { error: 'Série introuvable.' })
+
+    setEntry(id, { status: 'planned' }, fresh)
+    return json(res, 200, { ok: true })
+  }
 
   if (route === 'tick') {
     const episode = Number(body.episode)
