@@ -547,7 +547,18 @@ export async function mangaById(id: number): Promise<Manga> {
   return toManga(data.Media)
 }
 
-export async function browse(q: BrowseQuery, showAdult: boolean): Promise<Paged<Media>> {
+/**
+ * Une page du catalogue.
+ *
+ * `lane` décide qui passe devant. Par défaut « interactive » : quelqu'un
+ * regarde l'écran et attend. Le travail de fond — constituer un vivier de
+ * candidats pour les recommandations, par exemple — doit demander
+ * « background », sans quoi il se met en travers de la page que l'utilisateur
+ * est en train de regarder. La file est strictement sérielle, avec sept cents
+ * millisecondes entre deux requêtes : six appels de fond passés en tête, et
+ * la liste visible attend cinq secondes pour rien.
+ */
+export async function browse(q: BrowseQuery, showAdult: boolean, lane: Lane = 'interactive'): Promise<Paged<Media>> {
   const page = q.page ?? 1
   const perPage = q.perPage ?? 30
   // AniList treats an explicitly passed `null` as a real filter, not as "no
@@ -594,7 +605,7 @@ export async function browse(q: BrowseQuery, showAdult: boolean): Promise<Paged<
   const ttl = q.kind === 'search' ? TTL.search : TTL.list
   const k = `list:${JSON.stringify(vars)}`
   const { data, stale } = await cached(k, ttl, () =>
-    request<{ Page: { pageInfo: PageInfo; media: RawMedia[] } }>(LIST_QUERY, vars, 'interactive', k)
+    request<{ Page: { pageInfo: PageInfo; media: RawMedia[] } }>(LIST_QUERY, vars, lane, k)
   )
   return { items: data.Page.media.map(toMedia), pageInfo: data.Page.pageInfo, stale }
 }

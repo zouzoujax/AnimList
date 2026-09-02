@@ -163,10 +163,24 @@ void app.whenReady().then(() => {
     return
   }
 
-  // La liste de raccourcis suit la bibliothèque : l'épisode qu'elle annonce
-  // change à chaque case cochée.
+  /**
+   * La liste de raccourcis suit la bibliothèque : l'épisode qu'elle annonce
+   * change à chaque case cochée.
+   *
+   * Regroupée, parce qu'elle relit la bibliothèque entière — entrées, fiches
+   * et journal — pour en tirer cinq lignes. Cocher toute une saison d'un coup
+   * émet une centaine de changements, et la reconstruire cent fois bloquerait
+   * le processus principal pendant que la fenêtre attend ses réponses.
+   */
   refreshJumpList()
-  store.on('change', refreshJumpList)
+  let jumpTimer: NodeJS.Timeout | null = null
+  store.on('change', () => {
+    if (jumpTimer) clearTimeout(jumpTimer)
+    jumpTimer = setTimeout(() => {
+      jumpTimer = null
+      refreshJumpList()
+    }, 1500)
+  })
 
   // Lancée depuis un raccourci de la barre des tâches : on attend que la
   // fenêtre soit prête, sinon le message part dans le vide.

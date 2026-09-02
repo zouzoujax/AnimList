@@ -106,16 +106,33 @@ async function candidates(
     }
   }
 
-  // Les classements et la saison : de quoi ne pas dépendre d'une seule source.
-  for (const kind of ['trending', 'popular', 'top', 'season'] as const) {
-    const page = await browse({ kind, page: 1, perPage: 50 }, showAdult).catch(() => null)
+  /**
+   * Tout ce qui suit part en file d'arrière-plan.
+   *
+   * Personne n'attend ces requêtes : la rangée « Pour toi » apparaît quand
+   * elle apparaît. Passées en file interactive, elles se mettaient devant la
+   * liste que l'utilisateur regardait — six requêtes espacées de sept cents
+   * millisecondes, et le catalogue restait sur son squelette le temps qu'elles
+   * défilent. Pire un jour de limitation : chaque 429 fait attendre jusqu'à
+   * une minute, et l'attente devenait indistinguable d'un blocage.
+   *
+   * Le vivier est aussi resserré — deux classements plutôt que quatre. La
+   * saison et les tendances se recoupent largement, et le vrai apport vient
+   * des genres du profil, juste en dessous.
+   */
+  for (const kind of ['trending', 'season'] as const) {
+    const page = await browse({ kind, page: 1, perPage: 50 }, showAdult, 'background').catch(() => null)
     if (page) take(page.items)
   }
 
-  // Puis les meilleurs titres des genres que le profil place en tête : c'est
-  // la seule source qui suive vraiment le goût plutôt que la popularité.
+  // Les meilleurs titres des genres que le profil place en tête : la seule
+  // source qui suive le goût plutôt que la popularité.
   for (const facet of highlights(profile, 2)) {
-    const page = await browse({ kind: 'top', page: 1, perPage: 50, genre: facet.name }, showAdult).catch(() => null)
+    const page = await browse(
+      { kind: 'top', page: 1, perPage: 50, genre: facet.name },
+      showAdult,
+      'background'
+    ).catch(() => null)
     if (page) take(page.items)
   }
 
