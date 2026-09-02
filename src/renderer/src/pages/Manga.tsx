@@ -14,9 +14,9 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { BookOpen, ExternalLink, Flame, Search, Star, TrendingUp, X } from 'lucide-react'
 import type { Manga, MangaKind } from '@shared/types'
-import { ErrorBox, Modal, Poster, PosterSkeletons } from '@/components/ui'
+import { ErrorBox, Modal, Poster, PosterSkeletons, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
-import { useDebounced } from '@/lib/hooks'
+import { useDebounced, useInView } from '@/lib/hooks'
 
 const TABS: { kind: MangaKind; label: string; icon: typeof Flame }[] = [
   { kind: 'trending', label: 'Tendances', icon: Flame },
@@ -70,18 +70,23 @@ export default function MangaPage(): React.JSX.Element {
   const kind: MangaKind = searching ? 'search' : tab
   const key = `${kind}:${searching ? debounced : ''}`
 
-  const [held, setHeld] = useState<{ key: string; items: Manga[]; error: string | null }>({
-    key: '',
-    items: [],
-    error: null
-  })
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [held, setHeld] = useState<{
+    key: string
+    items: Manga[]
+    hasMore: boolean
+    page: number
+    error: string | null
+  }>({ key: '', items: [], hasMore: false, page: 1, error: null })
 
   useEffect(() => {
     let alive = true
     void window.api.manga
       .browse(kind, 1, searching ? debounced : '')
-      .then((res) => alive && setHeld({ key, items: res.items, error: null }))
-      .catch((err: Error) => alive && setHeld({ key, items: [], error: err.message }))
+      .then(
+        (res) => alive && setHeld({ key, items: res.items, hasMore: res.pageInfo.hasNextPage, page: 1, error: null })
+      )
+      .catch((err: Error) => alive && setHeld({ key, items: [], hasMore: false, page: 1, error: err.message }))
     return () => {
       alive = false
     }
@@ -91,6 +96,32 @@ export default function MangaPage(): React.JSX.Element {
   const fresh = held.key === key
   const items = fresh ? held.items : []
   const loading = !fresh
+  const hasMore = fresh && held.hasMore
+
+  const loadMore = (): void => {
+    if (loading || loadingMore || !hasMore) return
+    const next = held.page + 1
+    setLoadingMore(true)
+    void window.api.manga
+      .browse(kind, next, searching ? debounced : '')
+      .then((res) => {
+        // La page suivante n'appartient qu'à la requête qui l'a demandée : un
+        // onglet changé entre-temps la rendrait absurde.
+        setHeld((prev) => {
+          if (prev.key !== key) return prev
+          const seen = new Set(prev.items.map((m) => m.id))
+          return {
+            ...prev,
+            page: next,
+            items: [...prev.items, ...res.items.filter((m) => !seen.has(m.id))],
+            hasMore: res.pageInfo.hasNextPage
+          }
+        })
+      })
+      .catch((err: Error) => setHeld((prev) => (prev.key === key ? { ...prev, error: err.message } : prev)))
+      .finally(() => setLoadingMore(false))
+  }
+  const sentinel = useInView(loadMore)
 
   return (
     <div className="page">
@@ -146,11 +177,15 @@ export default function MangaPage(): React.JSX.Element {
       ) : items.length === 0 ? (
         <p className="py-16 text-center text-sm text-faint">Aucun manga ne correspond.</p>
       ) : (
-        <div className="card-grid">
-          {items.map((manga, i) => (
-            <Card key={manga.id} manga={manga} index={i} onOpen={() => setOpen(manga)} />
-          ))}
-        </div>
+        <>
+          <div className="card-grid">
+            {items.map((manga, i) => (
+              <Card key={manga.id} manga={manga} index={i} onOpen={() => setOpen(manga)} />
+            ))}
+          </div>
+          {hasMore && <div ref={sentinel} className="h-4" />}
+          {loadingMore && <Spinner label="Chargement de la suite…" />}
+        </>
       )}
 
       <Modal open={open !== null} onClose={() => setOpen(null)} width={640}>
