@@ -391,7 +391,7 @@ function EpisodeGrid({
                   title={`Ouvrir l'épisode ${ep.number} sur Anime-Sama`}
                   onClick={(e) => {
                     e.stopPropagation()
-                    void window.api.watch.openEpisode(watchUrl, ep.number)
+                    void window.api.watch.openEpisode(watchUrl, ep.number, detail.id)
                   }}
                   className="absolute -bottom-1.5 -right-1.5 grid h-[17px] w-[17px] place-items-center rounded-full opacity-0 transition group-hover:opacity-100"
                   style={{ background: glow, color: '#07080f', boxShadow: '0 2px 6px rgba(0,0,0,.5)' }}
@@ -418,7 +418,18 @@ function EpisodeGrid({
  * opening an anime, and so the page has something to show while the player
  * loads.
  */
-function Trailer({ id, cover, title }: { id: string; cover: string; title: string }): React.JSX.Element {
+function Trailer({
+  id,
+  animeId,
+  cover,
+  title
+}: {
+  /** Identifiant de la vidéo chez YouTube, pas celui de la série. */
+  id: string
+  animeId: number
+  cover: string
+  title: string
+}): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   const [thumb, setThumb] = useState(`https://i.ytimg.com/vi/${id}/maxresdefault.jpg`)
   const [src, setSrc] = useState<string | null>(null)
@@ -493,7 +504,7 @@ function Trailer({ id, cover, title }: { id: string; cover: string; title: strin
       >
         {src && (
           <button
-            onClick={() => void window.api.app.popoutTrailer(id, title)}
+            onClick={() => void window.api.app.popoutTrailer(id, title, animeId)}
             className="flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[0.72rem] text-white/85 transition-colors hover:bg-black/80 hover:text-white"
             title="Ouvrir dans une fenêtre plus grande"
           >
@@ -896,6 +907,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               <Trailer
                 key={media.trailer.id}
                 id={media.trailer.id}
+                animeId={media.id}
                 cover={media.banner ?? media.cover.xl}
                 title={titleOf(media, lang)}
               />
@@ -1157,7 +1169,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                     // lise, ce que le navigateur système ne permet pas. Si
                     // l'ouverture est refusée, on retombe sur le navigateur.
                     if (link.id === 'anime-sama' && link.pick) {
-                      void window.api.watch.openEpisode(link.url, watchAt).then((ok) => {
+                      void window.api.watch.openEpisode(link.url, watchAt, id).then((ok) => {
                         if (!ok && link.url) void window.api.app.openExternal(link.url)
                       })
                       return

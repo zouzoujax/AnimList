@@ -91,8 +91,32 @@ export default function Player({
     void window.api.videos.playing(true)
     return () => {
       void window.api.videos.playing(false)
+      // Plus rien ne joue : le statut Discord doit disparaître, pas rester
+      // figé sur le dernier épisode ouvert.
+      void window.api.videos.watching(null)
     }
   }, [])
+
+  /**
+   * Ce qui joue, poussé vers le processus principal.
+   *
+   * Lui seul ne peut pas le deviner : la pause et la position vivent dans
+   * l'élément vidéo de cette fenêtre. Envoyé sur les moments où ça change —
+   * démarrage, pause, saut — plutôt qu'en continu, puisque le statut Discord
+   * donne une heure de fin que le client fait descendre tout seul.
+   */
+  const report = (paused?: boolean): void => {
+    const el = video.current
+    if (!el) return
+    void window.api.videos.watching({
+      animeId,
+      title,
+      episode: file.episode,
+      position: el.currentTime,
+      duration: el.duration || 0,
+      paused: paused ?? el.paused
+    })
+  }
 
   /** Ce que fait chaque touche multimédia. */
   useEffect(() => {
@@ -127,6 +151,7 @@ export default function Player({
     const el = video.current
     if (!el) return
     mark.current = { at: el.currentTime, duration: el.duration || 0 }
+    report()
     if (file.resumeAt === null || file.resumeAt <= 0) return
     // Une reprise au-delà de la fin ne rouvrirait que du noir.
     if (el.duration && file.resumeAt >= el.duration) return
@@ -164,6 +189,9 @@ export default function Player({
     if (el.duration && now - savedAt.current > SAVE_EVERY_MS) {
       savedAt.current = now
       void window.api.videos.remember(file.path, el.currentTime, el.duration)
+      // Au même rythme : une vidéo qui bufferise prend du retard sur l'heure
+      // de fin annoncée, et le compte à rebours finirait par mentir.
+      report()
     }
 
     if (ticked.current || watched || file.episode === null) return
@@ -285,6 +313,9 @@ export default function Player({
               autoPlay
               onTimeUpdate={onTime}
               onLoadedMetadata={onLoaded}
+              onPlay={() => report(false)}
+              onPause={() => report(true)}
+              onSeeked={() => report()}
               onError={() => setFailed(true)}
               /* `object-contain` plutôt qu'un simple maximum : une vidéo plus
                  petite que la fenêtre restait à sa taille d'origine, perdue au

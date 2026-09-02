@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type {
   AiringEntry,
   AiringItem,
@@ -129,8 +130,8 @@ const api = {
      * le bon épisode — leur site n'ayant pas d'adresse par épisode. Faux si
      * l'URL ne vient pas de chez eux.
      */
-    openEpisode: (url: string, episode: number | null): Promise<boolean> =>
-      ipcRenderer.invoke('watch:open-episode', url, episode)
+    openEpisode: (url: string, episode: number | null, animeId?: number): Promise<boolean> =>
+      ipcRenderer.invoke('watch:open-episode', url, episode, animeId)
   },
   lists: {
     create: (name: string, emoji?: string): Promise<CustomList | null> =>
@@ -228,12 +229,24 @@ const api = {
     forgetPosition: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:forget-position', path),
     /** Dit si un épisode est en cours : les touches multimédia en dépendent. */
     playing: (active: boolean): Promise<void> => ipcRenderer.invoke('videos:playing', active),
+    /**
+     * Ce que le lecteur intégré est en train de jouer.
+     *
+     * Poussé plutôt que demandé : lui seul connaît sa pause et sa position
+     * sans qu'on ait à l'interroger. `null` quand il se ferme.
+     */
+    watching: (info: LocalWatching | null): Promise<void> => ipcRenderer.invoke('now:watching', info),
     /** Une touche multimédia pressée pendant la lecture. */
     onCommand: (handler: (command: string) => void): (() => void) => {
       const listener = (_e: unknown, command: string): void => handler(command)
       ipcRenderer.on('player:command', listener)
       return () => ipcRenderer.off('player:command', listener)
     }
+  },
+
+  discord: {
+    /** Ce qui est demandé, ce qui est vrai, et pourquoi si ça diffère. */
+    status: (): Promise<DiscordStatus> => ipcRenderer.invoke('discord:status')
   },
 
   app: {
@@ -261,8 +274,8 @@ const api = {
     trailerUrl: (videoId: string, title: string): Promise<string | null> =>
       ipcRenderer.invoke('trailer:url', videoId, title),
     /** Same player, in its own window, for a bigger view. */
-    popoutTrailer: (videoId: string, title: string): Promise<boolean> =>
-      ipcRenderer.invoke('trailer:popout', videoId, title),
+    popoutTrailer: (videoId: string, title: string, animeId?: number): Promise<boolean> =>
+      ipcRenderer.invoke('trailer:popout', videoId, title, animeId),
     closeTrailer: (): Promise<void> => ipcRenderer.invoke('trailer:close'),
     updateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:status'),
     checkUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),

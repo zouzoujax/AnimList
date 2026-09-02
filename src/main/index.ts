@@ -7,6 +7,7 @@ import { initAnimeSama } from './animesama'
 import { initFiller } from './filler'
 import { initTranslate } from './translate'
 import { stopRemote } from './remote'
+import { applyDiscord, stopDiscord } from './discord'
 import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
@@ -192,6 +193,9 @@ void app.whenReady().then(() => {
   }
 
   stopWatcher = startAiringWatcher(mainWindow)
+  // Le statut Discord, si les réglages le demandent. Éteint, l'appel ne fait
+  // rien ; Discord fermé, il repassera tout seul.
+  applyDiscord()
   stopFollows = startFollowWatcher(mainWindow)
   stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
@@ -228,6 +232,9 @@ app.on('before-quit', async (event) => {
   // Une touche multimédia retenue après la sortie resterait prise pour toute
   // la session Windows.
   releaseMediaKeys()
+  // Sans ça, « Regarde AnimeList » resterait affiché sur le profil après la
+  // fermeture, jusqu'à ce que Discord finisse par s'en rendre compte.
+  stopDiscord()
   stopRemote()
   event.preventDefault()
   await flush()

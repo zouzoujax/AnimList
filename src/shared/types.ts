@@ -284,6 +284,22 @@ export interface Prefs {
   deeplKey: string
   /** Traduire les résumés et les titres d'épisodes, quand une clé est posée. */
   translate: boolean
+  /**
+   * Annoncer sur Discord l'anime en cours de lecture.
+   *
+   * Éteint par défaut, et ce n'est pas de la prudence de façade : c'est la
+   * seule chose de cette app qui sorte du PC de sa propre initiative. Tous ceux
+   * qui voient ton profil verraient le titre.
+   */
+  discord: boolean
+  /**
+   * Identifiant de l'application Discord, celui qui donne le nom affiché en
+   * gros. Public par nature — il voyage dans le statut de tous ceux qui s'en
+   * servent — mais modifiable pour qui préfère créer la sienne.
+   */
+  discordAppId: string
+  /** N'annoncer que « Un anime » : ni titre, ni jaquette, ni épisode. */
+  discordHideTitle: boolean
   /** Hand corrections for the TV Time importer, keyed by source series id. */
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
@@ -694,6 +710,9 @@ export const DEFAULT_PREFS: Prefs = {
   sequelOf: {},
   deeplKey: '',
   translate: true,
+  discord: false,
+  discordAppId: '1544850319878656161',
+  discordHideTitle: false,
   tvtimeOverrides: {},
   tvtimeFolder: null
 }

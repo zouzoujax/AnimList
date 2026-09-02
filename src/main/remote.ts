@@ -36,6 +36,7 @@ import { playerCommand, playerState, type PlayerAction } from './playing'
 import { browse, refreshMedia } from './anilist'
 import { getPrefs } from './store'
 import { setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
+import { getLaunched, rememberLaunch, setLaunched } from './now'
 import { page } from './remote-page'
 
 export interface RemoteStatus {
@@ -46,15 +47,6 @@ export interface RemoteStatus {
   error: string | null
 }
 
-/**
- * La série qu'on vient de lancer.
- *
- * Le titre d'une fenêtre ne dit pas grand-chose — celle d'Anime-Sama s'appelle
- * « Anime-Sama », rien de plus. Retenir ce qu'on a lancé permet à la
- * télécommande d'afficher la bonne jaquette et le bon épisode au lieu d'un
- * nom de fenêtre.
- */
-let launched: { title: string; cover: string; episode: number | null } | null = null
 
 let server: Server | null = null
 let token = ''
@@ -145,9 +137,10 @@ async function remoteState(): Promise<unknown> {
 async function nowPlaying(): Promise<unknown> {
   const state = await playerState()
   if (!state) {
-    launched = null
+    setLaunched(null)
     return null
   }
+  const launched = getLaunched()
   return launched ? { ...state, ...launched } : state
 }
 
@@ -350,6 +343,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   if (route === 'trailer') {
     const video = media.trailer?.id
     if (!video) return json(res, 404, { error: 'Pas de bande-annonce pour cette série.' })
+    rememberLaunch(id, null, 'Bande-annonce')
     const opened = await openTrailerWindow(win, video, media.title.english ?? media.title.romaji)
     return opened ? json(res, 200, { ok: true }) : json(res, 502, { error: 'La bande-annonce n’a pas pu s’ouvrir.' })
   }
@@ -371,7 +365,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const at = target.episodes && Number.isInteger(episode) && episode > 0 ? episode : null
     const opened = await openAnimeSamaEpisode(target.url, at)
     if (!opened) return json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
-    launched = { title: media.title.english ?? media.title.romaji, cover: media.cover.large, episode: at }
+    rememberLaunch(id, at)
     return json(res, 200, { player: await nowPlaying() })
   }
 

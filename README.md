@@ -55,6 +55,10 @@ chaque allumage.
 **Sans rien ressaisir** — import depuis MyAnimeList, TV Time, ou simplement un pseudo AniList ou
 Kitsu. Résumés et titres d'épisodes traduits en français avec une clé DeepL.
 
+**Sur Discord** — ton profil peut annoncer la série, l'épisode, la jaquette et le
+temps restant, pendant une lecture seulement. Éteint par défaut : c'est la seule
+chose ici qui sorte du PC d'elle-même. Un mode discret n'annonce que « un anime ».
+
 **Intégré à Windows** — liste de raccourcis sur l'icône de la barre des tâches, touches multimédia
 du clavier pendant une lecture, mini-lecteur flottant, mises à jour automatiques.
 

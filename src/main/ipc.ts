@@ -30,6 +30,8 @@ import { importAniList, importKitsu } from './import-list'
 import { setPlayerActive } from './taskbar'
 import { canTranslate, purgeTranslations, translate } from './translate'
 import { remoteStatus, startRemote, stopRemote } from './remote'
+import { applyDiscord, discordStatus } from './discord'
+import { rememberLaunch, setLocalWatching, type LocalWatching } from './now'
 import {
   cacheMedia,
   cancelRewatch,
@@ -118,6 +120,11 @@ export function registerIpc(): void {
       win.setBackgroundMaterial(prefs.mica ? 'mica' : 'none')
       if (!prefs.mica) win.setBackgroundColor(chrome.color)
     }
+    // Le statut Discord se réaligne sur les réglages, quelle que soit la
+    // case touchée : allumage, identifiant, mode discret.
+    if (patch.discord !== undefined || patch.discordAppId !== undefined || patch.discordHideTitle !== undefined) {
+      applyDiscord()
+    }
     return prefs
   })
 
@@ -197,7 +204,12 @@ export function registerIpc(): void {
   ipcMain.handle('data:reveal', () => revealDataFolder())
 
   // ---- lecture chez une plateforme -------------------------------------
-  ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null) => openAnimeSamaEpisode(url, episode))
+  ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null, animeId?: number) => {
+    // Le titre de leur fenêtre est « Anime-Sama », rien de plus : sans cette
+    // note, la télécommande et le statut Discord n'auraient rien à montrer.
+    rememberLaunch(animeId, episode)
+    return openAnimeSamaEpisode(url, episode)
+  })
 
   // ---- image d'une carte -----------------------------------------------
   ipcMain.handle('card:save', (_e, rect: CardRect, name: string) => saveCard(rect, name))
@@ -225,6 +237,15 @@ export function registerIpc(): void {
   // raccourci global posé en permanence volerait la touche « lecture » à tous
   // les autres lecteurs de la machine.
   ipcMain.handle('videos:playing', (e, active: boolean) => setPlayerActive(ownerOf(e), active))
+  /**
+   * Le lecteur intégré est le seul à connaître sa pause et sa position sans
+   * qu'on ait à interroger une page : il les pousse plutôt qu'on ne les
+   * demande. Rien n'est écrit sur le disque — c'est de l'état vivant.
+   */
+  ipcMain.handle('now:watching', (_e, info: LocalWatching | null) => setLocalWatching(info))
+
+  // ---- statut Discord --------------------------------------------------
+  ipcMain.handle('discord:status', () => discordStatus())
 
   // ---- app -----------------------------------------------------------
   ipcMain.handle('app:info', () => ({
@@ -235,7 +256,10 @@ export function registerIpc(): void {
     schema: schemaInfo()
   }))
   ipcMain.handle('trailer:url', (_e, videoId: string, title: string) => trailerUrl(videoId, title))
-  ipcMain.handle('trailer:popout', (e, videoId: string, title: string) => openTrailerWindow(ownerOf(e), videoId, title))
+  ipcMain.handle('trailer:popout', (e, videoId: string, title: string, animeId?: number) => {
+    rememberLaunch(animeId, null, 'Bande-annonce')
+    return openTrailerWindow(ownerOf(e), videoId, title)
+  })
   ipcMain.handle('trailer:close', () => closeTrailerWindow())
   ipcMain.handle('update:status', () => updateStatus())
   ipcMain.handle('update:check', () => checkForUpdates())

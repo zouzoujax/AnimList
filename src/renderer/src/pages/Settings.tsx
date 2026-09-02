@@ -10,6 +10,7 @@ import {
   FileUp,
   FolderOpen,
   Keyboard,
+  MessageCircle,
   Stethoscope,
   HardDrive,
   Languages,
@@ -30,6 +31,7 @@ import {
   type RemoteStatus,
   type TitleLang
 } from '@shared/types'
+import { looksLikeAppId, type DiscordStatus } from '@shared/discord'
 import { Modal } from '@/components/ui'
 import QrCode from '@/components/QrCode'
 import TvTimeImport from '@/components/TvTimeImport'
@@ -180,6 +182,31 @@ export default function SettingsPage(): React.JSX.Element {
   const [follows, setFollows] = useState<Follow[]>([])
   const [handle, setHandle] = useState('')
   const [remote, setRemote] = useState<RemoteStatus | null>(null)
+  const [discord, setDiscord] = useState<DiscordStatus | null>(null)
+
+  /**
+   * L'état réel du statut, relu tant que la carte est ouverte.
+   *
+   * Il ne dépend pas que de nous : Discord peut être fermé, ou se fermer
+   * pendant qu'on regarde l'écran. Une seule lecture au montage afficherait
+   * un état périmé sans jamais se corriger.
+   */
+  useEffect(() => {
+    if (!prefs.discord) return
+    let alive = true
+    const read = (): void => {
+      void window.api.discord
+        .status()
+        .then((next) => alive && setDiscord(next))
+        .catch(() => undefined)
+    }
+    read()
+    const timer = setInterval(read, 3000)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [prefs.discord, prefs.discordAppId])
 
   useEffect(() => {
     let alive = true
@@ -225,6 +252,21 @@ export default function SettingsPage(): React.JSX.Element {
       setBusy(null)
     }
   }
+
+  /**
+   * Ce que la carte Discord dit d'elle-même.
+   *
+   * Trois causes possibles derrière « rien ne s'affiche », et elles ne se
+   * corrigent pas au même endroit : un identifiant mal collé, Discord fermé,
+   * ou simplement rien en cours de lecture. Le message les sépare.
+   */
+  const badId = prefs.discord && !looksLikeAppId(prefs.discordAppId)
+  const discordNote = badId
+    ? 'Cet identifiant n’en est pas un : dix-sept à vingt chiffres, sans espace.'
+    : discord?.connected
+      ? 'Relié à Discord. Le statut apparaît dès qu’un épisode ou une bande-annonce démarre, et disparaît à la fermeture du lecteur.'
+      : (discord?.error ?? 'Recherche de Discord sur ce PC…')
+  const discordTone = badId || (discord?.error && !discord.connected) ? '#ff8f8f' : 'var(--color-muted)'
 
   return (
     <div className="mx-auto max-w-[820px] px-7 py-7">
@@ -539,6 +581,56 @@ export default function SettingsPage(): React.JSX.Element {
           <p className="px-1 py-2 text-[0.8rem]" style={{ color: '#ff8f8f' }}>
             {remote.error}
           </p>
+        )}
+      </Card>
+
+      <Card title="Statut Discord" icon={<MessageCircle size={17} />}>
+        {/* La seule chose de cette app qui sorte du PC d'elle-même : tous ceux
+            qui voient ton profil verront le titre. D'où l'extinction par
+            défaut, et le mode discret juste en dessous. */}
+        <Row
+          label="Annoncer ce que je regarde"
+          hint="Affiche sur ton profil Discord la série, l’épisode, la jaquette et le temps restant — pendant une lecture seulement, et jamais autrement. Discord doit tourner sur ce PC."
+        >
+          <Toggle
+            on={prefs.discord}
+            onChange={(on) => {
+              setDiscord(null)
+              void setPrefs({ discord: on })
+            }}
+          />
+        </Row>
+
+        {prefs.discord && (
+          <>
+            <Row
+              label="Sans le titre"
+              hint="N’annonce que « Un anime » : ni série, ni épisode, ni jaquette, ni horloge. Le fait de regarder, rien d’autre."
+            >
+              <Toggle on={prefs.discordHideTitle} onChange={(discordHideTitle) => setPrefs({ discordHideTitle })} />
+            </Row>
+
+            <Row
+              label="Identifiant de l’application"
+              hint="Celui qui donne le nom affiché en gros, créé sur discord.com/developers. Celui d’origine convient : il est public par nature, puisqu’il voyage dans le statut."
+            >
+              <input
+                value={prefs.discordAppId}
+                onChange={(e) => setPrefs({ discordAppId: e.target.value })}
+                placeholder="1544850319878656161"
+                className="field !h-[34px] w-[190px]"
+                spellCheck={false}
+                inputMode="numeric"
+              />
+            </Row>
+
+            {/* Ce qui est demandé et ce qui est vrai sont deux choses : Discord
+                peut être fermé, ou l'identifiant faux. Le dire évite de
+                chercher pourquoi rien ne s'affiche. */}
+            <p className="px-1 py-2 text-[0.8rem]" style={{ color: discordTone }}>
+              {discordNote}
+            </p>
+          </>
         )}
       </Card>
 
