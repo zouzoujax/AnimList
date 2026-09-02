@@ -106,6 +106,36 @@ export interface PersonWorks {
   roles: { media: Media; role: string | null }[]
 }
 
+/** Ce qu'on peut suivre. Un personnage, non : il ne sort rien de nouveau. */
+export type FollowKind = 'staff' | 'studio'
+
+export interface Follow {
+  /** `staff:97042`, `studio:Bones` — stable, et unique par suivi. */
+  key: string
+  kind: FollowKind
+  /** L'identifiant AniList pour une personne, le nom pour un studio. */
+  ref: number | string
+  name: string
+  image: string | null
+  addedAt: number
+  /**
+   * Ce que la personne ou le studio avait déjà produit au moment du suivi.
+   *
+   * C'est la référence contre laquelle une nouveauté se mesure : suivre
+   * quelqu'un ne doit pas annoncer les vingt séries qu'il a déjà faites.
+   */
+  known: number[]
+  /** Trouvé depuis, et pas encore regardé par l'utilisateur. */
+  fresh: number[]
+  lastCheck: number
+}
+
+/** Une nouveauté, avec le suivi qui l'a fait remonter. */
+export interface FollowNews {
+  follow: Follow
+  media: Media[]
+}
+
 export interface MediaRef {
   id: number
   title: string

@@ -1,5 +1,7 @@
 import {
   Bell,
+  BellOff,
+  BellRing,
   Database,
   FileDown,
   FileUp,
@@ -16,7 +18,7 @@ import {
   Zap
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { LAYOUTS, THEMES, type ImportReport, type LayoutId, type TitleLang } from '@shared/types'
+import { LAYOUTS, THEMES, type Follow, type ImportReport, type LayoutId, type TitleLang } from '@shared/types'
 import { Modal } from '@/components/ui'
 import TvTimeImport from '@/components/TvTimeImport'
 import UpdatePanel from '@/components/UpdatePanel'
@@ -163,6 +165,18 @@ export default function SettingsPage(): React.JSX.Element {
   const [info, setInfo] = useState<Awaited<ReturnType<typeof window.api.app.info>> | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
+  const [follows, setFollows] = useState<Follow[]>([])
+
+  useEffect(() => {
+    let alive = true
+    void window.api.follows
+      .list()
+      .then((list) => alive && setFollows(list))
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     void window.api.app.info().then(setInfo)
@@ -442,6 +456,74 @@ export default function SettingsPage(): React.JSX.Element {
           >
             <Layers size={14} />
             {busy === 'sequels' ? 'Recherche…' : 'Chercher'}
+          </button>
+        </Row>
+      </Card>
+
+      <Card title="Ce que tu suis" icon={<BellRing size={17} />}>
+        {follows.length === 0 ? (
+          <p className="px-1 py-2 text-[0.82rem] leading-relaxed text-muted">
+            Aucun suivi. Sur la page d’un studio ou d’un doubleur, « Suivre » te fera prévenir de ses prochaines sorties
+            — et elles remonteront sur l’accueil.
+          </p>
+        ) : (
+          <div className="mb-3 flex flex-col gap-1.5">
+            {follows.map((follow) => (
+              <div key={follow.key} className="glass flex items-center gap-3 rounded-[12px] px-3 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[0.83rem] font-semibold">{follow.name}</span>
+                  <span className="text-[0.7rem] text-faint">
+                    {follow.kind === 'studio' ? 'Studio' : 'Personne'} · {follow.known.length} œuvres connues
+                    {follow.fresh.length > 0 &&
+                      ` · ${follow.fresh.length} nouveauté${follow.fresh.length > 1 ? 's' : ''}`}
+                  </span>
+                </span>
+                <button
+                  className="chip shrink-0"
+                  onClick={() =>
+                    void window.api.follows.remove(follow.key).then(() => {
+                      setFollows((prev) => prev.filter((f) => f.key !== follow.key))
+                      toast(`Tu ne suis plus ${follow.name}.`, 'ok')
+                    })
+                  }
+                >
+                  <BellOff size={12} />
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Row
+          label="Chercher maintenant"
+          hint="La recherche tourne deux fois par jour d’elle-même. Une nouveauté déjà annoncée ne l’est jamais deux fois."
+        >
+          <button
+            className="btn"
+            disabled={busy === 'follows' || follows.length === 0}
+            onClick={() =>
+              void (async () => {
+                setBusy('follows')
+                try {
+                  const found = await window.api.follows.sweep()
+                  setFollows(await window.api.follows.list())
+                  toast(
+                    found.length
+                      ? `${found.length} nouveauté${found.length > 1 ? 's' : ''} chez ceux que tu suis.`
+                      : 'Rien de neuf chez ceux que tu suis.',
+                    'ok'
+                  )
+                } catch (err) {
+                  toast((err as Error).message, 'error')
+                } finally {
+                  setBusy(null)
+                }
+              })()
+            }
+          >
+            <BellRing size={14} />
+            {busy === 'follows' ? 'Recherche…' : 'Chercher'}
           </button>
         </Row>
       </Card>

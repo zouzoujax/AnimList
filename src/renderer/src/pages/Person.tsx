@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Mic, User } from 'lucide-react'
 import type { PersonWorks } from '@shared/types'
 import { AnimeCard } from '@/components/AnimeCard'
+import { FollowButton } from '@/components/FollowButton'
 import { ErrorBox, Poster, PosterSkeletons } from '@/components/ui'
 import { useApp } from '@/store/app'
 
@@ -65,7 +66,7 @@ export default function PersonPage({ kind, id }: { kind: 'character' | 'staff'; 
             {kind === 'staff' ? <Mic size={22} className="text-faint" /> : <User size={22} className="text-faint" />}
           </div>
         )}
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="label mb-1">{kind === 'staff' ? 'Doubleur' : 'Personnage'}</p>
           <h1 className="title-xl text-[1.85rem] leading-tight">{person.name}</h1>
           <p className="mt-1 text-[0.82rem] text-muted">
@@ -73,6 +74,10 @@ export default function PersonPage({ kind, id }: { kind: 'character' | 'staff'; 
             {owned > 0 && ` · ${owned} dans ta bibliothèque`}
           </p>
         </div>
+
+        {/* Seulement pour une personne : un personnage ne sort rien de neuf,
+            c'est la série qui en décide. */}
+        {kind === 'staff' && <FollowButton kind="staff" target={id} name={person.name} />}
       </div>
 
       {person.roles.length === 0 ? (

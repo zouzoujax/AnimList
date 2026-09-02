@@ -9,6 +9,7 @@ import {
   DEFAULT_PREFS,
   type CustomList,
   type Entry,
+  type Follow,
   type EntryPatch,
   type Media,
   type Prefs,
@@ -37,6 +38,8 @@ interface Db {
    * position de lecture ne vaut pas ce prix.
    */
   positions: Record<string, Position>
+  /** Personnes et studios suivis. Additif lui aussi, pour la même raison. */
+  follows: Follow[]
 }
 
 const emptyDb = (): Db => ({
@@ -47,7 +50,8 @@ const emptyDb = (): Db => ({
   prefs: { ...DEFAULT_PREFS },
   lists: [],
   folders: {},
-  positions: {}
+  positions: {},
+  follows: []
 })
 
 export const store = new EventEmitter()
@@ -99,7 +103,8 @@ function sanitize(raw: unknown): Db {
     prefs: { ...DEFAULT_PREFS, ...(input.prefs ?? {}) },
     lists: Array.isArray(input.lists) ? input.lists : [],
     folders: input.folders && typeof input.folders === 'object' ? input.folders : {},
-    positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {}
+    positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {},
+    follows: Array.isArray(input.follows) ? input.follows.filter((f) => f && typeof f.key === 'string') : []
   }
 }
 
@@ -396,6 +401,42 @@ export function clearPosition(path: string): void {
   delete db.positions[path]
   coreDirty = true
   persist()
+}
+
+// ---------------------------------------------------------------- suivis
+
+export function getFollows(): Follow[] {
+  return db.follows
+}
+
+/**
+ * Ajoute un suivi, ou remplace celui qui portait déjà la même clé.
+ *
+ * Resuivre quelqu'un repart d'une liste de connues à jour : les sorties
+ * arrivées pendant qu'on ne suivait plus ne sont pas des nouveautés.
+ */
+export function putFollow(follow: Follow): Follow {
+  db.follows = [...db.follows.filter((f) => f.key !== follow.key), follow]
+  changed()
+  return follow
+}
+
+export function dropFollow(key: string): boolean {
+  const before = db.follows.length
+  db.follows = db.follows.filter((f) => f.key !== key)
+  if (db.follows.length === before) return false
+  changed()
+  return true
+}
+
+/** Applique un correctif à un suivi, sans toucher aux autres. */
+export function patchFollow(key: string, patch: Partial<Follow>): Follow | null {
+  const held = db.follows.find((f) => f.key === key)
+  if (!held) return null
+  const next = { ...held, ...patch }
+  db.follows = db.follows.map((f) => (f.key === key ? next : f))
+  changed()
+  return next
 }
 
 export function getMedia(id: number): Media | undefined {

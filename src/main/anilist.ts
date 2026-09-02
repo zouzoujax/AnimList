@@ -11,6 +11,7 @@ import type {
   AiringEntry,
   AiringItem,
   BrowseQuery,
+  FollowKind,
   Media,
   MediaDetail,
   Manga,
@@ -126,6 +127,45 @@ query StudioWorks($search: String, $page: Int, $perPage: Int) {
     media(sort: [POPULARITY_DESC], page: $page, perPage: $perPage) {
       pageInfo { currentPage hasNextPage total }
       nodes { ${MEDIA_FIELDS} }
+    }
+  }
+}`
+
+/**
+ * Les dernières œuvres d'une personne ou d'un studio.
+ *
+ * Triées par date de début décroissante, et non par popularité comme la page
+ * d'un studio : une série qui vient d'être annoncée n'est populaire nulle
+ * part, et c'est précisément celle qu'un suivi doit faire remonter. AniList
+ * range d'ailleurs les dates inconnues en tête — les annonces sans date de
+ * diffusion arrivent donc en premier, ce qui tombe bien.
+ *
+ * Pour une personne, les deux connexions comptent : `staffMedia` porte ce
+ * qu'elle a réalisé ou écrit, `characterMedia` ce qu'elle a doublé. Un seiyuu
+ * n'apparaîtrait pas dans la première.
+ */
+const STUDIO_LATEST_QUERY = `
+query StudioLatest($search: String) {
+  Studio(search: $search) {
+    id
+    name
+    media(sort: [START_DATE_DESC], perPage: 25) {
+      nodes { type isAdult ${MEDIA_FIELDS} }
+    }
+  }
+}`
+
+const STAFF_LATEST_QUERY = `
+query StaffLatest($id: Int) {
+  Staff(id: $id) {
+    id
+    name { full }
+    image { large }
+    staffMedia(sort: [START_DATE_DESC], perPage: 25, type: ANIME) {
+      nodes { type isAdult ${MEDIA_FIELDS} }
+    }
+    characterMedia(sort: [START_DATE_DESC], perPage: 25) {
+      nodes { type isAdult ${MEDIA_FIELDS} }
     }
   }
 }`
@@ -808,6 +848,67 @@ export async function detail(id: number): Promise<MediaDetail & { stale: boolean
         extra: r.averageScore ? `${r.averageScore}%` : null
       }))
   }
+}
+
+type RawLatest = RawMedia & { type?: string | null; isAdult?: boolean | null }
+
+/**
+ * Ce qu'une personne ou un studio a de plus récent, annonces comprises.
+ *
+ * Rend `null` quand AniList ne connaît pas la référence : un studio renommé,
+ * une personne supprimée. Le suivi correspondant est alors laissé tel quel
+ * plutôt que vidé — une panne de recherche ne doit pas effacer un suivi.
+ */
+export async function latestWorks(
+  kind: FollowKind,
+  ref: number | string,
+  showAdult: boolean
+): Promise<{ name: string; image: string | null; items: Media[] } | null> {
+  const key = `follow:${kind}:${ref}`
+
+  if (kind === 'studio') {
+    const { data } = await cached(key, TTL.list, () =>
+      request<{ Studio: { name: string; media: { nodes: RawLatest[] } } | null }>(
+        STUDIO_LATEST_QUERY,
+        { search: String(ref) },
+        'background',
+        key
+      )
+    )
+    if (!data.Studio) return null
+    return { name: data.Studio.name, image: null, items: pickAnime(data.Studio.media.nodes, showAdult) }
+  }
+
+  const { data } = await cached(key, TTL.list, () =>
+    request<{
+      Staff: {
+        name: { full: string }
+        image?: { large: string | null } | null
+        staffMedia: { nodes: RawLatest[] }
+        characterMedia: { nodes: RawLatest[] }
+      } | null
+    }>(STAFF_LATEST_QUERY, { id: Number(ref) }, 'background', key)
+  )
+  if (!data.Staff) return null
+  return {
+    name: data.Staff.name.full,
+    image: data.Staff.image?.large ?? null,
+    items: pickAnime([...data.Staff.staffMedia.nodes, ...data.Staff.characterMedia.nodes], showAdult)
+  }
+}
+
+/** Anime seulement, sans doublon : les deux connexions d'un staff se recoupent. */
+function pickAnime(nodes: RawLatest[], showAdult: boolean): Media[] {
+  const seen = new Set<number>()
+  const out: Media[] = []
+  for (const node of nodes) {
+    if (node.type && node.type !== 'ANIME') continue
+    if (node.isAdult && !showAdult) continue
+    if (seen.has(node.id)) continue
+    seen.add(node.id)
+    out.push(toMedia(node))
+  }
+  return out
 }
 
 export async function airing(ids: number[], from: number, to: number): Promise<AiringItem[]> {

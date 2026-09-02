@@ -2,6 +2,7 @@ import { ArrowLeft, Boxes } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { Media, StudioWorks } from '@shared/types'
 import { AnimeCard } from '@/components/AnimeCard'
+import { FollowButton } from '@/components/FollowButton'
 import { ErrorBox, PosterSkeletons, Section, Spinner } from '@/components/ui'
 import { num } from '@/lib/format'
 import { useInView } from '@/lib/hooks'
@@ -108,12 +109,14 @@ export default function StudioPage({ studio }: { studio: string }): React.JSX.El
         >
           <Boxes size={22} />
         </span>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="title-xl text-[1.85rem] leading-tight">{name}</h1>
           <p className="mt-0.5 text-[0.85rem] text-muted">
             {loading ? 'Chargement…' : `${num(items.length)} titres chargés · ${num(seen.length)} dans ta bibliothèque`}
           </p>
         </div>
+
+        <FollowButton kind="studio" target={studio} name={name} />
       </div>
 
       {loading ? (

@@ -1,5 +1,14 @@
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
-import type { BrowseQuery, EntryPatch, MangaKind, Media, Prefs, WatchEventPatch, WatchEventRef } from '@shared/types'
+import type {
+  BrowseQuery,
+  EntryPatch,
+  FollowKind,
+  MangaKind,
+  Media,
+  Prefs,
+  WatchEventPatch,
+  WatchEventRef
+} from '@shared/types'
 import * as anilist from './anilist'
 import { resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
@@ -14,6 +23,7 @@ import { openAnimeSamaEpisode } from './watch-window'
 import { cleanOrphans, health, removeStray } from './health'
 import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
+import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
 import {
   cacheMedia,
   cancelRewatch,
@@ -21,6 +31,7 @@ import {
   createList,
   dbPath,
   deleteList,
+  getFollows,
   getPrefs,
   markAllWatched,
   removeEntries,
@@ -136,6 +147,16 @@ export function registerIpc(): void {
   ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
   ipcMain.handle('anime:sweep-sequels', (e) => sweepSequels(ownerOf(e)))
   ipcMain.handle('anime:seasons', (_e, id: number) => anilist.seasonChain(id))
+
+  // ---- suivis : personnes et studios ---------------------------------
+  ipcMain.handle('follows:list', () => getFollows())
+  ipcMain.handle('follows:add', (_e, kind: FollowKind, ref: number | string, name: string) =>
+    addFollow(kind, ref, name)
+  )
+  ipcMain.handle('follows:remove', (_e, key: string) => removeFollow(key))
+  ipcMain.handle('follows:news', () => followNews())
+  ipcMain.handle('follows:seen', (_e, key?: string) => markSeen(key))
+  ipcMain.handle('follows:sweep', (e) => sweepFollows(ownerOf(e), true))
 
   // ---- data ----------------------------------------------------------
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))

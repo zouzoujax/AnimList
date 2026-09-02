@@ -1,7 +1,7 @@
-import { ArrowUpRight, Clock, Compass, Dices, Play, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Check, Clock, Compass, Dices, Play, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
-import type { Media } from '@shared/types'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { FollowNews, Media } from '@shared/types'
 import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
@@ -306,6 +306,26 @@ export default function HomePage(): React.JSX.Element {
     [heroCover]
   )
 
+  /**
+   * Ce que les personnes et studios suivis ont sorti depuis la dernière visite.
+   *
+   * Demandé une fois à l'ouverture de l'accueil, jamais en boucle : le
+   * balayage qui les trouve tourne dans le processus principal toutes les
+   * douze heures, la fenêtre ne fait que lire son résultat.
+   */
+  const [news, setNews] = useState<FollowNews[]>([])
+  useEffect(() => {
+    let alive = true
+    void window.api.follows
+      .news()
+      .then((rows) => alive && setNews(rows))
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
+  const newsTotal = news.reduce((n, row) => n + row.media.length, 0)
+
   return (
     <div className="page">
       <p className="label mb-1.5">
@@ -337,6 +357,47 @@ export default function HomePage(): React.JSX.Element {
               }
             />
           </div>
+        )}
+
+        {news.length > 0 && (
+          <Section
+            title="Chez ceux que tu suis"
+            subtitle={
+              newsTotal > 1
+                ? `${newsTotal} nouveautés depuis ta dernière visite`
+                : 'Une nouveauté depuis ta dernière visite'
+            }
+            action={
+              <button
+                className="chip shrink-0"
+                title="Ne plus les faire remonter ici"
+                onClick={() => {
+                  // Vidé tout de suite à l'écran : attendre la réponse ferait
+                  // rester la rangée une seconde de trop après le clic.
+                  setNews([])
+                  void window.api.follows.seen()
+                }}
+              >
+                <Check size={13} />
+                J’ai vu
+              </button>
+            }
+          >
+            <RowScroller>
+              {news.flatMap((row) =>
+                row.media.map((media, i) => (
+                  <MiniCard
+                    key={`${row.follow.key}:${media.id}`}
+                    id={media.id}
+                    title={titleOf(media, lang)}
+                    cover={media.cover.large}
+                    caption={row.follow.name}
+                    index={i}
+                  />
+                ))
+              )}
+            </RowScroller>
+          </Section>
         )}
 
         {behindList.length > 0 && (

@@ -8,6 +8,7 @@ import { initFiller } from './filler'
 import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
+import { startFollowWatcher } from './follows'
 import { startUpdateWatcher } from './updater'
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
@@ -27,6 +28,7 @@ registerMediaScheme()
 
 let mainWindow: BrowserWindow | null = null
 let stopWatcher: (() => void) | null = null
+let stopFollows: (() => void) | null = null
 let stopUpdateCheck: (() => void) | null = null
 let stopSequelWatcher: (() => void) | null = null
 
@@ -155,6 +157,7 @@ void app.whenReady().then(() => {
   }
 
   stopWatcher = startAiringWatcher(mainWindow)
+  stopFollows = startFollowWatcher(mainWindow)
   stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
 
@@ -180,6 +183,8 @@ app.on('before-quit', async (event) => {
   stopUpdateCheck = null
   stopSequelWatcher?.()
   stopSequelWatcher = null
+  stopFollows?.()
+  stopFollows = null
   event.preventDefault()
   await flush()
   app.exit(0)

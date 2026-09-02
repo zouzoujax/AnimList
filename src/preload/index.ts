@@ -7,6 +7,9 @@ import type {
   Entry,
   EntryPatch,
   FillerInfo,
+  Follow,
+  FollowKind,
+  FollowNews,
   HealthReport,
   ImportReport,
   LocalFolder,
@@ -160,6 +163,20 @@ const api = {
     stats: (): Promise<{ entries: number; bytes: number }> => ipcRenderer.invoke('cache:stats'),
     /** Rien n'est perdu : tout se retélécharge à la demande. */
     purge: (): Promise<void> => ipcRenderer.invoke('cache:purge')
+  },
+
+  follows: {
+    list: (): Promise<Follow[]> => ipcRenderer.invoke('follows:list'),
+    /** Rend `null` si AniList ne connaît pas la personne ou le studio. */
+    add: (kind: FollowKind, ref: number | string, name: string): Promise<Follow | null> =>
+      ipcRenderer.invoke('follows:add', kind, ref, name),
+    remove: (key: string): Promise<boolean> => ipcRenderer.invoke('follows:remove', key),
+    /** Les nouveautés en attente, avec leurs fiches. */
+    news: (): Promise<FollowNews[]> => ipcRenderer.invoke('follows:news'),
+    /** Marque les nouveautés comme vues — d'un suivi, ou de tous. */
+    seen: (key?: string): Promise<void> => ipcRenderer.invoke('follows:seen', key),
+    /** Force un balayage, sans attendre les douze heures. */
+    sweep: (): Promise<Media[]> => ipcRenderer.invoke('follows:sweep')
   },
 
   videos: {
