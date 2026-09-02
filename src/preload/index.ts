@@ -8,6 +8,7 @@ import type {
   EntryPatch,
   FillerInfo,
   ForYou,
+  Identification,
   Follow,
   FollowKind,
   FollowNews,
@@ -81,6 +82,9 @@ const api = {
      * Ce qu'AniList conseille à partir des séries passées en graine, moins ce
      * qui est déjà suivi.
      */
+    /** Reconnaît la scène d'une image : série, épisode, seconde. */
+    identify: (bytes: Uint8Array, mime: string): Promise<Identification> =>
+      ipcRenderer.invoke('anime:identify', bytes, mime),
     /** Le profil de goût et ce qu'il conseille, raisons comprises. */
     forYou: (): Promise<ForYou> => ipcRenderer.invoke('anime:for-you'),
     recommended: (seeds: number[], exclude: number[]): Promise<Suggestion[]> =>

@@ -1,4 +1,4 @@
-import { CalendarClock, Flame, Rocket, Search, Sparkles, Star, TrendingUp, X } from 'lucide-react'
+import { CalendarClock, Flame, Rocket, ScanSearch, Search, Sparkles, Star, TrendingUp, X } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -13,7 +13,8 @@ import {
   type MediaFormat
 } from '@shared/types'
 import { AnimeCard } from '@/components/AnimeCard'
-import { ErrorBox, PosterSkeletons, Spinner } from '@/components/ui'
+import IdentifyImage from '@/components/IdentifyImage'
+import { ErrorBox, Modal, PosterSkeletons, Spinner } from '@/components/ui'
 import { monthBucket, premiereLabel, premiereOf, premiereSort } from '@/lib/format'
 import { useBrowse, useDebounced, useInView } from '@/lib/hooks'
 import { useApp } from '@/store/app'
@@ -157,6 +158,26 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
     // épisode coché, non — d'où la taille plutôt que la table elle-même.
   }, [entries.size])
 
+  /**
+   * Reconnaissance d'une image.
+   *
+   * Coller ouvre la fenêtre avec l'image déjà dedans : après une capture
+   * d'écran, Ctrl+V est le geste qu'on fait sans y penser, et devoir d'abord
+   * trouver un bouton casserait exactement ça. La saisie de recherche est
+   * épargnée — y coller du texte doit rester du texte.
+   */
+  const [identify, setIdentify] = useState<{ open: boolean; file: File | null }>({ open: false, file: null })
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent): void => {
+      const target = event.target as HTMLElement | null
+      if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return
+      const file = [...(event.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'))
+      if (file) setIdentify({ open: true, file })
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  }, [])
+
   const scheduleItems = useMemo(() => {
     if (!showSchedule) return items
     const seen = new Set(items.map((m) => m.id))
@@ -197,6 +218,15 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
               </button>
             )}
           </div>
+
+          <button
+            className="chip !h-[38px] !px-3.5 shrink-0"
+            title="Trouver de quel anime vient une capture d’écran"
+            onClick={() => setIdentify({ open: true, file: null })}
+          >
+            <ScanSearch size={14} />
+            Identifier une image
+          </button>
 
           <div className="flex flex-wrap gap-1.5">
             {TABS.map(({ kind, label, icon: Icon }) => (
@@ -303,6 +333,10 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
           {loadingMore && <Spinner label="Chargement de la suite…" />}
         </>
       )}
+
+      <Modal open={identify.open} onClose={() => setIdentify({ open: false, file: null })} width={620}>
+        {identify.open && <IdentifyImage initial={identify.file} />}
+      </Modal>
     </div>
   )
 }

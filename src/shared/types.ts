@@ -486,6 +486,26 @@ export interface HealthReport {
 }
 
 /** Une série qu'AniList conseille à partir de ce que tu as déjà aimé. */
+/** Une scène reconnue dans une image. */
+export interface FrameMatch {
+  media: Media
+  /** Numéro d'épisode. `null` pour un film, ou quand l'index l'ignore. */
+  episode: number | null
+  /** Bornes de la scène dans l'épisode, en secondes. */
+  from: number
+  to: number
+  /** De 0 à 1. Au-dessus de 0,87 la correspondance est sûre. */
+  similarity: number
+  /** Vignette de la scène trouvée. */
+  preview: string
+}
+
+export interface Identification {
+  matches: FrameMatch[]
+  /** Recherches consommées ce mois-ci, si le service a bien voulu le dire. */
+  quota: { used: number; total: number } | null
+}
+
 /** Une recommandation, et ce qui la justifie. */
 export interface ForYouPick {
   media: Media

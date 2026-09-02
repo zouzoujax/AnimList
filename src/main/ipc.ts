@@ -25,6 +25,7 @@ import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
 import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
 import { forYou } from './foryou'
+import { identifyImage } from './identify'
 import {
   cacheMedia,
   cancelRewatch,
@@ -136,6 +137,11 @@ export function registerIpc(): void {
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
   ipcMain.handle('anime:for-you', () => forYou())
+
+  // ---- reconnaissance d'une image ------------------------------------
+  // L'image ne sort d'ici que sur un geste explicite : coller, déposer,
+  // choisir un fichier. Rien n'est envoyé de soi-même.
+  ipcMain.handle('anime:identify', (_e, bytes: Uint8Array, mime: string) => identifyImage(bytes, mime))
   ipcMain.handle(
     'manga:browse',
     (_e, kind: MangaKind, page: number, search: string, genre?: string, country?: string) =>
