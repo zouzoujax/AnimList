@@ -28,6 +28,7 @@ import { forYou } from './foryou'
 import { identifyImage } from './identify'
 import { importAniList, importKitsu } from './import-list'
 import { setPlayerActive } from './taskbar'
+import { canTranslate, purgeTranslations, translate } from './translate'
 import {
   cacheMedia,
   cancelRewatch,
@@ -139,6 +140,11 @@ export function registerIpc(): void {
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
   ipcMain.handle('anime:for-you', () => forYou())
+
+  // ---- traduction ------------------------------------------------------
+  ipcMain.handle('translate:texts', (_e, texts: string[]) => translate(texts))
+  ipcMain.handle('translate:ready', () => canTranslate())
+  ipcMain.handle('translate:purge', () => purgeTranslations())
 
   // ---- reconnaissance d'une image ------------------------------------
   // L'image ne sort d'ici que sur un geste explicite : coller, déposer,

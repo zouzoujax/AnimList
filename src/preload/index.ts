@@ -177,6 +177,19 @@ const api = {
     purge: (): Promise<void> => ipcRenderer.invoke('cache:purge')
   },
 
+  translate: {
+    /**
+     * Traduit une liste de textes, dans l'ordre. Rend toujours autant de
+     * textes qu'il en a reçu : sans clé, ou en cas de panne, l'anglais
+     * ressort tel quel plutôt qu'un trou.
+     */
+    texts: (texts: string[]): Promise<string[]> => ipcRenderer.invoke('translate:texts', texts),
+    /** Une clé est-elle posée ? L'écran s'en sert pour proposer ou se taire. */
+    ready: (): Promise<boolean> => ipcRenderer.invoke('translate:ready'),
+    /** Vide le cache : changement de clé, ou envie de tout retraduire. */
+    purge: (): Promise<number> => ipcRenderer.invoke('translate:purge')
+  },
+
   follows: {
     list: (): Promise<Follow[]> => ipcRenderer.invoke('follows:list'),
     /** Rend `null` si AniList ne connaît pas la personne ou le studio. */

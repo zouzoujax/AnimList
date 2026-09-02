@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { BrowseQuery, FillerInfo, Media, MediaDetail, SeasonEntry } from '@shared/types'
 import { searchTitles, type AnimeSamaTarget } from '@/lib/watch'
+import { fingerprint } from '@shared/translate'
+import { useApp } from '@/store/app'
 
 /**
  * Une réponse qui appartient à une clé.
@@ -240,6 +242,23 @@ export function useFiller(malId: number | null | undefined): FillerInfo | null {
  */
 export function useSeasons(animeId: number | null): SeasonEntry[] {
   return useKeyed(animeId ? String(animeId) : '', NO_SEASONS, () => window.api.anime.seasons(animeId as number))
+}
+
+/**
+ * Les mêmes textes, en français quand c'est possible.
+ *
+ * Rend les originaux tant que la traduction n'est pas là — et pour toujours
+ * s'il n'y a pas de clé, si le service tombe, ou si le réglage est coupé. La
+ * page n'a donc jamais de trou à gérer : elle affiche ce qu'on lui donne.
+ *
+ * La clé est l'empreinte des textes réunis : un synopsis fait plusieurs
+ * milliers de caractères, et s'en servir tel quel comme clé de comparaison
+ * coûterait à chaque rendu.
+ */
+export function useTranslated(texts: string[]): string[] {
+  const enabled = useApp((s) => s.prefs.translate)
+  const key = enabled && texts.length ? fingerprint(texts.join(' ')) : ''
+  return useKeyed(key, texts, () => window.api.translate.texts(texts))
 }
 
 export function useNow(intervalMs = 60_000): number {

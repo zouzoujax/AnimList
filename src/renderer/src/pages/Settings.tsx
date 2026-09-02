@@ -1,6 +1,7 @@
 import {
   AtSign,
   Bell,
+  Languages as LanguagesIcon,
   BellOff,
   BellRing,
   Database,
@@ -459,6 +460,46 @@ export default function SettingsPage(): React.JSX.Element {
             <Layers size={14} />
             {busy === 'sequels' ? 'Recherche…' : 'Chercher'}
           </button>
+        </Row>
+      </Card>
+
+      <Card title="Traduction" icon={<LanguagesIcon size={17} />}>
+        <Row
+          label="Résumés et titres d’épisodes en français"
+          hint="AniList ne les publie qu’en anglais. Avec une clé, ils sont traduits une fois puis gardés sur ce PC — rien n’est retraduit deux fois."
+        >
+          <Toggle on={prefs.translate} onChange={(translate) => setPrefs({ translate })} />
+        </Row>
+
+        {/* Aucune clé n'est embarquée : en glisser une dans un dépôt public
+            reviendrait à l'offrir, et une traduction facturée à quelqu'un
+            d'autre n'est pas gratuite pour autant. */}
+        <Row
+          label="Clé DeepL"
+          hint="À créer gratuitement sur deepl.com/pro-api — 500 000 caractères par mois, de quoi traduire des centaines de fiches. Sans clé, les textes restent anglais et le reste de l’app ne change pas."
+        >
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <input
+              type="password"
+              value={prefs.deeplKey}
+              onChange={(e) => setPrefs({ deeplKey: e.target.value })}
+              placeholder="collée ici"
+              className="field !h-[34px] w-[190px]"
+              spellCheck={false}
+            />
+            <button
+              className="chip"
+              title="Vider les traductions gardées et tout retraduire"
+              onClick={() =>
+                void window.api.translate
+                  .purge()
+                  .then((n) => toast(n ? `${n} traductions oubliées.` : 'Rien à oublier.', 'ok'))
+              }
+            >
+              <Trash2 size={12} />
+              Vider
+            </button>
+          </div>
         </Row>
       </Card>
 

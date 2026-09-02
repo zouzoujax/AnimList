@@ -39,7 +39,7 @@ import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, 
 import { originTitle } from '@shared/origin'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonLabel, titleOf } from '@/lib/format'
-import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons } from '@/lib/hooks'
+import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons, useTranslated } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
@@ -164,7 +164,17 @@ function EpisodeGrid({
   const [hideFiller, setHideFiller] = useState(false)
   const fillerInfo = useFiller(detail.idMal)
 
-  const episodes = detail.episodeMeta
+  const rawEpisodes = detail.episodeMeta
+  /**
+   * Les titres d'épisodes, traduits eux aussi.
+   *
+   * Une seule requête pour toute la grille plutôt qu'une par case : trois cent
+   * cinquante-neuf allers-retours pour One Piece épuiseraient n'importe quel
+   * quota, et le service accepte justement les envois groupés.
+   */
+  const titles = useTranslated(rawEpisodes.map((ep) => ep.title ?? ''))
+  const episodes = rawEpisodes.map((ep, i) => (ep.title ? { ...ep, title: titles[i] || ep.title } : ep))
+
   if (!episodes.length) {
     return (
       <p className="glass rounded-2xl px-4 py-6 text-center text-[0.82rem] text-faint">
@@ -530,6 +540,17 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
 
   const media: Media | MediaDetail | undefined = data ?? cached
+  /**
+   * Le résumé en français.
+   *
+   * Posé ici, avec les autres crochets et avant tout retour anticipé : la
+   * fiche rend un squelette tant que rien n'est chargé, et un crochet appelé
+   * après ce retour ne le serait pas à tous les rendus.
+   *
+   * AniList ne publie ses résumés qu'en anglais ; sans clé DeepL, l'original
+   * ressort tel quel.
+   */
+  const [synopsis] = useTranslated(media?.description ? [media.description] : [])
   const [draft, setDraft] = useState<{ animeId: number; text: string }>({ animeId: id, text: entry?.notes ?? '' })
   const [expanded, setExpanded] = useState(false)
   const [picking, setPicking] = useState(false)
@@ -854,7 +875,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
               <p
                 className={`whitespace-pre-line text-[0.885rem] leading-relaxed text-muted ${expanded ? '' : 'clamp-3'}`}
               >
-                {media.description}
+                {synopsis ?? media.description}
               </p>
               {media.description.length > 240 && (
                 <button

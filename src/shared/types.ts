@@ -274,6 +274,16 @@ export interface Prefs {
    * bibliothèque, sans redemander la relation à AniList à chaque affichage.
    */
   sequelOf: Record<string, number>
+  /**
+   * Clé DeepL, collée par l'utilisateur, pour traduire les textes d'AniList.
+   *
+   * Vide par défaut, et aucune clé n'est embarquée : en glisser une dans un
+   * dépôt public reviendrait à l'offrir. Sans clé, les résumés restent
+   * anglais et l'app marche comme avant.
+   */
+  deeplKey: string
+  /** Traduire les résumés et les titres d'épisodes, quand une clé est posée. */
+  translate: boolean
   /** Hand corrections for the TV Time importer, keyed by source series id. */
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
@@ -672,6 +682,8 @@ export const DEFAULT_PREFS: Prefs = {
   sequelsAdded: [],
   lastSequelSweep: 0,
   sequelOf: {},
+  deeplKey: '',
+  translate: true,
   tvtimeOverrides: {},
   tvtimeFolder: null
 }

@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { initAniList } from './anilist'
 import { initAnimeSama } from './animesama'
 import { initFiller } from './filler'
+import { initTranslate } from './translate'
 import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
@@ -123,6 +124,7 @@ void app.whenReady().then(() => {
   initAniList()
   initAnimeSama()
   initFiller()
+  initTranslate()
   registerIpc()
   serveMedia()
 
