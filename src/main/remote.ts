@@ -44,6 +44,16 @@ export interface RemoteStatus {
   error: string | null
 }
 
+/**
+ * La série qu'on vient de lancer.
+ *
+ * Le titre d'une fenêtre ne dit pas grand-chose — celle d'Anime-Sama s'appelle
+ * « Anime-Sama », rien de plus. Retenir ce qu'on a lancé permet à la
+ * télécommande d'afficher la bonne jaquette et le bon épisode au lieu d'un
+ * nom de fenêtre.
+ */
+let launched: { title: string; cover: string; episode: number | null } | null = null
+
 let server: Server | null = null
 let token = ''
 let status: RemoteStatus = { on: false, url: null, token: null, port: REMOTE_PORT, error: null }
@@ -111,7 +121,17 @@ async function remoteState(): Promise<unknown> {
   rows.sort((a, b) => b.updatedAt - a.updatedAt)
   // Ce qui joue en ce moment sur le PC, pour que le téléphone puisse le
   // piloter sans avoir à demander séparément.
-  return { series: rows, player: await playerState() }
+  return { series: rows, player: await nowPlaying() }
+}
+
+/** L'état du lecteur, complété par ce qu'on sait de la série lancée. */
+async function nowPlaying(): Promise<unknown> {
+  const state = await playerState()
+  if (!state) {
+    launched = null
+    return null
+  }
+  return launched ? { ...state, ...launched } : state
 }
 
 /**
@@ -165,7 +185,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
    * curseur : passer par `/api/state` relirait la bibliothèque entière —
    * entrées, fiches et journal — à ce rythme-là, pour trois nombres.
    */
-  if (route === 'player') return json(res, 200, { player: await playerState() })
+  if (route === 'player') return json(res, 200, { player: await nowPlaying() })
 
   if (req.method !== 'POST') return json(res, 405, { error: 'Méthode refusée.' })
 
@@ -183,7 +203,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
     const done = await playerCommand(action, Number(body.value))
     if (!done) return json(res, 409, { error: 'Rien à piloter, ou commande hors de portée de ce lecteur.' })
-    return json(res, 200, { player: await playerState() })
+    return json(res, 200, { player: await nowPlaying() })
   }
 
   const id = Number(body.id)
@@ -242,7 +262,9 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const episode = Number(body.episode)
     const at = target.episodes && Number.isInteger(episode) && episode > 0 ? episode : null
     const opened = openAnimeSamaEpisode(target.url, at)
-    return opened ? json(res, 200, { ok: true, at }) : json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
+    if (!opened) return json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
+    launched = { title: media.title.english ?? media.title.romaji, cover: media.cover.large, episode: at }
+    return json(res, 200, { player: await nowPlaying() })
   }
 
   // `open` : la fiche, sur le PC.

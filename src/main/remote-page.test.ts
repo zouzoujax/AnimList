@@ -42,19 +42,35 @@ describe('la page de la télécommande', () => {
 
 describe('les actions de la page', () => {
   const html = page()
+  const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]
 
-  // Le bouton doit être passé explicitement : `window.event` est un vestige,
-  // et sa cible n'est plus renseignée une fois la fonction reprise après
-  // l'attente — le bouton serait rétabli sur `null`.
-  it('passe le bouton à ses gestionnaires plutôt que de le deviner', () => {
-    expect(html).toContain('onclick="watch(this,')
-    expect(html).toContain('onclick="trailer(this,')
+  // Le vrai risque : ajouter un bouton et oublier de le traiter. Il ne
+  // planterait pas, il ne ferait simplement rien — et rien ne le dirait.
+  it('traite toutes les actions que ses boutons portent', () => {
+    const posed = [...script.matchAll(/data-act="(\w+)/g)].map((m) => m[1])
+    const dynamic = [...script.matchAll(/data-act="' \+ \(?p\.\w+ \? '(\w+)' : '(\w+)'/g)].flatMap((m) => [m[1], m[2]])
+    const actions = [...new Set([...posed, ...dynamic])]
+    expect(actions.length).toBeGreaterThan(4)
+
+    // La liste des commandes de lecture est lue une fois, sans expression
+    // rationnelle : les échappements d'une regex écrite dans un gabarit sont
+    // exactement le piège que ce fichier existe pour attraper.
+    const controls = /CONTROLS = \[([^\]]*)\]/.exec(script)?.[1] ?? ''
+
+    for (const action of actions) {
+      const handled = script.includes(`action === '${action}'`) || controls.includes(`'${action}'`)
+      expect(handled, `action « ${action} » sans gestionnaire`).toBe(true)
+    }
+  })
+
+  // Toute la raison d'être de la délégation : un gestionnaire en ligne oblige
+  // à imbriquer des guillemets dans un gabarit qui les mange.
+  it('n’utilise aucun gestionnaire en ligne', () => {
+    expect(html).not.toContain('onclick=')
     expect(html).not.toContain('event.currentTarget')
   })
 
-  it('déclare les gestionnaires que le balisage appelle', () => {
-    for (const name of ['tick', 'watch', 'trailer', 'open_']) {
-      expect(html).toContain(`window.${name} =`)
-    }
+  it('écoute les clics en un seul endroit', () => {
+    expect(script.match(/addEventListener\('click'/g)).toHaveLength(1)
   })
 })
