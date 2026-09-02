@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   Bell,
   BellOff,
   Bookmark,
@@ -513,6 +514,7 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }): R
 
 export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
+  const back = useApp((s) => s.back)
   const { data, loading, error, retry } = useDetail(id)
   const mediaCache = useApp((s) => s.media)
   const cached = mediaCache.get(id)
@@ -621,6 +623,13 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   if (!media) {
     return (
       <div className="mx-auto max-w-[1400px] px-7 py-7">
+        {/* Ici surtout : une fiche qui n'a pas chargé est le moment où l'on a
+            le plus besoin de repartir, et c'est le seul écran qui n'avait rien
+            d'autre à offrir qu'un message d'erreur. */}
+        <button className="btn mb-5 !h-8" onClick={back}>
+          <ArrowLeft size={14} />
+          Retour
+        </button>
         {error ? (
           <ErrorBox message={error} onRetry={retry} />
         ) : (
@@ -672,6 +681,24 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
     <div className="pb-14">
       {/* ---------------------------------------------------------------- hero */}
       <div className="relative">
+        {/*
+          Revenir en arrière n'existait que dans la barre de titre : un chevron
+          de sept pixels, collé au bord de la fenêtre, à sept cents pixels de ce
+          qu'on est en train de lire. Les pages Personne et Studio ont leur
+          « Retour » dans la page ; la fiche d'un anime, la plus profonde des
+          trois, n'en avait pas.
+
+          Posé en absolu par-dessus la bannière : ajouté dans le flux, il
+          aurait décalé de trente pixels une mise en page calée au pixel sur la
+          hauteur de l'image.
+        */}
+        <div className="absolute inset-x-0 top-0 z-10 mx-auto max-w-[1400px] px-7 pt-5">
+          <button className="btn !h-8" onClick={back}>
+            <ArrowLeft size={14} />
+            Retour
+          </button>
+        </div>
+
         <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden">
           {media.banner ? (
             <img src={media.banner} alt="" className="h-full w-full object-cover" />
