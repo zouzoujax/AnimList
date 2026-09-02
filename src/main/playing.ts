@@ -31,7 +31,8 @@
  * n'est pas encore chargé, ou la page n'en contient pas.
  */
 
-import type { BrowserWindow, WebFrameMain } from 'electron'
+import type { BrowserWindow } from 'electron'
+import { videoFrame, videoFullscreen, videoScript, type VideoState } from './video-frame'
 import { closeTrailerWindow, trailerWindow } from './trailer'
 import { closeWatchWindow, watchWindow } from './watch-window'
 
@@ -68,54 +69,6 @@ function current(): { kind: PlayerKind; win: BrowserWindow } | null {
   return null
 }
 
-interface RawTrailerState {
-  position?: number
-  duration?: number
-  volume?: number
-  playing?: boolean
-  /** Vrai quand c'est la vidéo qui est en plein écran, pas la fenêtre. */
-  full?: boolean
-}
-
-/**
- * Le script qui trouve la vidéo dans un cadre, et agit dessus.
- *
- * La plus grande est la bonne : les lecteurs web posent souvent une vignette
- * d'aperçu ou une publicité vidéo minuscule à côté de la vraie. Trier par
- * surface visible évite de piloter la mauvaise.
- */
-function videoScript(body: string): string {
-  return `(function () {
-    var all = Array.prototype.slice.call(document.querySelectorAll('video'))
-    var v = all.sort(function (a, b) {
-      return b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight
-    })[0]
-    if (!v) return null
-    ${body}
-  })()`
-}
-
-const PROBE = videoScript(`
-  return {
-    position: v.currentTime || 0,
-    duration: isFinite(v.duration) ? v.duration : 0,
-    volume: Math.round((v.muted ? 0 : v.volume) * 100),
-    playing: !v.paused,
-    full: document.fullscreenElement !== null
-  }
-`)
-
-/** Le premier cadre qui contient une vidéo, et ce qu'elle raconte. */
-async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameMain; state: RawTrailerState } | null> {
-  for (const frame of win.webContents.mainFrame.framesInSubtree) {
-    // Un cadre peut disparaître entre l'énumération et l'appel — une publicité
-    // qui se referme, une navigation. L'échec ne doit pas interrompre le tour.
-    const found: unknown = await frame.executeJavaScript(PROBE, true).catch(() => null)
-    if (found && typeof found === 'object') return { frame, state: found }
-  }
-  return null
-}
-
 /**
  * Ce qui revient d'une page est vérifié, pas supposé.
  *
@@ -123,7 +76,7 @@ async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameMain; st
  * chargement, ou avoir été remplacée. Un contrôle de forme coûte une ligne et
  * évite de lire des champs sur `null`.
  */
-function isTrailerState(value: unknown): value is RawTrailerState {
+function isTrailerState(value: unknown): value is VideoState {
   return typeof value === 'object' && value !== null
 }
 
@@ -211,24 +164,7 @@ export async function playerCommand(action: PlayerAction, params: PlayerParams =
       return true
     }
 
-    if (video) {
-      const asked: unknown = await video.frame
-        .executeJavaScript(
-          videoScript('if (!v.requestFullscreen) return false; v.requestFullscreen(); return true'),
-          true
-        )
-        .catch(() => false)
-
-      if (asked === true) {
-        // Le plein écran arrive de façon différée : demander tout de suite si
-        // c'est fait répondrait toujours non.
-        await new Promise((resolve) => setTimeout(resolve, 350))
-        const took: unknown = await video.frame
-          .executeJavaScript('document.fullscreenElement !== null', true)
-          .catch(() => false)
-        if (took === true) return true
-      }
-    }
+    if (video && action === 'fullscreen' && (await videoFullscreen(found.win))) return true
 
     found.win.setFullScreen(action === 'fullscreen')
     return true

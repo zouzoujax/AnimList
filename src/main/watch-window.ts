@@ -9,6 +9,12 @@
  * C'est leur page qui s'affiche, avec leur lecteur : rien n'est extrait, rien
  * n'est contourné. La fenêtre est une fenêtre de navigation, pas un lecteur.
  *
+ * Une fois la page là, la vidéo est démarrée et passée en plein écran. C'est
+ * ce qu'on venait faire — et personne ne clique sur « lecture » pour le
+ * plaisir de cliquer. Rien n'est garanti pour autant : certains lecteurs ne
+ * créent leur `video` qu'après un geste, et aucun code ne peut le donner à
+ * leur place. On renonce alors en silence, la page restant ouverte.
+ *
  * Aucune intégration Node, aucun accès à nos canaux : le préchargement n'expose
  * rien et la fenêtre ne peut rien demander à l'app.
  */
@@ -16,6 +22,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
+import { autostart } from './video-frame'
 
 let win: BrowserWindow | null = null
 
@@ -64,6 +71,8 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
   if (win && !win.isDestroyed() && openedUrl === url && Number.isInteger(episode) && (episode as number) > 0) {
     if (await switchEpisode(win, episode as number)) {
       win.focus()
+      // Le lecteur se recharge derrière le changement : on relance dessus.
+      void autostart(win, true)
       return true
     }
   }
@@ -139,6 +148,10 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
 
   openedUrl = url
   void win.loadURL(url)
+
+  // En arrière-plan : l'appelant n'a pas à attendre qu'une vidéo apparaisse
+  // pour savoir que la fenêtre s'est ouverte.
+  void autostart(win, true)
   return true
 }
 
