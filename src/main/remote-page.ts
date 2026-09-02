@@ -114,6 +114,23 @@ const STYLE = `
   .bar { height: 4px; border-radius: 99px; background: #262a3d; margin-top: 8px; overflow: hidden; }
   .bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
 
+  /* ---- choix de l'épisode ---- */
+  .eps { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .modes { display: flex; gap: 6px; margin-bottom: 10px; }
+  .modes .chip { flex: 1; justify-content: center; }
+  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
+  /* Une case carrée d'au moins quarante-quatre pixels : c'est la taille en
+     dessous de laquelle un pouce vise à côté. */
+  .num {
+    min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    background: var(--panel-2); color: var(--muted);
+    font-size: .82rem; font-weight: 600; font-variant-numeric: tabular-nums;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .num[data-seen='true'] { background: var(--accent-soft); border-color: rgba(124,92,255,.4); color: var(--accent); }
+  .num[data-off='true'] { opacity: .3; }
+  .eps .note { margin-top: 10px; }
+
   /* ---- boutons ---- */
   .acts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
   button {
@@ -258,6 +275,7 @@ const SCRIPT = `
     close: 'M18 6 6 18M6 6l12 12',
     volume: 'M11 5 6 9H3v6h3l5 4zM16 9a4 4 0 0 1 0 6',
     clock: 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
+    list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
     home: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5',
     books: 'M4 4h5v16H4zM11 4h4v16h-4zM17.5 5l3.2 15',
     compass: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM15.5 8.5l-2 5-5 2 2-5z',
@@ -412,6 +430,51 @@ const SCRIPT = `
     }
   }
 
+  /**
+   * Le choix d'épisode, déplié dans la carte de sa série.
+   *
+   * Une seule à la fois : deux grilles ouvertes sur un écran de téléphone, on
+   * ne sait plus laquelle on touche.
+   */
+  var eps = { id: 0, data: null, mode: 'watch' }
+
+  function renderEpisodes(s) {
+    if (eps.id !== s.id) return ''
+    if (!eps.data) return '<div class="eps"><div class="note">Chargement des épisodes…</div></div>'
+
+    var seen = {}
+    eps.data.watched.forEach(function (n) { seen[n] = true })
+    var total = eps.data.total || eps.data.lastAired || 0
+    if (!total) return '<div class="eps"><div class="note">Aucun épisode connu pour cette série.</div></div>'
+
+    var nums = ''
+    for (var n = 1; n <= total; n++) {
+      // Au-delà du dernier diffusé, il n'y a rien à regarder ni à cocher.
+      var off = n > eps.data.lastAired
+      nums += '<button class="num" data-act="ep" data-id="' + s.id + '" data-ep="' + n + '" ' +
+        'data-seen="' + !!seen[n] + '" data-off="' + off + '"' + (off ? ' disabled' : '') + '>' + n + '</button>'
+    }
+
+    // Trois modes annoncés plutôt qu'un appui long : sur un téléphone, un
+    // geste caché n'est pas une fonction, c'est un piège.
+    var MODES = [
+      ['watch', 'Regarder', 'Touche un numéro pour l’ouvrir sur le PC.'],
+      ['tick', 'Cocher', 'Touche un numéro pour le cocher, ou le décocher s’il l’est déjà.'],
+      ['upto', 'Jusqu’ici', 'Touche un numéro pour marquer vus tous les épisodes jusque-là.']
+    ]
+    var modes = MODES.map(function (m) {
+      return '<button class="chip" data-act="epmode" data-mode="' + m[0] + '" aria-pressed="' +
+        (eps.mode === m[0]) + '">' + m[1] + '</button>'
+    }).join('')
+    var hint = (MODES.find(function (m) { return m[0] === eps.mode }) || MODES[0])[2]
+
+    return '<div class="eps">' +
+      '<div class="modes">' + modes + '</div>' +
+      '<div class="nums">' + nums + '</div>' +
+      '<div class="note">' + hint + '</div>' +
+    '</div>'
+  }
+
   /** Les mots de l'app pour chaque statut, employés par la carte et par les filtres. */
   var STATUS = {
     watching: 'En cours',
@@ -460,7 +523,9 @@ const SCRIPT = `
         btn('data-act="watch" data-id="' + s.id + '" data-ep="' + (s.episode || 0) + '"', 'Regarder', 'play', 'ghost') +
         ba +
         btn('data-act="open" data-id="' + s.id + '"', 'Fiche', 'info', 'ghost') +
+        (total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
       '</div>' +
+      renderEpisodes(s) +
     '</div>'
   }
 
@@ -590,6 +655,53 @@ const SCRIPT = `
       return load()
     }
     if (action === 'filter') { filter = el.getAttribute('data-filter'); return load() }
+
+    // Déplier, ou replier si c'était déjà celle-là.
+    if (action === 'eps') {
+      var wanted = Number(el.getAttribute('data-id'))
+      if (eps.id === wanted) { eps = { id: 0, data: null, mode: eps.mode }; return load() }
+      eps = { id: wanted, data: null, mode: eps.mode }
+      load()
+      try {
+        var got = await call('/api/episodes?id=' + wanted)
+        // La grille a pu être refermée, ou une autre ouverte, pendant l'attente.
+        if (eps.id === wanted) { eps.data = got; load() }
+      } catch (err) {
+        say(err.message)
+      }
+      return
+    }
+
+    if (action === 'epmode') { eps.mode = el.getAttribute('data-mode'); return load() }
+
+    if (action === 'ep') {
+      var epId = Number(el.getAttribute('data-id'))
+      var epNo = Number(el.getAttribute('data-ep'))
+      el.disabled = true
+      try {
+        if (eps.mode === 'watch') {
+          renderPlayer((await call('/api/watch', { id: epId, episode: epNo })).player)
+          say('Épisode ' + epNo + ' ouvert sur le PC')
+        } else {
+          var isSeen = el.getAttribute('data-seen') === 'true'
+          await call('/api/tick', {
+            id: epId,
+            episode: epNo,
+            // En mode « cocher », toucher un épisode déjà vu le retire : c'est
+            // le seul moyen de corriger une erreur depuis le téléphone.
+            watched: eps.mode === 'upto' ? true : !isSeen,
+            upTo: eps.mode === 'upto'
+          })
+          say(eps.mode === 'upto' ? 'Vus jusqu’à l’épisode ' + epNo : (isSeen ? 'Épisode ' + epNo + ' décoché' : 'Épisode ' + epNo + ' coché'))
+          eps.data = await call('/api/episodes?id=' + epId)
+        }
+      } catch (err) {
+        say(err.message)
+      } finally {
+        el.disabled = false
+      }
+      return load()
+    }
     if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }
     if (action === 'search') { query = (document.getElementById('q') || {}).value || ''; return load() }
 

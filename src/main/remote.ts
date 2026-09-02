@@ -35,7 +35,7 @@ import { openAnimeSamaEpisode } from './watch-window'
 import { playerCommand, playerState, type PlayerAction } from './playing'
 import { browse, refreshMedia } from './anilist'
 import { getPrefs } from './store'
-import { setEntry, setWatched, snapshot } from './store'
+import { setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
 import { page } from './remote-page'
 
 export interface RemoteStatus {
@@ -215,6 +215,31 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       seriesRows(() => true)
     )
 
+  /**
+   * Les épisodes d'une série, un par un.
+   *
+   * À part du reste : envoyer la liste complète de chaque série ferait passer
+   * des milliers de numéros pour une seule qu'on ouvrira. Elle n'est demandée
+   * qu'au moment où l'on déplie le choix.
+   */
+  if (route === 'episodes') {
+    const id = Number(new URLSearchParams(url.slice(url.indexOf('?') + 1)).get('id'))
+    const data = snapshot()
+    const media = data.media.find((m) => m.id === id)
+    if (!media) return json(res, 404, { error: 'Série inconnue.' })
+
+    const watched = data.history.filter((ev) => ev.animeId === id).map((ev) => ev.episode)
+    return json(res, 200, {
+      id,
+      title: media.title.english ?? media.title.romaji,
+      total: media.episodes ?? 0,
+      watched: [...new Set(watched)].sort((a, b) => a - b),
+      // Le dernier épisode diffusé : au-delà, il n'y a rien à regarder ni à
+      // cocher, et la grille le montre plutôt que de laisser essayer.
+      lastAired: media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
+    })
+  }
+
   if (route === 'discover') {
     const params = new URLSearchParams(url.slice(url.indexOf('?') + 1))
     const search = (params.get('q') ?? '').trim()
@@ -252,7 +277,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   if (req.method !== 'POST') return json(res, 405, { error: 'Méthode refusée.' })
 
-  let body: { id?: number; episode?: number; action?: string; value?: number }
+  let body: { id?: number; episode?: number; action?: string; value?: number; watched?: boolean; upTo?: boolean }
   try {
     body = JSON.parse((await readBody(req)) || '{}') as typeof body
   } catch {
@@ -288,6 +313,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const episode = Number(body.episode)
     if (!Number.isInteger(episode) || episode <= 0) return json(res, 400, { error: 'Épisode inconnu.' })
 
+    // Décocher est toujours permis : c'est la porte de sortie d'une coche
+    // arrivée par un import ou par une diffusion repoussée après coup.
+    const on = body.watched !== false
+
     /**
      * Le refus est ici, pas seulement dans la page.
      *
@@ -297,11 +326,15 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
      */
     const media = snapshot().media.find((m) => m.id === id)
     const already = snapshot().history.some((ev) => ev.animeId === id && ev.episode === episode)
-    if (media && !canTick(media, episode, already)) {
+    if (on && media && !canTick(media, episode, already)) {
       return json(res, 409, { error: `L’épisode ${episode} n’est pas encore sorti.` })
     }
 
-    setWatched(id, episode, true)
+    // « Jusqu'ici » rattrape une saison entière d'un geste, ce qui est la
+    // raison d'être d'une liste d'épisodes sur un téléphone.
+    if (on && body.upTo === true) setWatchedUpTo(id, episode)
+    else setWatched(id, episode, on)
+
     return json(res, 200, await remoteState())
   }
 

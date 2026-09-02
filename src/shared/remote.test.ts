@@ -71,6 +71,7 @@ describe('routeOf', () => {
     expect(routeOf('/api/library')).toBe('library')
     expect(routeOf('/api/discover')).toBe('discover')
     expect(routeOf('/api/add')).toBe('add')
+    expect(routeOf('/api/episodes')).toBe('episodes')
   })
 
   it('tolère une barre en trop', () => {
@@ -101,6 +102,7 @@ describe('needsToken', () => {
     expect(needsToken('library')).toBe(true)
     expect(needsToken('discover')).toBe(true)
     expect(needsToken('add')).toBe(true)
+    expect(needsToken('episodes')).toBe(true)
   })
 
   it('laisse la page se charger : c’est elle qui demande le mot de passe', () => {
