@@ -89,3 +89,18 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
   void win.loadURL(url)
   return true
 }
+
+/**
+ * La fenêtre Anime-Sama, pour qui doit la piloter. `null` si fermée.
+ *
+ * Seules les commandes qui s'adressent à la fenêtre elle-même — plein écran,
+ * fermeture — ont un sens ici : leur lecteur vit dans une iframe d'un autre
+ * domaine, hors d'atteinte.
+ */
+export function watchWindow(): BrowserWindow | null {
+  return win && !win.isDestroyed() ? win : null
+}
+
+export function closeWatchWindow(): void {
+  win?.close()
+}

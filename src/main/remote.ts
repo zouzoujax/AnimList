@@ -32,6 +32,7 @@ import { searchTitles } from '@shared/titles'
 import { resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode } from './watch-window'
+import { playerCommand, playerState, type PlayerAction } from './playing'
 import { setWatched, snapshot } from './store'
 import { page } from './remote-page'
 
@@ -71,7 +72,7 @@ function json(res: ServerResponse, code: number, body: unknown): void {
 }
 
 /** Ce que la télécommande montre : les séries en cours, et où on en est. */
-function remoteState(): unknown {
+async function remoteState(): Promise<unknown> {
   const data = snapshot()
   const media = new Map(data.media.map((m) => [m.id, m]))
 
@@ -108,7 +109,9 @@ function remoteState(): unknown {
   }
 
   rows.sort((a, b) => b.updatedAt - a.updatedAt)
-  return { series: rows }
+  // Ce qui joue en ce moment sur le PC, pour que le téléphone puisse le
+  // piloter sans avoir à demander séparément.
+  return { series: rows, player: await playerState() }
 }
 
 /**
@@ -153,15 +156,34 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (!given || !safeEqual(given, token)) return json(res, 401, { error: 'Mot de passe incorrect.' })
   }
 
-  if (route === 'state') return json(res, 200, remoteState())
+  if (route === 'state') return json(res, 200, await remoteState())
+
+  /**
+   * L'état du lecteur seul.
+   *
+   * Le téléphone le relit toutes les deux secondes pour faire avancer le
+   * curseur : passer par `/api/state` relirait la bibliothèque entière —
+   * entrées, fiches et journal — à ce rythme-là, pour trois nombres.
+   */
+  if (route === 'player') return json(res, 200, { player: await playerState() })
 
   if (req.method !== 'POST') return json(res, 405, { error: 'Méthode refusée.' })
 
-  let body: { id?: number; episode?: number }
+  let body: { id?: number; episode?: number; action?: string; value?: number }
   try {
     body = JSON.parse((await readBody(req)) || '{}') as typeof body
   } catch {
     return json(res, 400, { error: 'Requête illisible.' })
+  }
+
+  if (route === 'control') {
+    const action = String(body.action ?? '') as PlayerAction
+    const allowed: PlayerAction[] = ['play', 'pause', 'seek', 'volume', 'fullscreen', 'windowed', 'close']
+    if (!allowed.includes(action)) return json(res, 400, { error: 'Commande inconnue.' })
+
+    const done = await playerCommand(action, Number(body.value))
+    if (!done) return json(res, 409, { error: 'Rien à piloter, ou commande hors de portée de ce lecteur.' })
+    return json(res, 200, { player: await playerState() })
   }
 
   const id = Number(body.id)
@@ -185,7 +207,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     }
 
     setWatched(id, episode, true)
-    return json(res, 200, remoteState())
+    return json(res, 200, await remoteState())
   }
 
   // Les actions qui touchent la machine plutôt que les données. Toutes

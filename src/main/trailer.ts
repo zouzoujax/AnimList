@@ -56,13 +56,28 @@ let popout: BrowserWindow | null = null
 /** Escapes what could break out of an HTML attribute. */
 const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`).slice(0, 160)
 
-function page(videoId: string, title: string): string {
-  const src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`
+/**
+ * Le pont entre la télécommande et le lecteur de YouTube.
+ *
+ * `enablejsapi=1` ouvre un dialogue par `postMessage` avec le lecteur : on lui
+ * envoie des commandes, il renvoie sa position, sa durée et son volume. C'est
+ * ce qui permet à un téléphone de piloter une vidéo qui joue sur le PC.
+ *
+ * Rien n'est chargé de chez YouTube pour autant : leur bibliothèque
+ * `iframe_api` ferait exactement le même dialogue, en imposant un script tiers
+ * dans une page dont la politique de sécurité n'en autorise aucun.
+ *
+ * L'état est relevé au passage plutôt que demandé : le lecteur émet sa
+ * position en continu dès qu'on s'est déclaré à l'écoute, et le curseur du
+ * téléphone n'a qu'à lire la dernière valeur connue.
+ */
+function page(videoId: string, title: string, nonce: string): string {
+  const src = `https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`
   return `<!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src https://www.youtube-nocookie.com; style-src 'unsafe-inline'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src https://www.youtube-nocookie.com; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'">
 <title>${title}</title>
 <style>
   html, body { margin: 0; height: 100%; background: #000; overflow: hidden }
@@ -70,7 +85,47 @@ function page(videoId: string, title: string): string {
 </style>
 </head>
 <body>
-<iframe src="${src}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="${title}"></iframe>
+<iframe id="p" src="${src}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen title="${title}"></iframe>
+<script nonce="${nonce}">
+  var frame = document.getElementById('p')
+  var state = { position: 0, duration: 0, volume: 100, muted: false, playing: true }
+
+  function send(func, args) {
+    frame.contentWindow.postMessage(JSON.stringify({ event: 'command', func: func, args: args || [] }), '*')
+  }
+
+  // Se déclarer à l'écoute : sans ça le lecteur n'émet rien, et la position
+  // resterait inconnue.
+  frame.addEventListener('load', function () {
+    frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), '*')
+  })
+
+  window.addEventListener('message', function (e) {
+    if (typeof e.data !== 'string') return
+    var msg
+    try { msg = JSON.parse(e.data) } catch (err) { return }
+    var info = msg && msg.info
+    if (!info) return
+    if (typeof info.currentTime === 'number') state.position = info.currentTime
+    if (typeof info.duration === 'number' && info.duration > 0) state.duration = info.duration
+    if (typeof info.volume === 'number') state.volume = info.volume
+    if (typeof info.muted === 'boolean') state.muted = info.muted
+    // 1 = en lecture, 2 = en pause. Le reste — mise en mémoire tampon, fin —
+    // ne dit rien de l'intention de l'utilisateur.
+    if (info.playerState === 1) state.playing = true
+    if (info.playerState === 2) state.playing = false
+  })
+
+  window.__player = function () { return state }
+  window.__cmd = function (action, value) {
+    if (action === 'play') { send('playVideo'); state.playing = true }
+    else if (action === 'pause') { send('pauseVideo'); state.playing = false }
+    else if (action === 'seek') { send('seekTo', [value, true]); state.position = value }
+    else if (action === 'volume') { send('setVolume', [value]); state.volume = value; if (value > 0) send('unMute') }
+    else return false
+    return true
+  }
+</script>
 </body>
 </html>`
 }
@@ -91,8 +146,9 @@ async function ensureServer(): Promise<boolean> {
     }
 
     const title = escapeHtml(new URLSearchParams(query).get('t') ?? 'Bande-annonce')
+    // Un nonce par page : le script est le nôtre, et lui seul peut s'exécuter.
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' })
-    res.end(page(videoId, title))
+    res.end(page(videoId, title, randomUUID()))
   })
 
   port = await new Promise<number>((resolve, reject) => {
@@ -174,6 +230,11 @@ export async function openTrailerWindow(parent: BrowserWindow, videoId: string, 
 
 export function closeTrailerWindow(): void {
   popout?.close()
+}
+
+/** La fenêtre de bande-annonce, pour qui doit la piloter. `null` si fermée. */
+export function trailerWindow(): BrowserWindow | null {
+  return popout && !popout.isDestroyed() ? popout : null
 }
 
 /** Releases the port when the app quits. */

@@ -63,7 +63,7 @@ export function tokenFrom(url: string, header: string | null | undefined): strin
   return new URLSearchParams(url.slice(at + 1)).get('t')
 }
 
-export type RemoteRoute = 'page' | 'state' | 'tick' | 'open' | 'watch' | 'trailer' | 'unknown'
+export type RemoteRoute = 'page' | 'state' | 'tick' | 'open' | 'watch' | 'trailer' | 'control' | 'player' | 'unknown'
 
 /**
  * Ce que demande une adresse.
@@ -85,6 +85,10 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'watch'
     case '/api/trailer':
       return 'trailer'
+    case '/api/control':
+      return 'control'
+    case '/api/player':
+      return 'player'
     default:
       return 'unknown'
   }

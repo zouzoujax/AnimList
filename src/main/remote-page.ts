@@ -36,6 +36,19 @@ const STYLE = `
   .err { color:#ff8f8f; }
   form { display:flex; gap:8px; margin-top:20px; }
   input { flex:1; font:inherit; padding:11px 12px; border-radius:12px; border:1px solid var(--line); background:var(--panel); color:var(--text); }
+  .player { position:sticky; top:0; z-index:5; background:#161927; border:1px solid var(--line); border-radius:16px; padding:12px; margin-bottom:14px; }
+  .player .now { font-weight:600; font-size:.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .player .kind { color:var(--muted); font-size:.72rem; margin-top:2px; }
+  .player .line { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .player .time { color:var(--muted); font-size:.72rem; font-variant-numeric:tabular-nums; flex:none; }
+  /* Une piste haute : on la vise au pouce, pas à la souris. */
+  input[type=range] { flex:1; -webkit-appearance:none; appearance:none; height:26px; background:transparent; }
+  input[type=range]::-webkit-slider-runnable-track { height:6px; border-radius:99px; background:#2a2e42; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; margin-top:-7px; border-radius:50%; background:var(--accent); }
+  .player .btns { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+  .player .btns button { flex:1 1 auto; min-width:72px; }
+  .vol { display:flex; align-items:center; gap:8px; margin-top:4px; }
+  .vol span { color:var(--muted); font-size:.72rem; flex:none; }
   .flash { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:var(--accent); color:#fff; padding:10px 16px; border-radius:999px; font-size:.85rem; font-weight:600; opacity:0; transition:opacity .2s; pointer-events:none; }
   .flash.on { opacity:1; }
 `
@@ -112,11 +125,99 @@ const SCRIPT = `
     return 'dans ' + Math.max(1, Math.floor(left / 60000)) + ' min'
   }
 
+  var playerEl = document.getElementById('player')
+  // Vrai pendant qu'on fait glisser : sinon le rafraîchissement remettrait le
+  // curseur là où la vidéo en est, et il sauterait sous le doigt.
+  var dragging = false
+
+  function mmss(total) {
+    total = Math.max(0, Math.floor(total || 0))
+    var s = total % 60, m = Math.floor(total / 60) % 60, h = Math.floor(total / 3600)
+    var mm = h > 0 ? String(m).padStart(2, '0') : String(m)
+    return (h > 0 ? h + ':' : '') + mm + ':' + String(s).padStart(2, '0')
+  }
+
+  function btn(action, label, klass) {
+    return '<button class="' + klass + '" data-act="' + action + '">' + label + '</button>'
+  }
+
+  // Un seul écouteur pour toute la barre, posé une fois.
+  playerEl.addEventListener('click', function (e) {
+    var button = e.target.closest ? e.target.closest('[data-act]') : null
+    if (!button) return
+    button.disabled = true
+    send(button.getAttribute('data-act'), 0).then(function () { button.disabled = false })
+  })
+
+  function renderPlayer(p) {
+    if (!p) { playerEl.innerHTML = ''; return }
+    if (dragging) return
+
+    var seek = p.canSeek && p.duration > 0
+      ? '<div class="line">' +
+          '<span class="time">' + mmss(p.position) + '</span>' +
+          '<input type="range" id="seek" min="0" max="' + Math.floor(p.duration) + '" value="' + Math.floor(p.position) + '">' +
+          '<span class="time">' + mmss(p.duration) + '</span>' +
+        '</div>' +
+        '<div class="vol"><span>Volume</span>' +
+          '<input type="range" id="vol" min="0" max="100" value="' + Math.round(p.volume) + '"></div>'
+      : ''
+
+    // Un lecteur hors d'atteinte le dit, au lieu d'afficher des boutons muets.
+    var kind = p.kind === 'trailer'
+      ? 'Bande-annonce'
+      : 'Anime-Sama · leur lecteur ne se pilote pas d’ici, seulement la fenêtre'
+
+    playerEl.innerHTML =
+      '<div class="player">' +
+        '<div class="now">' + esc(p.title) + '</div>' +
+        '<div class="kind">' + kind + '</div>' +
+        seek +
+        // Les boutons portent leur commande en attribut et un seul
+        // écouteur les sert tous : c'est plus court, et surtout ça évite
+        // d'imbriquer des guillemets dans un gabarit qui les mange.
+        '<div class="btns">' +
+          (p.canSeek ? btn(p.playing ? 'pause' : 'play', p.playing ? 'Pause' : 'Lecture', '') : '') +
+          btn(p.fullscreen ? 'windowed' : 'fullscreen', p.fullscreen ? 'Fenêtre' : 'Plein écran', 'ghost') +
+          btn('close', 'Fermer', 'ghost') +
+        '</div>' +
+      '</div>'
+
+    var seekEl = document.getElementById('seek')
+    if (seekEl) {
+      seekEl.addEventListener('input', function () { dragging = true })
+      seekEl.addEventListener('change', function () {
+        dragging = false
+        send('seek', Number(seekEl.value))
+      })
+    }
+    var volEl = document.getElementById('vol')
+    if (volEl) {
+      volEl.addEventListener('input', function () { dragging = true })
+      volEl.addEventListener('change', function () {
+        dragging = false
+        send('volume', Number(volEl.value))
+      })
+    }
+  }
+
+  async function send(action, value) {
+    try {
+      var res = await call('/api/control', { action: action, value: value })
+      renderPlayer(res.player)
+    } catch (err) {
+      say(err.message)
+      load()
+    }
+  }
+
   function render(state) {
+    renderPlayer(state.player)
     if (!state.series.length) {
       app.innerHTML = '<div class="empty">Rien en cours.<br>Commence une série sur le PC, elle apparaîtra ici.</div>'
       return
     }
+
     app.innerHTML = state.series.map((s) => {
       const total = s.total ? ' sur ' + s.total : ''
       // Un épisode à venir ne se coche pas : le bouton est éteint et la ligne
@@ -212,8 +313,13 @@ const SCRIPT = `
   }
 
   load()
-  // La bibliothèque bouge aussi depuis le PC : on relit de temps en temps.
+  // La bibliothèque bouge lentement ; une vidéo qui joue, non. Deux rythmes :
+  // la liste toutes les vingt secondes, la position toutes les deux.
   setInterval(load, 20000)
+  setInterval(async function () {
+    if (dragging || !playerEl.innerHTML) return
+    try { renderPlayer((await call('/api/player')).player) } catch (err) { /* rien à dire */ }
+  }, 2000)
 `
 
 /** Le HTML complet, monté d'un bloc. */
@@ -230,6 +336,7 @@ export function page(): string {
 <body>
 <h1>AnimeList</h1>
 <p class="sub">Ce qu'il te reste à reprendre</p>
+<div id="player"></div>
 <div id="app"><div class="empty">Chargement…</div></div>
 <div class="flash" id="flash"></div>
 <script>${SCRIPT}</script>
