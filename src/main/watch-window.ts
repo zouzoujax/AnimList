@@ -19,10 +19,54 @@ import { ORIGIN } from './animesama'
 
 let win: BrowserWindow | null = null
 
-export function openAnimeSamaEpisode(url: string, episode: number | null): boolean {
+/** L'adresse actuellement ouverte, pour savoir si un changement suffit. */
+let openedUrl = ''
+
+/**
+ * Change d'épisode dans la page déjà ouverte.
+ *
+ * Leur page porte un `<select id="selectEpisodes">` dont le `onchange` appelle
+ * leur propre `selectEpisode()`. Le choisir, c'est exactement le geste d'un
+ * visiteur — on ne contourne rien, on actionne leur sélecteur.
+ *
+ * Recréer la fenêtre marchait aussi, et c'est ce qui se passait : tout le site
+ * se rechargeait à chaque épisode, publicités comprises, avec le clignotement
+ * que ça suppose. Rend faux si le sélecteur n'est pas là — page pas encore
+ * chargée, ou mise en page changée — et l'appelant repart alors de zéro.
+ */
+async function switchEpisode(target: BrowserWindow, episode: number): Promise<boolean> {
+  const script = `(function () {
+    var sel = document.getElementById('selectEpisodes')
+    if (!sel || !sel.options || !sel.options.length) return false
+    var want = 'EPISODE ' + ${episode}
+    for (var i = 0; i < sel.options.length; i++) {
+      if ((sel.options[i].textContent || '').trim().toUpperCase() === want) {
+        sel.selectedIndex = i
+        sel.dispatchEvent(new Event('change'))
+        return true
+      }
+    }
+    return false
+  })()`
+
+  const done: unknown = await target.webContents.executeJavaScript(script, true).catch(() => false)
+  return done === true
+}
+
+export async function openAnimeSamaEpisode(url: string, episode: number | null): Promise<boolean> {
   // Une seule origine acceptée : cette fenêtre n'est pas un navigateur à tout
   // faire, et une URL venue d'ailleurs n'a rien à y faire.
   if (!url.startsWith(`${ORIGIN}/`)) return false
+
+  // Même saison déjà à l'écran : on ne recharge pas le site pour changer de
+  // numéro. C'est la différence entre un clic dans un menu et une visite
+  // entière, publicités comprises.
+  if (win && !win.isDestroyed() && openedUrl === url && Number.isInteger(episode) && (episode as number) > 0) {
+    if (await switchEpisode(win, episode as number)) {
+      win.focus()
+      return true
+    }
+  }
 
   const args = Number.isInteger(episode) && (episode as number) > 0 ? [`--animelist-episode=${episode}`] : []
 
@@ -66,6 +110,7 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
 
   win.on('closed', () => {
     win = null
+    openedUrl = ''
   })
 
   /**
@@ -92,6 +137,7 @@ export function openAnimeSamaEpisode(url: string, episode: number | null): boole
     if (!target.startsWith(`${ORIGIN}/`)) event.preventDefault()
   })
 
+  openedUrl = url
   void win.loadURL(url)
   return true
 }

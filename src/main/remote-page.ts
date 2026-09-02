@@ -510,6 +510,20 @@ const SCRIPT = `
       ? btn('data-act="trailer" data-id="' + s.id + '"', 'Bande-annonce', 'film', 'ghost')
       : ''
 
+    /**
+     * « Regarder » lance l'épisode suivant quand il y en a un à lancer.
+     *
+     * Quand il n'y en a pas — tout est vu, ou le suivant n'est pas encore
+     * sorti — le bouton ouvre la liste plutôt que de ne rien faire : c'est
+     * exactement le moment où l'on veut choisir soi-même.
+     */
+    var lancable = s.episode !== null && !s.unaired
+    var regarder = lancable
+      ? btn('data-act="watch" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Regarder', 'play', 'ghost')
+      : total
+        ? btn('data-act="eps" data-id="' + s.id + '"', 'Choisir', 'play', 'ghost')
+        : ''
+
     return '<div class="card">' +
       '<div class="row">' +
         '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
@@ -519,11 +533,9 @@ const SCRIPT = `
           (total ? '<div class="bar"><i style="width:' + done + '%"></i></div>' : '') +
         '</div>' +
       '</div>' +
-      '<div class="acts">' + first +
-        btn('data-act="watch" data-id="' + s.id + '" data-ep="' + (s.episode || 0) + '"', 'Regarder', 'play', 'ghost') +
-        ba +
+      '<div class="acts">' + first + regarder + ba +
         btn('data-act="open" data-id="' + s.id + '"', 'Fiche', 'info', 'ghost') +
-        (total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
+        (lancable && total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
       '</div>' +
       renderEpisodes(s) +
     '</div>'
@@ -682,6 +694,8 @@ const SCRIPT = `
         if (eps.mode === 'watch') {
           renderPlayer((await call('/api/watch', { id: epId, episode: epNo })).player)
           say('Épisode ' + epNo + ' ouvert sur le PC')
+          // La grille se replie : le choix est fait, elle n'a plus rien à dire.
+          eps = { id: 0, data: null, mode: eps.mode }
         } else {
           var isSeen = el.getAttribute('data-seen') === 'true'
           await call('/api/tick', {

@@ -369,7 +369,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     // ailleurs on ouvre la page telle quelle plutôt que de viser à côté.
     const episode = Number(body.episode)
     const at = target.episodes && Number.isInteger(episode) && episode > 0 ? episode : null
-    const opened = openAnimeSamaEpisode(target.url, at)
+    const opened = await openAnimeSamaEpisode(target.url, at)
     if (!opened) return json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
     launched = { title: media.title.english ?? media.title.romaji, cover: media.cover.large, episode: at }
     return json(res, 200, { player: await nowPlaying() })
