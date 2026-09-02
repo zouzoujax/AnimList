@@ -8,6 +8,7 @@
 
 import { BookOpen, ExternalLink } from 'lucide-react'
 import type { Manga } from '@shared/types'
+import { ORIGIN_HINTS, ORIGIN_LABELS } from '@shared/origin'
 import { Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 
@@ -26,8 +27,12 @@ export function MangaSheet({ manga, onClose }: { manga: Manga; onClose: () => vo
       <div className="flex gap-4 border-b p-5" style={{ borderColor: 'var(--line)' }}>
         <Poster src={manga.cover.xl} alt="" className="h-[168px] w-[116px] shrink-0" rounded="rounded-[14px]" />
         <div className="min-w-0 flex-1">
-          <p className="label" style={{ color: rgba(glow, 1) }}>
-            {MANGA_STATUS[manga.status ?? ''] ?? 'Manga'}
+          {/* L'origine avant le statut : c'est elle qui dit ce qu'on s'apprête
+              à lire — un manhwa se lit en couleur et se défile, un manga se
+              tourne de droite à gauche. */}
+          <p className="label" style={{ color: rgba(glow, 1) }} title={ORIGIN_HINTS[manga.origin]}>
+            {ORIGIN_LABELS[manga.origin]}
+            {manga.status && MANGA_STATUS[manga.status] ? ` · ${MANGA_STATUS[manga.status]}` : ''}
           </p>
           <h2 className="title-xl mt-1 text-[1.3rem] leading-tight">{manga.title.english ?? manga.title.romaji}</h2>
           {manga.title.native && <p className="mt-0.5 text-[0.78rem] text-faint">{manga.title.native}</p>}

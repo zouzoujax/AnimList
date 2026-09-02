@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
 import { applyBudget } from '@shared/cache-budget'
+import { originOf } from '@shared/origin'
 import { matchStreamEpisodes } from '@shared/stream-episodes'
 import { createQueue, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
@@ -400,6 +401,8 @@ export function currentSeason(date = new Date()): { season: SeasonName; year: nu
 const MANGA_FIELDS = `
   id
   title { romaji english native }
+  countryOfOrigin
+  format
   coverImage { large extraLarge color }
   bannerImage
   description(asHtml: false)
@@ -414,16 +417,33 @@ const MANGA_FIELDS = `
   staff(perPage: 2, sort: [RELEVANCE]) { nodes { name { full } } }`
 
 const MANGA_QUERY = `
-query Manga($page: Int, $perPage: Int, $sort: [MediaSort], $search: String, $genre: String, $isAdult: Boolean) {
+query Manga(
+  $page: Int
+  $perPage: Int
+  $sort: [MediaSort]
+  $search: String
+  $genre: String
+  $isAdult: Boolean
+  $country: CountryCode
+) {
   Page(page: $page, perPage: $perPage) {
     pageInfo { currentPage hasNextPage total }
-    media(type: MANGA, sort: $sort, search: $search, genre: $genre, isAdult: $isAdult) { ${MANGA_FIELDS} }
+    media(
+      type: MANGA
+      sort: $sort
+      search: $search
+      genre: $genre
+      isAdult: $isAdult
+      countryOfOrigin: $country
+    ) { ${MANGA_FIELDS} }
   }
 }`
 
 interface RawManga {
   id: number
   title: { romaji: string; english: string | null; native: string | null }
+  countryOfOrigin: string | null
+  format: string | null
   coverImage: { large: string; extraLarge: string | null; color: string | null }
   bannerImage: string | null
   description: string | null
@@ -461,6 +481,9 @@ function toManga(m: RawManga): Manga {
     averageScore: m.averageScore,
     popularity: m.popularity ?? 0,
     startYear: m.startDate?.year ?? null,
+    // AniList range manga, manhwa et manhua sous le même format ; seul le pays
+    // les distingue, et sept titres sur huit en tendance sont coréens.
+    origin: originOf(m.countryOfOrigin, m.format),
     staff: (m.staff?.nodes ?? []).map((n) => n.name.full),
     siteUrl: m.siteUrl
   }
@@ -471,14 +494,16 @@ export async function mangas(
   page: number,
   search: string,
   genre: string | undefined,
-  showAdult: boolean
+  showAdult: boolean,
+  country?: string
 ): Promise<Paged<Manga>> {
   const vars: Record<string, unknown> = { page, perPage: 30, sort: MANGA_SORTS[kind] }
   if (kind === 'search' && search) vars.search = search
   if (genre) vars.genre = genre
+  if (country) vars.country = country
   if (!showAdult) vars.isAdult = false
 
-  const key = `manga:${kind}:${page}:${search}:${genre ?? ''}:${showAdult}`
+  const key = `manga:${kind}:${page}:${search}:${genre ?? ''}:${country ?? ''}:${showAdult}`
   const ttl = kind === 'search' ? TTL.search : TTL.list
   const { data, stale } = await cached(key, ttl, () =>
     request<{ Page: { pageInfo: PageInfo; media: RawManga[] } }>(MANGA_QUERY, vars, 'interactive', key)

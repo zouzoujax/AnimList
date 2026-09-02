@@ -136,8 +136,10 @@ export function registerIpc(): void {
     anilist.recommended(seeds, exclude, getPrefs().showAdult)
   )
   ipcMain.handle('anime:for-you', () => forYou())
-  ipcMain.handle('manga:browse', (_e, kind: MangaKind, page: number, search: string, genre?: string) =>
-    anilist.mangas(kind, page, search, genre, getPrefs().showAdult)
+  ipcMain.handle(
+    'manga:browse',
+    (_e, kind: MangaKind, page: number, search: string, genre?: string, country?: string) =>
+      anilist.mangas(kind, page, search, genre, getPrefs().showAdult, country)
   )
   ipcMain.handle('manga:detail', (_e, id: number) => anilist.mangaById(id))
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))

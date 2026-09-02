@@ -1,4 +1,5 @@
 import type { ReleaseNote } from './release-notes'
+import type { MangaOrigin } from './origin'
 import type { TasteFacet } from './taste'
 export type MediaFormat = 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC'
 export type MediaStatus = 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED' | 'HIATUS'
@@ -344,6 +345,13 @@ export interface Manga {
   averageScore: number | null
   popularity: number
   startYear: number | null
+  /**
+   * Manga, manhwa ou manhua.
+   *
+   * Déduit du pays d'origine : AniList les range tous sous le même format,
+   * alors que ce ne sont ni les mêmes objets ni le même sens de lecture.
+   */
+  origin: MangaOrigin
   /** Auteurs et dessinateurs, dans cet ordre. */
   staff: string[]
   siteUrl: string

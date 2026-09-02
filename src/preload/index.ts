@@ -106,8 +106,9 @@ const api = {
   },
   manga: {
     /** Le catalogue manga d'AniList. Lecture seule : rien n'est suivi. */
-    browse: (kind: MangaKind, page: number, search: string, genre?: string): Promise<Paged<Manga>> =>
-      ipcRenderer.invoke('manga:browse', kind, page, search, genre),
+    /** `country` est un code à deux lettres : JP pour un manga, KR pour un manhwa. */
+    browse: (kind: MangaKind, page: number, search: string, genre?: string, country?: string): Promise<Paged<Manga>> =>
+      ipcRenderer.invoke('manga:browse', kind, page, search, genre, country),
     /** La fiche d'un manga seul, quand on arrive depuis la relation d'un anime. */
     detail: (id: number): Promise<Manga> => ipcRenderer.invoke('manga:detail', id)
   },

@@ -7,6 +7,11 @@
  * répond déjà à la question qu'on se pose le plus souvent : « ça continue en
  * manga, et où j'en serais ? »
  *
+ * Manga, manhwa et manhua sont séparés, parce qu'AniList ne les sépare pas :
+ * il les range tous sous le même format, et sept des huit titres en tendance
+ * sont en réalité coréens. Ce ne sont pourtant ni les mêmes objets ni le même
+ * sens de lecture — l'annoncer évite d'ouvrir autre chose que ce qu'on croyait.
+ *
  * Rien n'est écrit dans la bibliothèque depuis cette page.
  */
 
@@ -14,6 +19,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { Flame, Search, Star, TrendingUp, X } from 'lucide-react'
 import type { Manga, MangaKind } from '@shared/types'
+import { ORIGIN_FILTERS, ORIGIN_HINTS, ORIGIN_LABELS, type MangaOrigin } from '@shared/origin'
 import { MANGA_STATUS, MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, PosterSkeletons, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
@@ -40,8 +46,15 @@ function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: (
       <p className="clamp-2 mt-2 text-[0.815rem] font-semibold leading-snug">
         {manga.title.english ?? manga.title.romaji}
       </p>
-      <p className="mt-0.5 text-[0.7rem] text-faint">
-        {manga.chapters ? `${manga.chapters} chapitres` : (MANGA_STATUS[manga.status ?? ''] ?? '—')}
+      <p className="mt-0.5 text-[0.7rem] text-faint" title={ORIGIN_HINTS[manga.origin]}>
+        <span style={{ color: 'var(--accent-2)' }}>{ORIGIN_LABELS[manga.origin]}</span>
+        {/* Le nombre de chapitres quand il est connu, le statut sinon : une
+            série en cours n'en annonce aucun, et la ligne resterait vide. */}
+        {manga.chapters
+          ? ` · ${manga.chapters} ch.`
+          : MANGA_STATUS[manga.status ?? '']
+            ? ` · ${MANGA_STATUS[manga.status ?? '']}`
+            : ''}
         {manga.startYear ? ` · ${manga.startYear}` : ''}
       </p>
       {manga.averageScore !== null && (
@@ -55,13 +68,16 @@ function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: (
 
 export default function MangaPage(): React.JSX.Element {
   const [tab, setTab] = useState<MangaKind>('trending')
+  // `null` : les trois traditions mélangées, comme AniList les sert.
+  const [origin, setOrigin] = useState<MangaOrigin | null>(null)
   const [search, setSearch] = useState('')
   const debounced = useDebounced(search.trim(), 380)
   const [open, setOpen] = useState<Manga | null>(null)
 
   const searching = debounced.length >= 2
   const kind: MangaKind = searching ? 'search' : tab
-  const key = `${kind}:${searching ? debounced : ''}`
+  const country = ORIGIN_FILTERS.find((f) => f.id === origin)?.country
+  const key = `${kind}:${searching ? debounced : ''}:${country ?? ''}`
 
   const [loadingMore, setLoadingMore] = useState(false)
   const [held, setHeld] = useState<{
@@ -75,7 +91,7 @@ export default function MangaPage(): React.JSX.Element {
   useEffect(() => {
     let alive = true
     void window.api.manga
-      .browse(kind, 1, searching ? debounced : '')
+      .browse(kind, 1, searching ? debounced : '', undefined, country)
       .then(
         (res) => alive && setHeld({ key, items: res.items, hasMore: res.pageInfo.hasNextPage, page: 1, error: null })
       )
@@ -84,7 +100,7 @@ export default function MangaPage(): React.JSX.Element {
       alive = false
     }
     // La clé porte la requête entière ; le reste n'est là que pour la composer.
-  }, [key, kind, debounced, searching])
+  }, [key, kind, debounced, searching, country])
 
   const fresh = held.key === key
   const items = fresh ? held.items : []
@@ -96,7 +112,7 @@ export default function MangaPage(): React.JSX.Element {
     const next = held.page + 1
     setLoadingMore(true)
     void window.api.manga
-      .browse(kind, next, searching ? debounced : '')
+      .browse(kind, next, searching ? debounced : '', undefined, country)
       .then((res) => {
         // La page suivante n'appartient qu'à la requête qui l'a demandée : un
         // onglet changé entre-temps la rendrait absurde.
@@ -120,7 +136,8 @@ export default function MangaPage(): React.JSX.Element {
     <div className="page">
       <h1 className="title-xl mb-1 text-[1.85rem]">Manga</h1>
       <p className="mb-6 text-[0.85rem] text-muted">
-        Le catalogue AniList, pour lire ce qui prolonge une série. Rien n’est suivi ici : cette page se consulte.
+        Le catalogue AniList, pour lire ce qui prolonge une série. Manga, manhwa et manhua sont distingués — AniList les
+        mélange. Rien n’est suivi ici : cette page se consulte.
       </p>
 
       <div className="glass sticky top-0 z-20 mb-7 rounded-[20px] p-3 backdrop-blur-xl">
@@ -160,6 +177,25 @@ export default function MangaPage(): React.JSX.Element {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* La distinction qu'AniList ne fait pas. Survolez pour savoir ce que
+            chaque mot recouvre : le sens de lecture n'est pas le même. */}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+          <button data-on={origin === null} className="chip" onClick={() => setOrigin(null)}>
+            Tout
+          </button>
+          {ORIGIN_FILTERS.map((filter) => (
+            <button
+              key={filter.id}
+              data-on={origin === filter.id}
+              className="chip"
+              title={ORIGIN_HINTS[filter.id]}
+              onClick={() => setOrigin(origin === filter.id ? null : filter.id)}
+            >
+              {ORIGIN_LABELS[filter.id]}
+            </button>
+          ))}
         </div>
       </div>
 
