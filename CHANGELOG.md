@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.3.17 — 2 septembre 2026
+
+### Modifications
+
+- Le catalogue manga s'arrêtait aux trente premiers titres, sur les trois onglets comme dans la recherche : il se déroule maintenant tout seul en descendant, comme « Découvrir » et les pages de studio
+
 ## 0.3.16 — 2 septembre 2026
 
 ### Corrections
