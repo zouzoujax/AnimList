@@ -9,16 +9,26 @@
  * Quand Chromium n'arrive pas à décoder — du HEVC, un conteneur exotique — le
  * lecteur ne montre pas un carré noir : il le dit et propose le lecteur du
  * système, qui lui saura le lire.
+ *
+ * Il retient aussi où on s'est arrêté, et rouvre le fichier à cette
+ * seconde-là. La position part sur le disque toutes les cinq secondes et à la
+ * fermeture : fermer la fenêtre est le geste normal, ce n'est pas à
+ * l'utilisateur de penser à sauvegarder sa place. Elle est effacée dès que
+ * l'épisode est coché — il n'y a plus rien à reprendre.
  */
 
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { ExternalLink, TriangleAlert, X } from 'lucide-react'
+import { ExternalLink, RotateCcw, TriangleAlert, X } from 'lucide-react'
 import type { LocalEpisode } from '@shared/types'
+import { clock } from '@shared/playback'
 import { useApp } from '../store/app'
 
 /** Assez tard pour que ce soit vu, assez tôt pour ne pas dépendre du générique. */
 const WATCHED_AT = 0.9
+
+/** Assez souvent pour ne rien perdre d'une coupure, assez rare pour ne rien coûter. */
+const SAVE_EVERY_MS = 5000
 
 export default function Player({
   file,
@@ -38,6 +48,50 @@ export default function Player({
   const [failed, setFailed] = useState(!file.playable)
   const ticked = useRef(false)
 
+  /**
+   * Dernière position connue, hors du rendu.
+   *
+   * Elle change quatre fois par seconde : en faire un état ferait repeindre le
+   * lecteur pour rien. La fermeture la relit telle quelle.
+   */
+  const mark = useRef<{ at: number; duration: number }>({ at: 0, duration: 0 })
+  const savedAt = useRef(0)
+  const [resumed, setResumed] = useState<number | null>(null)
+
+  /**
+   * Enregistre la place au démontage.
+   *
+   * C'est le seul chemin fiable : fermer, changer d'épisode ou quitter l'app
+   * passent tous par là, alors qu'aucun d'eux ne prévient la vidéo.
+   */
+  useEffect(() => {
+    const path = file.path
+    return () => {
+      const { at, duration } = mark.current
+      if (duration > 0) void window.api.videos.remember(path, at, duration)
+    }
+  }, [file.path])
+
+  /** Reprend là où on s'était arrêté, une fois la durée connue. */
+  const onLoaded = (): void => {
+    const el = video.current
+    if (!el) return
+    mark.current = { at: el.currentTime, duration: el.duration || 0 }
+    if (file.resumeAt === null || file.resumeAt <= 0) return
+    // Une reprise au-delà de la fin ne rouvrirait que du noir.
+    if (el.duration && file.resumeAt >= el.duration) return
+    el.currentTime = file.resumeAt
+    setResumed(file.resumeAt)
+  }
+
+  /** Reprendre du début : on efface la place plutôt que de la garder en fond. */
+  const restart = (): void => {
+    const el = video.current
+    if (el) el.currentTime = 0
+    setResumed(null)
+    void window.api.videos.forgetPosition(file.path)
+  }
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
@@ -53,9 +107,22 @@ export default function Player({
 
   const onTime = (): void => {
     const el = video.current
-    if (!el || ticked.current || watched || file.episode === null) return
+    if (!el) return
+
+    mark.current = { at: el.currentTime, duration: el.duration || 0 }
+    const now = Date.now()
+    if (el.duration && now - savedAt.current > SAVE_EVERY_MS) {
+      savedAt.current = now
+      void window.api.videos.remember(file.path, el.currentTime, el.duration)
+    }
+
+    if (ticked.current || watched || file.episode === null) return
     if (!el.duration || el.currentTime / el.duration < WATCHED_AT) return
     ticked.current = true
+    // L'épisode est vu : il n'y a plus de place à garder, et le démontage ne
+    // doit pas la réécrire derrière nous.
+    mark.current = { at: 0, duration: 0 }
+    void window.api.videos.forgetPosition(file.path)
     void toggleEpisode(animeId, file.episode).then(() => toast(`Épisode ${file.episode} coché`, 'ok'))
   }
 
@@ -97,6 +164,12 @@ export default function Player({
             </p>
             <p className="truncate text-[0.7rem] text-white/45">{file.name}</p>
           </div>
+          {resumed !== null && (
+            <button className="btn" onClick={restart} title="Repartir du début de l’épisode">
+              <RotateCcw size={14} />
+              Repris à {clock(resumed)}
+            </button>
+          )}
           <button className="btn" onClick={openOutside} title="Ouvrir dans le lecteur du système">
             <ExternalLink size={14} />
             Lecteur système
@@ -136,6 +209,7 @@ export default function Player({
               controls
               autoPlay
               onTimeUpdate={onTime}
+              onLoadedMetadata={onLoaded}
               onError={() => setFailed(true)}
               /* `object-contain` plutôt qu'un simple maximum : une vidéo plus
                  petite que la fenêtre restait à sa taille d'origine, perdue au

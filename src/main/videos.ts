@@ -29,7 +29,8 @@ import {
   srtToVtt,
   subtitleTwin
 } from '@shared/episode-files'
-import { allFolders, getFolder, setFolder } from './store'
+import { resumePoint } from '@shared/playback'
+import { allFolders, clearPosition, getFolder, positionsFor, setPosition, setFolder } from './store'
 
 export const MEDIA_SCHEME = 'animelist-media'
 
@@ -83,6 +84,7 @@ export async function scanFolder(animeId: number): Promise<LocalFolder | null> {
 
   const paths = await filesUnder(folder)
   const names = paths.map((p) => p.slice(p.lastIndexOf(sep) + 1))
+  const held = positionsFor(paths)
 
   const episodes: LocalEpisode[] = paths
     .filter((p) => isVideo(p))
@@ -95,6 +97,7 @@ export async function scanFolder(animeId: number): Promise<LocalFolder | null> {
       )
       const twin = subtitleTwin(name, sameDir)
       const dir = path.slice(0, path.lastIndexOf(sep))
+      const pos = held[path]
       return {
         episode: episodeFromName(name),
         name,
@@ -102,7 +105,9 @@ export async function scanFolder(animeId: number): Promise<LocalFolder | null> {
         url: mediaUrl(path),
         playable: PLAYABLE_EXTENSIONS.includes(extensionOf(name)),
         subtitleUrl: twin ? mediaUrl(join(dir, twin), true) : null,
-        size: statSync(path).size
+        size: statSync(path).size,
+        resumeAt: resumePoint(pos),
+        duration: pos?.duration ?? null
       }
     })
     .sort((a, b) => (a.episode ?? 1e9) - (b.episode ?? 1e9) || a.name.localeCompare(b.name))
@@ -124,6 +129,26 @@ export async function chooseFolder(animeId: number): Promise<LocalFolder | null>
 
 export function forgetFolder(animeId: number): void {
   setFolder(animeId, null)
+}
+
+/**
+ * Retient où en est la lecture d'un fichier.
+ *
+ * Le chemin passe par le même contrôle que la lecture elle-même : la fenêtre
+ * ne doit pas pouvoir faire écrire une ligne pour un fichier qu'elle n'a pas
+ * le droit de lire.
+ */
+export function rememberPosition(path: string, at: number, duration: number): boolean {
+  if (!isAllowed(path)) return false
+  setPosition(path, at, duration)
+  return true
+}
+
+/** Oublie la reprise : l'épisode est fini, ou on veut le reprendre du début. */
+export function forgetPosition(path: string): boolean {
+  if (!isAllowed(path)) return false
+  clearPosition(path)
+  return true
 }
 
 /** Pour ce que Chromium ne sait pas lire : on passe la main au système. */

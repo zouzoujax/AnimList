@@ -9,7 +9,7 @@ import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
-import { chooseFolder, forgetFolder, openInSystemPlayer, scanFolder } from './videos'
+import { chooseFolder, forgetFolder, forgetPosition, openInSystemPlayer, rememberPosition, scanFolder } from './videos'
 import { openAnimeSamaEpisode } from './watch-window'
 import { cleanOrphans, health, removeStray } from './health'
 import { saveCard, type CardRect } from './card'
@@ -166,6 +166,10 @@ export function registerIpc(): void {
   ipcMain.handle('videos:choose', (_e, animeId: number) => chooseFolder(animeId))
   ipcMain.handle('videos:forget', (_e, animeId: number) => forgetFolder(animeId))
   ipcMain.handle('videos:open-external', (_e, path: string) => openInSystemPlayer(path))
+  ipcMain.handle('videos:remember', (_e, path: string, at: number, duration: number) =>
+    rememberPosition(path, at, duration)
+  )
+  ipcMain.handle('videos:forget-position', (_e, path: string) => forgetPosition(path))
 
   // ---- app -----------------------------------------------------------
   ipcMain.handle('app:info', () => ({

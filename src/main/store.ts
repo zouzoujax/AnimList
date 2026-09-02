@@ -4,6 +4,7 @@ import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { migrate, SCHEMA_VERSION, type MigrationReport, type StoredDb } from './migrations'
+import { MAX_POSITIONS, prunePositions, worthRemembering, type Position } from '@shared/playback'
 import {
   DEFAULT_PREFS,
   type CustomList,
@@ -26,6 +27,16 @@ interface Db {
   lists: CustomList[]
   /** Dossier de fichiers locaux choisi pour une série, par identifiant. */
   folders: Record<string, string>
+  /**
+   * Où en est la lecture d'un fichier local, par chemin.
+   *
+   * Ajout purement additif : un fichier écrit par une version plus ancienne
+   * n'en a pas, et `sanitize` le remplace par un objet vide. Pas de migration,
+   * donc pas de numéro de schéma à monter — le monter passerait la
+   * bibliothèque en lecture seule sur toute version déjà installée, et une
+   * position de lecture ne vaut pas ce prix.
+   */
+  positions: Record<string, Position>
 }
 
 const emptyDb = (): Db => ({
@@ -35,7 +46,8 @@ const emptyDb = (): Db => ({
   history: [],
   prefs: { ...DEFAULT_PREFS },
   lists: [],
-  folders: {}
+  folders: {},
+  positions: {}
 })
 
 export const store = new EventEmitter()
@@ -86,7 +98,8 @@ function sanitize(raw: unknown): Db {
     history: Array.isArray(input.history) ? input.history : [],
     prefs: { ...DEFAULT_PREFS, ...(input.prefs ?? {}) },
     lists: Array.isArray(input.lists) ? input.lists : [],
-    folders: input.folders && typeof input.folders === 'object' ? input.folders : {}
+    folders: input.folders && typeof input.folders === 'object' ? input.folders : {},
+    positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {}
   }
 }
 
@@ -343,6 +356,46 @@ export function setFolder(animeId: number, folder: string | null): void {
 /** Les dossiers autorisés : le protocole media ne sert rien en dehors d'eux. */
 export function allFolders(): string[] {
   return Object.values(db.folders)
+}
+
+/** Où en était la lecture de ces fichiers. Les autres n'ont rien à reprendre. */
+export function positionsFor(paths: string[]): Record<string, Position> {
+  const out: Record<string, Position> = {}
+  for (const path of paths) {
+    const held = db.positions[path]
+    if (held) out[path] = held
+  }
+  return out
+}
+
+/**
+ * Retient — ou oublie — où en est un fichier.
+ *
+ * Une position qui ne vaut plus d'être reprise est effacée plutôt que gardée
+ * à zéro : c'est la même chose pour l'utilisateur, et la liste reste courte
+ * sans attendre le prochain élagage.
+ */
+export function setPosition(path: string, at: number, duration: number): void {
+  const keep = worthRemembering(at, duration)
+  if (!keep && !db.positions[path]) return
+
+  if (keep) db.positions[path] = { at, duration, updatedAt: Date.now() }
+  else delete db.positions[path]
+
+  if (Object.keys(db.positions).length > MAX_POSITIONS) db.positions = prunePositions(db.positions)
+
+  // Pas de `changed()` : la position bouge toutes les cinq secondes pendant
+  // qu'on regarde, et prévenir la fenêtre à chaque fois lui ferait recalculer
+  // toute la bibliothèque pour rien.
+  coreDirty = true
+  persist()
+}
+
+export function clearPosition(path: string): void {
+  if (!db.positions[path]) return
+  delete db.positions[path]
+  coreDirty = true
+  persist()
 }
 
 export function getMedia(id: number): Media | undefined {

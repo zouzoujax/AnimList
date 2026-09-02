@@ -461,6 +461,10 @@ export interface LocalEpisode {
   playable: boolean
   subtitleUrl: string | null
   size: number
+  /** Seconde où reprendre, relevée à la dernière lecture. `null` : au début. */
+  resumeAt: number | null
+  /** Durée connue du fichier, une fois qu'il a été lu au moins une fois. */
+  duration: number | null
 }
 
 export interface LocalFolder {

@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'react'
 import { FolderOpen, FolderSearch, Play, RefreshCw, TriangleAlert, Unlink } from 'lucide-react'
 import type { LocalEpisode, LocalFolder } from '@shared/types'
+import { clock } from '@shared/playback'
 import Player from './Player'
 import { Section } from './ui'
 import { rgba } from '@/lib/color'
@@ -110,6 +111,9 @@ export default function LocalFiles({
         <div className="flex flex-col gap-1.5">
           {folder.episodes.map((file) => {
             const done = file.episode !== null && seen?.has(file.episode)
+            // Un épisode coché n'a plus rien à reprendre, même si le fichier
+            // garde une position d'un visionnage précédent.
+            const resume = done ? null : file.resumeAt
             return (
               <button
                 key={file.path}
@@ -132,7 +136,21 @@ export default function LocalFiles({
                     {weight(file.size)}
                     {file.subtitleUrl && ' · sous-titres'}
                     {!file.playable && ' · lecteur système'}
+                    {resume !== null && ` · reprendre à ${clock(resume)}`}
                   </span>
+                  {/* La barre ne s'affiche que s'il y a une durée : sans elle,
+                      la part vue est inconnue et une barre vide mentirait. */}
+                  {resume !== null && file.duration !== null && file.duration > 0 && (
+                    <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-white/10">
+                      <span
+                        className="block h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, (resume / file.duration) * 100)}%`,
+                          background: rgba(glow, 0.9)
+                        }}
+                      />
+                    </span>
+                  )}
                 </span>
                 <Play
                   size={15}
@@ -147,7 +165,19 @@ export default function LocalFiles({
         </div>
       )}
 
-      {playing && <Player file={playing} animeId={animeId} title={title} onClose={() => setPlaying(null)} />}
+      {playing && (
+        <Player
+          file={playing}
+          animeId={animeId}
+          title={title}
+          /* Relire le dossier en fermant : la place que le lecteur vient
+             d'enregistrer doit se voir sur la ligne, sans rien rafraîchir. */
+          onClose={() => {
+            setPlaying(null)
+            void load()
+          }}
+        />
+      )}
     </Section>
   )
 }

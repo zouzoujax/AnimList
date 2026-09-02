@@ -169,7 +169,12 @@ const api = {
     choose: (animeId: number): Promise<LocalFolder | null> => ipcRenderer.invoke('videos:choose', animeId),
     forget: (animeId: number): Promise<void> => ipcRenderer.invoke('videos:forget', animeId),
     /** Pour ce que Chromium ne décode pas. Faux si le chemin est refusé. */
-    openExternal: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:open-external', path)
+    openExternal: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:open-external', path),
+    /** Retient où en est la lecture, pour rouvrir le fichier au bon endroit. */
+    remember: (path: string, at: number, duration: number): Promise<boolean> =>
+      ipcRenderer.invoke('videos:remember', path, at, duration),
+    /** Oublie la reprise : l'épisode est fini, ou on repart du début. */
+    forgetPosition: (path: string): Promise<boolean> => ipcRenderer.invoke('videos:forget-position', path)
   },
 
   app: {
