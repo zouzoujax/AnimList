@@ -1,6 +1,7 @@
 import {
   AtSign,
   Bell,
+  Smartphone,
   Languages as LanguagesIcon,
   BellOff,
   BellRing,
@@ -20,7 +21,15 @@ import {
   Zap
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
-import { LAYOUTS, THEMES, type Follow, type ImportReport, type LayoutId, type TitleLang } from '@shared/types'
+import {
+  LAYOUTS,
+  THEMES,
+  type Follow,
+  type ImportReport,
+  type LayoutId,
+  type RemoteStatus,
+  type TitleLang
+} from '@shared/types'
 import { Modal } from '@/components/ui'
 import TvTimeImport from '@/components/TvTimeImport'
 import UpdatePanel from '@/components/UpdatePanel'
@@ -169,6 +178,18 @@ export default function SettingsPage(): React.JSX.Element {
   const [confirmReset, setConfirmReset] = useState(false)
   const [follows, setFollows] = useState<Follow[]>([])
   const [handle, setHandle] = useState('')
+  const [remote, setRemote] = useState<RemoteStatus | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    void window.api.remote
+      .status()
+      .then((next) => alive && setRemote(next))
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -461,6 +482,59 @@ export default function SettingsPage(): React.JSX.Element {
             {busy === 'sequels' ? 'Recherche…' : 'Chercher'}
           </button>
         </Row>
+      </Card>
+
+      <Card title="Télécommande" icon={<Smartphone size={17} />}>
+        {/* Éteinte à chaque démarrage, jamais retenue : allumer expose la
+            bibliothèque à tout ce qui est branché sur la même box, et ça se
+            décide à chaque fois plutôt qu'une fois pour toutes. */}
+        <Row
+          label="Piloter depuis le téléphone"
+          hint="Ouvre une petite page sur le réseau local : voir ce qu’il reste à reprendre, cocher un épisode, faire ouvrir une fiche sur le PC. Protégée par un mot de passe tiré au hasard, qui change à chaque allumage. Toujours éteinte au démarrage."
+        >
+          <Toggle
+            on={remote?.on ?? false}
+            onChange={(on) =>
+              void (on ? window.api.remote.start() : window.api.remote.stop()).then((next) => {
+                setRemote(next)
+                if (on && next.error) toast(next.error, 'error')
+              })
+            }
+          />
+        </Row>
+
+        {remote?.on && remote.url && (
+          <Row
+            label="Adresse à ouvrir"
+            hint="Sur un téléphone connecté au même wifi. Le mot de passe est dans le lien."
+          >
+            <div className="flex flex-wrap items-center justify-end gap-1.5">
+              <code
+                className="rounded-[8px] px-2 py-1 text-[0.72rem]"
+                style={{ background: 'var(--panel-2)', color: 'var(--color-muted)' }}
+              >
+                {remote.url}
+              </code>
+              <button
+                className="chip"
+                onClick={() =>
+                  void navigator.clipboard
+                    .writeText(remote.url as string)
+                    .then(() => toast('Adresse copiée.', 'ok'))
+                    .catch(() => toast('Copie refusée.', 'error'))
+                }
+              >
+                Copier
+              </button>
+            </div>
+          </Row>
+        )}
+
+        {remote?.error && !remote.on && (
+          <p className="px-1 py-2 text-[0.8rem]" style={{ color: '#ff8f8f' }}>
+            {remote.error}
+          </p>
+        )}
       </Card>
 
       <Card title="Traduction" icon={<LanguagesIcon size={17} />}>

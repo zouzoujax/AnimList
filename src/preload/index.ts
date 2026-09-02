@@ -22,6 +22,7 @@ import type {
   Paged,
   PersonWorks,
   Prefs,
+  RemoteStatus,
   SeasonEntry,
   SeasonName,
   Snapshot,
@@ -175,6 +176,14 @@ const api = {
     stats: (): Promise<{ entries: number; bytes: number }> => ipcRenderer.invoke('cache:stats'),
     /** Rien n'est perdu : tout se retélécharge à la demande. */
     purge: (): Promise<void> => ipcRenderer.invoke('cache:purge')
+  },
+
+  remote: {
+    status: (): Promise<RemoteStatus> => ipcRenderer.invoke('remote:status'),
+    /** Allume le serveur et tire un nouveau mot de passe. */
+    start: (): Promise<RemoteStatus> => ipcRenderer.invoke('remote:start'),
+    /** Coupe, et périme le mot de passe avec. */
+    stop: (): Promise<RemoteStatus> => ipcRenderer.invoke('remote:stop')
   },
 
   translate: {

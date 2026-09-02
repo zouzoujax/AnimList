@@ -496,6 +496,16 @@ export interface HealthReport {
 }
 
 /** Une série qu'AniList conseille à partir de ce que tu as déjà aimé. */
+/** L'état du petit serveur qui sert la télécommande. */
+export interface RemoteStatus {
+  on: boolean
+  /** Adresse à taper sur le téléphone, mot de passe compris. */
+  url: string | null
+  token: string | null
+  port: number
+  error: string | null
+}
+
 /** Une scène reconnue dans une image. */
 export interface FrameMatch {
   media: Media

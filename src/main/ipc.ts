@@ -29,6 +29,7 @@ import { identifyImage } from './identify'
 import { importAniList, importKitsu } from './import-list'
 import { setPlayerActive } from './taskbar'
 import { canTranslate, purgeTranslations, translate } from './translate'
+import { remoteStatus, startRemote, stopRemote } from './remote'
 import {
   cacheMedia,
   cancelRewatch,
@@ -145,6 +146,14 @@ export function registerIpc(): void {
   ipcMain.handle('translate:texts', (_e, texts: string[]) => translate(texts))
   ipcMain.handle('translate:ready', () => canTranslate())
   ipcMain.handle('translate:purge', () => purgeTranslations())
+
+  // ---- télécommande ----------------------------------------------------
+  // Éteinte par défaut, et à chaque démarrage : allumer expose la
+  // bibliothèque à tout ce qui est branché sur la même box, et ça se décide
+  // à chaque fois plutôt qu'une fois pour toutes.
+  ipcMain.handle('remote:status', () => remoteStatus())
+  ipcMain.handle('remote:start', () => startRemote())
+  ipcMain.handle('remote:stop', () => stopRemote())
 
   // ---- reconnaissance d'une image ------------------------------------
   // L'image ne sort d'ici que sur un geste explicite : coller, déposer,

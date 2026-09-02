@@ -6,6 +6,7 @@ import { initAniList } from './anilist'
 import { initAnimeSama } from './animesama'
 import { initFiller } from './filler'
 import { initTranslate } from './translate'
+import { stopRemote } from './remote'
 import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
@@ -213,6 +214,7 @@ app.on('before-quit', async (event) => {
   // Une touche multimédia retenue après la sortie resterait prise pour toute
   // la session Windows.
   releaseMediaKeys()
+  stopRemote()
   event.preventDefault()
   await flush()
   app.exit(0)
