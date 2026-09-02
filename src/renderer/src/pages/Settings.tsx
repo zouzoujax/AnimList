@@ -1,4 +1,5 @@
 import {
+  AtSign,
   Bell,
   BellOff,
   BellRing,
@@ -166,6 +167,7 @@ export default function SettingsPage(): React.JSX.Element {
   const [busy, setBusy] = useState<string | null>(null)
   const [confirmReset, setConfirmReset] = useState(false)
   const [follows, setFollows] = useState<Follow[]>([])
+  const [handle, setHandle] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -590,6 +592,38 @@ export default function SettingsPage(): React.JSX.Element {
             <Upload size={14} />
             {busy === 'mal' ? 'Import en cours…' : 'Importer'}
           </button>
+        </Row>
+
+        {/* Un pseudo suffit : ces deux services publient les listes publiques
+            sans compte ni clé, ce qui est de loin le chemin le plus court pour
+            amener des années d'historique. */}
+        <Row
+          label="Importer depuis un pseudo"
+          hint="AniList ou Kitsu, si la liste est publique. AniList donne ses propres identifiants — l'import est exact. Kitsu passe par MyAnimeList ; une série sans correspondance est ignorée plutôt que devinée."
+        >
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="pseudo"
+              className="field !h-[34px] w-[150px]"
+            />
+            <button
+              className="btn"
+              disabled={busy !== null || !handle.trim()}
+              onClick={() => run('anilist', () => window.api.data.importAniList(handle))}
+            >
+              <AtSign size={14} />
+              {busy === 'anilist' ? 'Import…' : 'AniList'}
+            </button>
+            <button
+              className="btn"
+              disabled={busy !== null || !handle.trim()}
+              onClick={() => run('kitsu', () => window.api.data.importKitsu(handle))}
+            >
+              {busy === 'kitsu' ? 'Import…' : 'Kitsu'}
+            </button>
+          </div>
         </Row>
 
         <TvTimeImport />

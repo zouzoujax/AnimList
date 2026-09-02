@@ -26,6 +26,7 @@ import { sweepSequels } from './sequels'
 import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
 import { forYou } from './foryou'
 import { identifyImage } from './identify'
+import { importAniList, importKitsu } from './import-list'
 import {
   cacheMedia,
   cancelRewatch,
@@ -172,6 +173,8 @@ export function registerIpc(): void {
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))
   ipcMain.handle('data:import', (e, mode: 'merge' | 'replace') => importData(ownerOf(e), mode))
   ipcMain.handle('data:import-mal', (e) => importMal(ownerOf(e)))
+  ipcMain.handle('data:import-anilist', (_e, user: string) => importAniList(user))
+  ipcMain.handle('data:import-kitsu', (_e, user: string) => importKitsu(user))
   ipcMain.handle('data:import-tvtime', (e, folder?: string | null) => importTvTime(ownerOf(e), folder))
   ipcMain.handle('data:cancel-tvtime', () => cancelImport())
   ipcMain.handle('data:reset', () => resetAll())

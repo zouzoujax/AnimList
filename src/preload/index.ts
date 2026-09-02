@@ -148,6 +148,10 @@ const api = {
     export: (): Promise<ImportReport> => ipcRenderer.invoke('data:export'),
     import: (mode: 'merge' | 'replace'): Promise<ImportReport> => ipcRenderer.invoke('data:import', mode),
     importMal: (): Promise<ImportReport> => ipcRenderer.invoke('data:import-mal'),
+    /** Liste publique AniList, par pseudo : aucun compte ni fichier requis. */
+    importAniList: (user: string): Promise<ImportReport> => ipcRenderer.invoke('data:import-anilist', user),
+    /** Liste publique Kitsu, par pseudo. Rapprochée via MyAnimeList. */
+    importKitsu: (user: string): Promise<ImportReport> => ipcRenderer.invoke('data:import-kitsu', user),
     importTvTime: (folder?: string | null): Promise<TvTimeReport> => ipcRenderer.invoke('data:import-tvtime', folder),
     cancelTvTime: (): Promise<void> => ipcRenderer.invoke('data:cancel-tvtime'),
     onTvTimeProgress: (cb: (progress: TvTimeProgress) => void): (() => void) => {
