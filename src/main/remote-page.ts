@@ -67,10 +67,13 @@ const SCRIPT = `
       body: body ? JSON.stringify(body) : undefined
     })
     if (res.status === 401) throw new Error('unauthorized')
-    const body = await res.json().catch(() => null)
+    // Surtout pas « body » : c'est déjà le nom du paramètre, et redéclarer
+    // l'identifiant empêchait tout le script de se parser — la page restait
+    // sur « Chargement… » sans jamais rien tenter.
+    const payload = await res.json().catch(() => null)
     // Le serveur explique ses refus : « pas encore sorti » vaut mieux que 409.
-    if (!res.ok) throw new Error((body && body.error) || 'Le PC a répondu ' + res.status)
-    return body
+    if (!res.ok) throw new Error((payload && payload.error) || 'Le PC a répondu ' + res.status)
+    return payload
   }
 
   function askToken(message) {

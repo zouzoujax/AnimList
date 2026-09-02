@@ -128,11 +128,9 @@ async function candidates(
   // Les meilleurs titres des genres que le profil place en tête : la seule
   // source qui suive le goût plutôt que la popularité.
   for (const facet of highlights(profile, 2)) {
-    const page = await browse(
-      { kind: 'top', page: 1, perPage: 50, genre: facet.name },
-      showAdult,
-      'background'
-    ).catch(() => null)
+    const page = await browse({ kind: 'top', page: 1, perPage: 50, genre: facet.name }, showAdult, 'background').catch(
+      () => null
+    )
     if (page) take(page.items)
   }
 
