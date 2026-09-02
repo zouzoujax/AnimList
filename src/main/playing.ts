@@ -73,6 +73,8 @@ interface RawTrailerState {
   duration?: number
   volume?: number
   playing?: boolean
+  /** Vrai quand c'est la vidéo qui est en plein écran, pas la fenêtre. */
+  full?: boolean
 }
 
 /**
@@ -98,7 +100,8 @@ const PROBE = videoScript(`
     position: v.currentTime || 0,
     duration: isFinite(v.duration) ? v.duration : 0,
     volume: Math.round((v.muted ? 0 : v.volume) * 100),
-    playing: !v.paused
+    playing: !v.paused,
+    full: document.fullscreenElement !== null
   }
 `)
 
@@ -148,6 +151,9 @@ export async function playerState(): Promise<PlayerState | null> {
       duration: video.state.duration ?? 0,
       volume: video.state.volume ?? 100,
       playing: video.state.playing ?? true,
+      // L'un ou l'autre : la vidéo peut être en plein écran dans une fenêtre
+      // qui ne l'est pas, et l'inverse arrive quand la demande a été refusée.
+      fullscreen: video.state.full === true || found.win.isFullScreen(),
       // Constaté, pas supposé : on a la main sur un élément `video` réel.
       canSeek: true
     }
@@ -180,6 +186,54 @@ export async function playerCommand(action: PlayerAction, params: PlayerParams =
     else closeWatchWindow()
     return true
   }
+  /**
+   * Le plein écran de la **vidéo**, pas de la fenêtre.
+   *
+   * Agrandir la fenêtre montrait leur page en grand — bandeau, menus et
+   * publicités compris. Ce qu'on veut, c'est l'image seule.
+   *
+   * La demande peut être refusée : un cadre sans autorisation de plein écran,
+   * ou un lecteur qui l'intercepte. On ne le suppose donc pas — on regarde
+   * ensuite si elle a pris, et on agrandit la fenêtre à défaut. Mieux vaut le
+   * moins bon des deux que rien.
+   *
+   * La bande-annonce garde le plein écran de fenêtre : sa page n'est qu'un
+   * cadre occupant tout, les deux reviennent au même.
+   */
+  if ((action === 'fullscreen' || action === 'windowed') && found.kind !== 'trailer') {
+    const video = await videoFrame(found.win)
+
+    if (video && action === 'windowed') {
+      await video.frame
+        .executeJavaScript('document.exitFullscreen && document.exitFullscreen(), true', true)
+        .catch(() => false)
+      found.win.setFullScreen(false)
+      return true
+    }
+
+    if (video) {
+      const asked: unknown = await video.frame
+        .executeJavaScript(
+          videoScript('if (!v.requestFullscreen) return false; v.requestFullscreen(); return true'),
+          true
+        )
+        .catch(() => false)
+
+      if (asked === true) {
+        // Le plein écran arrive de façon différée : demander tout de suite si
+        // c'est fait répondrait toujours non.
+        await new Promise((resolve) => setTimeout(resolve, 350))
+        const took: unknown = await video.frame
+          .executeJavaScript('document.fullscreenElement !== null', true)
+          .catch(() => false)
+        if (took === true) return true
+      }
+    }
+
+    found.win.setFullScreen(action === 'fullscreen')
+    return true
+  }
+
   if (action === 'fullscreen' || action === 'windowed') {
     found.win.setFullScreen(action === 'fullscreen')
     return true
