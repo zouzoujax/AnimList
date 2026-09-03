@@ -21,6 +21,8 @@ import { getMedia } from './store'
 
 /** Ce qu'on a lancé dans une fenêtre extérieure, que son titre ne dit pas. */
 export interface Launched {
+  /** La série, pour retrouver ce que la fenêtre extérieure ignore. */
+  animeId: number
   title: string
   cover: string
   episode: number | null
@@ -65,5 +67,11 @@ export function getLocalWatching(): LocalWatching | null {
 export function rememberLaunch(animeId: number | undefined, episode: number | null, note?: string): void {
   const media = animeId === undefined ? undefined : getMedia(animeId)
   if (!media) return setLaunched(null)
-  setLaunched({ title: media.title.english ?? media.title.romaji, cover: media.cover.large, episode, note })
+  setLaunched({
+    animeId: media.id,
+    title: media.title.english ?? media.title.romaji,
+    cover: media.cover.large,
+    episode,
+    note
+  })
 }

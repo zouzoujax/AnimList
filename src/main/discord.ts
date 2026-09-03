@@ -230,10 +230,14 @@ async function whatIsPlaying(): Promise<Watching | null> {
   // Le titre d'une fenêtre ne dit rien — celle d'Anime-Sama s'appelle
   // « Anime-Sama ». Ce qu'on a lancé, si.
   const launched = getLaunched()
+  // Le nombre d'épisodes n'est ni dans leur page ni dans le carnet : il est
+  // dans la fiche, comme pour le lecteur intégré. Sans lui, la même série
+  // annonçait « Épisode 9 » chez eux et « Épisode 9 sur 12 » ici.
+  const media = launched ? getMedia(launched.animeId) : undefined
   return {
     title: launched?.title ?? state.title,
     episode: launched?.episode ?? null,
-    total: null,
+    total: media?.episodes ?? null,
     cover: launched?.cover ?? null,
     position: state.position,
     duration: state.duration,
