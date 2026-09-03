@@ -184,7 +184,9 @@ describe('countdown', () => {
 })
 
 describe('isUnaired', () => {
-  const soon = { nextAiring: { episode: 12, airingAt: 1 } }
+  // Une heure devant : la fonction juge l'épisode annoncé sur sa date, donc
+  // une date passée ferait dire l'inverse à ces trois tests.
+  const soon = { nextAiring: { episode: 12, airingAt: Math.floor(Date.now() / 1000) + 3600 } }
 
   it('holds back the episode still to come and every one after it', () => {
     expect(isUnaired(soon, 12)).toBe(true)
