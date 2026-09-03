@@ -19,8 +19,12 @@
  *   `{"code":4000,"message":"Invalid Client ID"}` sur l'opération 2 — c'est
  *   ce qui permet de dire *pourquoi* ça ne marche pas plutôt que de rester
  *   muet ;
- * - `type: 3` est conservé tel quel, et c'est lui qui affiche « Regarde »
- *   devant le nom de l'application, dans la langue du lecteur ;
+ * - **accepté ne veut pas dire affiché.** Un champ `type` hors de la commande
+ *   documentée est rangé par Discord et renvoyé tel quel dans sa réponse, puis
+ *   son client refuse d'afficher la carte : rien ne distingue les deux cas
+ *   depuis le tube. C'est une capture d'écran qui a tranché, pas la réponse.
+ *   D'où la ligne « Envoyé à Discord » dans les réglages, qui sépare
+ *   définitivement « l'app n'envoie rien » de « Discord n'affiche rien » ;
  * - une jaquette AniList passée en `large_image` revient réécrite en
  *   `mp:external/…`, donc Discord la relaie lui-même : rien à téléverser dans
  *   leur portail, et une nouvelle série ne demande aucun réglage.

@@ -1,14 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  activityOf,
-  clampText,
-  looksLikeAppId,
-  sameActivity,
-  summarise,
-  MAX_TEXT,
-  WATCHING,
-  type Watching
-} from './discord'
+import { activityOf, clampText, looksLikeAppId, sameActivity, summarise, MAX_TEXT, type Watching } from './discord'
 
 const base: Watching = {
   title: 'Sousou no Frieren',
@@ -65,7 +56,6 @@ describe('activityOf', () => {
   it('met le titre, l’épisode et la jaquette', () => {
     const activity = activityOf(base, { at: AT })
     expect(activity).toMatchObject({
-      type: WATCHING,
       details: 'Sousou no Frieren',
       state: 'Épisode 12 sur 28',
       assets: { large_image: 'https://s4.anilist.co/file/cover.jpg', large_text: 'Sousou no Frieren' }
@@ -111,7 +101,18 @@ describe('activityOf', () => {
    */
   it('ne laisse rien filtrer en mode discret', () => {
     const activity = activityOf(base, { hideTitle: true, at: AT })
-    expect(activity).toEqual({ type: WATCHING, details: 'Un anime' })
+    expect(activity).toEqual({ details: 'Un anime' })
+  })
+
+  /**
+   * Discord accepte un champ `type`, le renvoie dans sa réponse, et refuse
+   * ensuite d'afficher la carte. Le test garde la forme documentée : le
+   * symptôme d'une régression ici serait une carte muette, impossible à
+   * relier à sa cause.
+   */
+  it('n’envoie aucun champ hors de la commande documentée', () => {
+    const activity = activityOf(base, { at: AT })
+    expect(Object.keys(activity ?? {}).sort()).toEqual(['assets', 'details', 'state', 'timestamps'])
   })
 })
 

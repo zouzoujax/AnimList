@@ -43,10 +43,19 @@ export const MIN_TEXT = 2
 export const MAX_TEXT = 128
 
 /**
- * Type 3, « Watching ». C'est lui qui met « Regarde » devant le nom de l'app.
- * Le mot vient de Discord, dans la langue du lecteur — on ne l'écrit pas.
+ * **Pas de champ `type`, et c'est mesuré.**
+ *
+ * Il existe un type « Watching » qui mettrait « Regarde » devant le nom de
+ * l'app au lieu de « Joue à ». Il n'est pas dans les champs documentés de
+ * `SET_ACTIVITY`, et l'envoyer quand même a un effet trompeur : Discord
+ * l'accepte, le range, le renvoie tel quel dans sa réponse — puis son client
+ * refuse d'afficher la carte. Constaté à l'écran : la même activité sans ce
+ * champ paraît, avec lui rien ne paraît.
+ *
+ * Accepté et affiché sont deux choses différentes, et seule la seconde compte.
+ * On reste donc sur la forme documentée, qui vaut « Joue à ». Le verbe est
+ * moins juste ; une carte invisible ne l'est pas du tout.
  */
-export const WATCHING = 3
 
 /** Ce qu'on est en train de regarder, quelle que soit la source. */
 export interface Watching {
@@ -107,7 +116,6 @@ export function summarise(activity: Activity | null): string | null {
 
 /** Une activité, dans la forme littérale que la commande transporte. */
 export interface Activity {
-  type: number
   details: string
   state?: string
   timestamps?: { start?: number; end?: number }
@@ -168,12 +176,12 @@ export function activityOf(
   { hideTitle = false, at = Date.now() }: { hideTitle?: boolean; at?: number } = {}
 ): Activity | null {
   if (!now) return null
-  if (hideTitle) return { type: WATCHING, details: 'Un anime' }
+  if (hideTitle) return { details: 'Un anime' }
 
   const details = clampText(now.title)
   if (!details) return null
 
-  const activity: Activity = { type: WATCHING, details }
+  const activity: Activity = { details }
 
   const state = stateOf(now)
   if (state) activity.state = state
@@ -209,7 +217,7 @@ export const DRIFT_MS = 2000
 /** Vrai quand renvoyer l'activité n'apprendrait rien à Discord. */
 export function sameActivity(a: Activity | null, b: Activity | null): boolean {
   if (!a || !b) return a === b
-  if (a.type !== b.type || a.details !== b.details || a.state !== b.state) return false
+  if (a.details !== b.details || a.state !== b.state) return false
   if (a.assets?.large_image !== b.assets?.large_image) return false
   if (a.assets?.large_text !== b.assets?.large_text) return false
 
