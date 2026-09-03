@@ -630,6 +630,29 @@ export default function SettingsPage(): React.JSX.Element {
             <p className="px-1 py-2 text-[0.8rem]" style={{ color: discordTone }}>
               {discordNote}
             </p>
+
+            {/* Ce que Discord a réellement reçu. Sans cette ligne, « je ne vois
+                rien sur mon profil » n'a pas de réponse : l'app qui n'envoie
+                rien et Discord qui n'affiche rien se ressemblent exactement. */}
+            {discord?.connected && (
+              <div
+                className="mt-1 rounded-[10px] px-3 py-2.5 text-[0.78rem] leading-relaxed"
+                style={{ background: 'var(--panel-2)' }}
+              >
+                {discord.showing ? (
+                  <>
+                    <span className="text-faint">Envoyé à Discord : </span>
+                    <span className="font-semibold">{discord.showing}</span>
+                  </>
+                ) : (
+                  <span className="text-muted">
+                    Rien en cours de lecture. Lance un épisode : cette ligne dira ce qui part sur ton profil. Si elle se
+                    remplit et que Discord n’affiche toujours rien, c’est son réglage «&nbsp;Statut d’activité&nbsp;» qui
+                    est en cause, pas l’app.
+                  </span>
+                )}
+              </div>
+            )}
           </>
         )}
       </Card>

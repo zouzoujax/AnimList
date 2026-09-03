@@ -87,6 +87,22 @@ export interface DiscordStatus {
   /** Ce qui est vrai : la poignée de main est passée. */
   connected: boolean
   error: string | null
+  /**
+   * Ce qui a réellement été envoyé à Discord, en clair. `null` quand il n'y a
+   * rien à annoncer.
+   *
+   * Sans ça, « je ne vois rien sur mon profil » n'a aucune réponse : l'app
+   * peut ne rien envoyer, ou Discord peut ne pas l'afficher, et les deux se
+   * ressemblent parfaitement de l'extérieur. Le montrer ici tranche d'un coup
+   * d'œil, et évite d'aller chercher dans le mauvais des deux.
+   */
+  showing: string | null
+}
+
+/** Le résumé lisible d'une activité, pour l'écran des réglages. */
+export function summarise(activity: Activity | null): string | null {
+  if (!activity) return null
+  return activity.state ? `${activity.details} — ${activity.state}` : activity.details
 }
 
 /** Une activité, dans la forme littérale que la commande transporte. */

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { activityOf, clampText, looksLikeAppId, sameActivity, MAX_TEXT, WATCHING, type Watching } from './discord'
+import {
+  activityOf,
+  clampText,
+  looksLikeAppId,
+  sameActivity,
+  summarise,
+  MAX_TEXT,
+  WATCHING,
+  type Watching
+} from './discord'
 
 const base: Watching = {
   title: 'Sousou no Frieren',
@@ -129,5 +138,21 @@ describe('sameActivity', () => {
   it('distingue « rien » de « quelque chose »', () => {
     expect(sameActivity(null, null)).toBe(true)
     expect(sameActivity(activityOf(base, { at: AT }), null)).toBe(false)
+  })
+})
+
+describe('summarise', () => {
+  // C'est la ligne qui répond à « je ne vois rien sur mon profil » : elle doit
+  // dire ce qui est parti, pas ce qu'on espérait envoyer.
+  it('rend lisible ce qui a été envoyé', () => {
+    expect(summarise(activityOf(base, { at: AT }))).toBe('Sousou no Frieren — Épisode 12 sur 28')
+  })
+
+  it('se passe de la seconde ligne quand il n’y en a pas', () => {
+    expect(summarise(activityOf({ ...base, episode: null }, { at: AT }))).toBe('Sousou no Frieren')
+  })
+
+  it('ne montre rien quand rien n’a été envoyé', () => {
+    expect(summarise(null)).toBeNull()
   })
 })

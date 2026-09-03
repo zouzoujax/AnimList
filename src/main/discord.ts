@@ -36,6 +36,7 @@ import {
   activityOf,
   looksLikeAppId,
   sameActivity,
+  summarise,
   OP_CLOSE,
   OP_FRAME,
   OP_HANDSHAKE,
@@ -308,5 +309,5 @@ export function stopDiscord(): void {
 }
 
 export function discordStatus(): DiscordStatus {
-  return { on: wanted, connected: ready, error }
+  return { on: wanted, connected: ready, error, showing: summarise(sent) }
 }
