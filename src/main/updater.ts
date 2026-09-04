@@ -21,6 +21,7 @@ import type { ReleaseNote, UpdateStatus } from '@shared/types'
 import { parseReleaseNote } from '@shared/release-notes'
 import { getPrefs } from './store'
 import { setTaskbarProgress } from './taskbar'
+import { showUpdateWindow } from './update-window'
 
 let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null, notes: [] }
 let started = false
@@ -56,6 +57,10 @@ function broadcast(): void {
 function set(next: Partial<UpdateStatus>): void {
   state = { ...state, ...next }
   broadcast()
+  // Une seule porte : la petite fenêtre suit l'état plutôt que de l'apprendre
+  // par un appel posé à un endroit et oublié à un autre. Elle décide seule si
+  // le moment se prête à paraître.
+  showUpdateWindow(state)
 }
 
 export function updateStatus(): UpdateStatus {

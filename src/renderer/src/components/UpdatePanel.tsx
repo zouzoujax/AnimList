@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react'
 import {
   Check,
   Download,
+  Eye,
   Pencil,
   Plus,
   RefreshCw,
@@ -190,6 +191,16 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
         {status.phase === 'available' && !auto && download}
 
         {status.phase === 'ready' && restart}
+
+        {/* La petite fenêtre ne paraît qu'en cas de vraie mise à jour : sans
+            ça, impossible de voir à quoi elle ressemble avant qu'elle ne
+            serve. L'aperçu ne télécharge rien et le dit sur chaque ligne. */}
+        {status.phase !== 'ready' && status.phase !== 'available' && status.phase !== 'downloading' && (
+          <button className="btn" onClick={() => void window.api.app.previewUpdate()}>
+            <Eye size={14} />
+            Aperçu
+          </button>
+        )}
 
         {status.phase !== 'ready' && status.phase !== 'available' && (
           <button

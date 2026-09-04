@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mise à jour d'AnimeList</title>
+    <style>
+      /*
+        Une page à part, sans Tailwind ni React : elle doit paraître à
+        l'instant où une version est trouvée, et charger le rendu complet de
+        l'app pour dessiner une barre de progression serait un mégaoctet pour
+        deux cents pixels.
+
+        Les couleurs viennent du thème choisi, passées en paramètres d'adresse
+        par le processus principal.
+      */
+      :root {
+        --bg: #0b0e1a;
+        --fg: #c9d0ea;
+        --accent: #7c5cff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+        background: transparent;
+        color: var(--fg);
+        user-select: none;
+        overflow: hidden;
+      }
+
+      /* Toute la carte se déplace à la souris : une fenêtre sans cadre n'a
+         aucune barre de titre pour ça. Les boutons s'en excluent, sinon ils
+         deviendraient des poignées et ne cliqueraient plus. */
+      .card {
+        -webkit-app-region: drag;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 14px 16px;
+        border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
+        border-radius: 12px;
+        background: var(--bg);
+        box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .head img {
+        width: 40px;
+        height: 40px;
+        border-radius: 9px;
+        flex: none;
+      }
+
+      .names {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .line {
+        margin-top: 2px;
+        font-size: 0.76rem;
+        opacity: 0.72;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .close {
+        -webkit-app-region: no-drag;
+        flex: none;
+        width: 24px;
+        height: 24px;
+        border: 0;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        opacity: 0.55;
+        font-size: 0.95rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+
+      .close:hover {
+        opacity: 1;
+        background: color-mix(in srgb, var(--fg) 12%, transparent);
+      }
+
+      .track {
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        background: color-mix(in srgb, var(--fg) 14%, transparent);
+      }
+
+      .track[hidden] {
+        display: none;
+      }
+
+      .fill {
+        height: 100%;
+        width: 0%;
+        border-radius: 999px;
+        background: var(--accent);
+        transition: width 0.3s ease;
+      }
+
+      /* L'installeur ne rend aucune progression : la barre dit « ça
+         travaille » sans prétendre savoir où ça en est. */
+      .track.sweep .fill {
+        width: 35%;
+        animation: sweep 1.1s ease-in-out infinite;
+      }
+
+      @keyframes sweep {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(300%);
+        }
+      }
+
+      .actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: auto;
+      }
+
+      button.act {
+        -webkit-app-region: no-drag;
+        padding: 6px 12px;
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+
+      button.act:hover {
+        background: color-mix(in srgb, var(--fg) 10%, transparent);
+      }
+
+      button.act.primary {
+        border-color: transparent;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 600;
+      }
+
+      button.act.primary:hover {
+        filter: brightness(1.1);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="head">
+        <img src="./src/assets/icon.png" alt="" />
+        <div class="names">
+          <div class="title" id="title">AnimeList</div>
+          <div class="line" id="line">Recherche…</div>
+        </div>
+        <button class="close" id="close" title="Fermer" aria-label="Fermer">✕</button>
+      </div>
+      <div class="track" id="track" hidden><div class="fill" id="fill"></div></div>
+      <div class="actions" id="actions"></div>
+    </div>
+    <script type="module" src="/src/update.ts"></script>
+  </body>
+</html>

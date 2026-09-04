@@ -16,6 +16,7 @@ import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
+import { closeUpdateWindow, dismissUpdateWindow, previewUpdateWindow } from './update-window'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
 import { chooseFolder, forgetFolder, forgetPosition, openInSystemPlayer, rememberPosition, scanFolder } from './videos'
@@ -265,6 +266,12 @@ export function registerIpc(): void {
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:download', () => downloadUpdate())
   ipcMain.handle('update:install', () => installUpdate())
+  // La petite fenêtre se ferme d'elle-même. « Plus tard » vaut pour toute la
+  // version ; refermer un aperçu ne fait taire personne.
+  ipcMain.on('update:dismiss', (_, remember: boolean) =>
+    remember ? dismissUpdateWindow(updateStatus().version) : closeUpdateWindow()
+  )
+  ipcMain.handle('update:preview', () => previewUpdateWindow(app.getVersion()))
   ipcMain.handle('app:open-external', (_e, url: string) => {
     if (/^https?:\/\//i.test(url)) return shell.openExternal(url)
     return undefined

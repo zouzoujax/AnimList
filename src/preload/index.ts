@@ -281,6 +281,9 @@ const api = {
     checkUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:check'),
     downloadUpdate: (): Promise<UpdateStatus> => ipcRenderer.invoke('update:download'),
     installUpdate: (): Promise<void> => ipcRenderer.invoke('update:install'),
+    /** Joue la petite fenêtre à vide : elle n'est visible qu'en cas de vraie
+     *  mise à jour, donc invisible jusqu'à la prochaine. */
+    previewUpdate: (): Promise<void> => ipcRenderer.invoke('update:preview'),
     onUpdateStatus: (cb: (status: UpdateStatus) => void): (() => void) => {
       const handler = (_e: unknown, status: UpdateStatus): void => cb(status)
       ipcRenderer.on('update:status', handler)

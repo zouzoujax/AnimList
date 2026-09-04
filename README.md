@@ -60,7 +60,9 @@ temps restant, pendant une lecture seulement. Éteint par défaut : c'est la seu
 chose ici qui sorte du PC d'elle-même. Un mode discret n'annonce que « un anime ».
 
 **Intégré à Windows** — liste de raccourcis sur l'icône de la barre des tâches, touches multimédia
-du clavier pendant une lecture, mini-lecteur flottant, mises à jour automatiques.
+du clavier pendant une lecture, mini-lecteur flottant, mises à jour automatiques. Une nouvelle
+version s'annonce dans une petite carte en bas à droite — logo, nom, progression du
+téléchargement — qui ne prend pas le premier plan et ne se pose pas sur un épisode en cours.
 
 ## Démarrer
 
