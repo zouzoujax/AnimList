@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.1 — 5 septembre 2026
+
+### Ajouts
+
+- Une mise à jour lancée depuis les réglages s'affiche dans une petite carte au centre de l'écran : le logo, le nom, la version et la progression du téléchargement. Aucun bouton — la décision vient d'être prise une seconde plus tôt — et elle se ferme d'elle-même une fois qu'il n'y a plus rien à suivre. Un bouton « Aperçu » dans les réglages permet de la voir sans attendre une vraie mise à jour
+
 ## 0.4.0 — 5 septembre 2026
 
 ### Ajouts
