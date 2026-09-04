@@ -56,11 +56,10 @@ function broadcast(): void {
 
 function set(next: Partial<UpdateStatus>): void {
   state = { ...state, ...next }
+  // La petite carte, quand elle est ouverte, reçoit l'état comme toutes les
+  // fenêtres : elle suit le cycle sans qu'on ait à la prévenir. Ce qu'elle ne
+  // fait pas, c'est s'ouvrir ici — elle ne paraît que sur un clic.
   broadcast()
-  // Une seule porte : la petite fenêtre suit l'état plutôt que de l'apprendre
-  // par un appel posé à un endroit et oublié à un autre. Elle décide seule si
-  // le moment se prête à paraître.
-  showUpdateWindow(state)
 }
 
 export function updateStatus(): UpdateStatus {
@@ -168,6 +167,9 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
 export async function downloadUpdate(): Promise<UpdateStatus> {
   if (state.phase !== 'available') return state
 
+  // Demandé depuis les réglages : la carte montre où ça en est, en bas à
+  // droite, pendant qu'on retourne à autre chose.
+  showUpdateWindow('download')
   set({ phase: 'downloading', percent: 0, message: null })
   try {
     const auto = await attach()
@@ -184,6 +186,9 @@ export async function installUpdate(): Promise<void> {
   if (state.phase !== 'ready') return
   const auto = await attach().catch(() => null)
   if (!auto) return
+  // L'app se ferme dans la seconde : la carte dit ce qui se passe pendant
+  // que les fenêtres disparaissent.
+  showUpdateWindow('install')
   /**
    * Silencieux, et l'app revient d'elle-même.
    *

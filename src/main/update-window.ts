@@ -1,15 +1,19 @@
 /**
- * La petite fenêtre de mise à jour : logo, nom, barre de progression.
+ * La petite carte de mise à jour : logo, nom, barre de progression.
  *
- * Le cycle est automatique et discret — c'est bien, tant que personne ne se
- * demande ce que l'app fabrique. Une version trouvée, un téléchargement en
- * cours, une version prête : trois moments qui méritent d'être vus sans avoir
- * à ouvrir les réglages.
+ * **Elle ne surgit jamais d'elle-même.** Elle s'ouvre sur un clic dans les
+ * réglages — télécharger, ou redémarrer pour installer — et suit ensuite le
+ * cycle jusqu'au bout. Une carte qui apparaîtrait toute seule pendant qu'on
+ * regarde un épisode serait une interruption ; celle-ci ne fait que montrer où
+ * en est ce qu'on vient de demander.
  *
- * **Ce qu'elle ne fait pas** : voler le premier plan. Elle paraît sans prendre
- * le focus, en bas à droite, et ne passe au-dessus des autres fenêtres que si
- * aucun épisode ne joue. Un carton qui recouvre une vidéo pour annoncer une
- * mise à jour est exactement ce qu'on reproche aux autres logiciels.
+ * Aucun bouton non plus, pour la même raison : la décision est prise: la carte
+ * en rend compte. Elle se ferme donc seule, quand il n'y a plus rien à suivre.
+ *
+ * Elle paraît au centre de l'écran : c'est la réponse au clic qu'on vient de
+ * faire, et on la cherche là où on regardait. Elle ne prend pas le focus pour
+ * autant, et ne passe au-dessus des autres fenêtres que si aucun épisode ne
+ * joue — on peut lancer une mise à jour puis retourner à sa série.
  *
  * Le contenu vient de `updateCard`, testé à part. Cette page-ci est bâtie sans
  * React ni Tailwind : elle doit paraître à l'instant, pas après avoir chargé
@@ -19,29 +23,16 @@
 import { BrowserWindow, screen } from 'electron'
 import { join } from 'node:path'
 import { THEMES, chromeFor } from '@shared/types'
-import { updateCard } from '@shared/update-card'
-import type { UpdateStatus } from '@shared/types'
 import { getLocalWatching } from './now'
 import { getPrefs } from './store'
 import { trailerWindow } from './trailer'
 import { watchWindow } from './watch-window'
 
 const WIDTH = 380
-const HEIGHT = 176
-/** De quoi ne pas coller à la barre des tâches ni au bord de l'écran. */
-const MARGIN = 18
+/** Le logo, deux lignes, une barre. Rien d'autre : rien d'autre à loger. */
+const HEIGHT = 104
 
 let win: BrowserWindow | null = null
-
-/**
- * La version qu'on a demandé de ne plus annoncer.
- *
- * « Plus tard » vaut pour toute la version, pas pour l'étape en cours :
- * refermer la carte pendant le téléchargement et la voir revenir dix secondes
- * plus tard sous prétexte que la phase a changé serait pire que de ne pas
- * l'avoir fermée. La notification, elle, dira quand même que c'est prêt.
- */
-let dismissed: string | null = null
 
 /** Vrai pendant qu'un épisode ou une bande-annonce joue, ici ou ailleurs. */
 function watching(): boolean {
@@ -56,12 +47,18 @@ function colors(): string {
   return `?bg=${encodeURIComponent(color)}&fg=${encodeURIComponent(symbolColor)}&accent=${encodeURIComponent(accent)}`
 }
 
-/** En bas à droite de l'écran qui porte la fenêtre principale. */
+/**
+ * Au centre de l'écran qui porte la fenêtre principale.
+ *
+ * `workArea` plutôt que la taille de l'écran : sur un centrage vertical exact,
+ * la barre des tâches décale l'ensemble de sa hauteur, et la carte tombe
+ * légèrement bas. Le centre visé est celui de la zone utile.
+ */
 function place(target: BrowserWindow): void {
   const main = BrowserWindow.getAllWindows().find((w) => w !== target && !w.isDestroyed())
   const display = main ? screen.getDisplayMatching(main.getBounds()) : screen.getPrimaryDisplay()
   const { x, y, width, height } = display.workArea
-  target.setPosition(x + width - WIDTH - MARGIN, y + height - HEIGHT - MARGIN)
+  target.setPosition(Math.round(x + (width - WIDTH) / 2), Math.round(y + (height - HEIGHT) / 2))
 }
 
 function create(search: string): BrowserWindow {
@@ -106,25 +103,21 @@ function create(search: string): BrowserWindow {
 }
 
 /**
- * Montre la carte si le moment s'y prête, la ferme sinon.
+ * Ouvre la carte, sur le clic qui vient d'être fait.
  *
- * Appelée à chaque changement d'état : c'est la seule porte, et l'état de la
- * fenêtre ne peut donc pas diverger de celui du cycle.
+ * `install` ne se déduit d'aucun état : le cycle reste sur « prête » pendant
+ * que l'installeur démarre, et la carte annoncerait « prête à installer »
+ * pendant qu'elle s'installe. C'est le clic qui le sait.
+ *
+ * Une fois ouverte, elle suit le cycle toute seule : les changements d'état
+ * lui parviennent comme à toutes les fenêtres.
  */
-export function showUpdateWindow(status: UpdateStatus): void {
-  if (!updateCard(status)) return closeUpdateWindow()
-  if (status.version && status.version === dismissed) return
-
-  if (!win || win.isDestroyed()) win = create(colors())
+export function showUpdateWindow(mode: 'download' | 'install'): void {
+  closeUpdateWindow()
+  win = create(`${colors()}&mode=${mode}`)
   // Au-dessus du reste, sauf pendant un épisode : la carte attendra la fin
   // plutôt que de se poser sur la vidéo.
   win.setAlwaysOnTop(!watching())
-}
-
-/** « Plus tard », ou la croix : plus rien pour cette version. */
-export function dismissUpdateWindow(version: string | null): void {
-  dismissed = version
-  closeUpdateWindow()
 }
 
 export function closeUpdateWindow(): void {
@@ -143,6 +136,6 @@ export function closeUpdateWindow(): void {
  */
 export function previewUpdateWindow(version: string): void {
   closeUpdateWindow()
-  win = create(`${colors()}&demo=1&version=${encodeURIComponent(version)}`)
+  win = create(`${colors()}&mode=demo&version=${encodeURIComponent(version)}`)
   win.setAlwaysOnTop(true)
 }

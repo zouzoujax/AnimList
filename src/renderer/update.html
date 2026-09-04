@@ -7,12 +7,13 @@
     <style>
       /*
         Une page à part, sans Tailwind ni React : elle doit paraître à
-        l'instant où une version est trouvée, et charger le rendu complet de
-        l'app pour dessiner une barre de progression serait un mégaoctet pour
-        deux cents pixels.
+        l'instant où on clique dans les réglages, et charger le rendu complet
+        de l'app pour dessiner une barre de progression serait un mégaoctet
+        pour deux cents pixels.
 
-        Les couleurs viennent du thème choisi, passées en paramètres d'adresse
-        par le processus principal.
+        Aucun bouton : la carte rend compte, elle ne demande rien. Les couleurs
+        viennent du thème choisi, passées en paramètres d'adresse par le
+        processus principal.
       */
       :root {
         --bg: #0b0e1a;
@@ -39,14 +40,14 @@
       }
 
       /* Toute la carte se déplace à la souris : une fenêtre sans cadre n'a
-         aucune barre de titre pour ça. Les boutons s'en excluent, sinon ils
-         deviendraient des poignées et ne cliqueraient plus. */
+         aucune barre de titre pour ça, et rien d'autre ici ne se clique. */
       .card {
         -webkit-app-region: drag;
         height: 100%;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        justify-content: center;
+        gap: 11px;
         padding: 14px 16px;
         border: 1px solid color-mix(in srgb, var(--fg) 16%, transparent);
         border-radius: 12px;
@@ -69,7 +70,6 @@
 
       .names {
         min-width: 0;
-        flex: 1;
       }
 
       .title {
@@ -89,35 +89,11 @@
         text-overflow: ellipsis;
       }
 
-      .close {
-        -webkit-app-region: no-drag;
-        flex: none;
-        width: 24px;
-        height: 24px;
-        border: 0;
-        border-radius: 6px;
-        background: transparent;
-        color: inherit;
-        opacity: 0.55;
-        font-size: 0.95rem;
-        line-height: 1;
-        cursor: pointer;
-      }
-
-      .close:hover {
-        opacity: 1;
-        background: color-mix(in srgb, var(--fg) 12%, transparent);
-      }
-
       .track {
         height: 6px;
         border-radius: 999px;
         overflow: hidden;
         background: color-mix(in srgb, var(--fg) 14%, transparent);
-      }
-
-      .track[hidden] {
-        display: none;
       }
 
       .fill {
@@ -143,40 +119,6 @@
           transform: translateX(300%);
         }
       }
-
-      .actions {
-        display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-top: auto;
-      }
-
-      button.act {
-        -webkit-app-region: no-drag;
-        padding: 6px 12px;
-        border-radius: 8px;
-        border: 1px solid color-mix(in srgb, var(--fg) 20%, transparent);
-        background: transparent;
-        color: inherit;
-        font: inherit;
-        font-size: 0.78rem;
-        cursor: pointer;
-      }
-
-      button.act:hover {
-        background: color-mix(in srgb, var(--fg) 10%, transparent);
-      }
-
-      button.act.primary {
-        border-color: transparent;
-        background: var(--accent);
-        color: #fff;
-        font-weight: 600;
-      }
-
-      button.act.primary:hover {
-        filter: brightness(1.1);
-      }
     </style>
   </head>
   <body>
@@ -185,12 +127,10 @@
         <img src="./src/assets/icon.png" alt="" />
         <div class="names">
           <div class="title" id="title">AnimeList</div>
-          <div class="line" id="line">Recherche…</div>
+          <div class="line" id="line">…</div>
         </div>
-        <button class="close" id="close" title="Fermer" aria-label="Fermer">✕</button>
       </div>
-      <div class="track" id="track" hidden><div class="fill" id="fill"></div></div>
-      <div class="actions" id="actions"></div>
+      <div class="track" id="track"><div class="fill" id="fill"></div></div>
     </div>
     <script type="module" src="/src/update.ts"></script>
   </body>

@@ -28,36 +28,49 @@ describe('clampPercent', () => {
 
 describe('updateCard', () => {
   /**
-   * Le cas le plus fréquent de très loin : l'app cherche une version toutes
-   * les six heures et n'en trouve pas. Une fenêtre qui surgirait là serait
-   * une fenêtre qui surgit pour rien, quatre fois par jour.
+   * C'est ce qui referme la carte : le cycle retombe — à jour, ou en panne —
+   * et il n'y a plus rien à suivre. Sans ce `null`, la fenêtre resterait
+   * ouverte sur un état périmé, sans bouton pour s'en débarrasser.
    */
-  it('ne montre rien quand il n’y a rien à annoncer', () => {
+  it('ne montre rien quand il n’y a plus rien à suivre', () => {
     for (const phase of ['idle', 'checking', 'current', 'error'] as const) {
       expect(updateCard(status({ phase }))).toBeNull()
     }
   })
 
-  it('annonce une version trouvée, et propose de la prendre', () => {
+  it('annonce la version trouvée avant le premier octet', () => {
     const card = updateCard(status({ phase: 'available', version: '0.4.1' }))
-    expect(card).toMatchObject({
+    expect(card).toEqual({
       title: 'AnimeList 0.4.1',
       line: 'Nouvelle version disponible',
-      bar: 'none',
-      actions: ['download', 'later']
+      percent: 0,
+      bar: 'value'
     })
+  })
+
+  /**
+   * Aucun bouton, nulle part : la carte rend compte d'une décision déjà prise
+   * dans les réglages. La reposer par-dessus reviendrait à demander deux fois.
+   */
+  it('ne propose jamais rien à cliquer', () => {
+    for (const phase of ['available', 'downloading', 'ready'] as const) {
+      expect(Object.keys(updateCard(status({ phase, version: '0.4.1' })) ?? {}).sort()).toEqual([
+        'bar',
+        'line',
+        'percent',
+        'title'
+      ])
+    }
   })
 
   it('montre le pourcentage pendant le téléchargement', () => {
     const card = updateCard(status({ phase: 'downloading', version: '0.4.1', percent: 42 }))
     expect(card).toMatchObject({ line: 'Téléchargement… 42 %', percent: 42, bar: 'value' })
-    // Rien à valider pendant qu'elle descend : seulement de quoi s'en aller.
-    expect(card?.actions).toEqual(['later'])
   })
 
-  it('propose le redémarrage une fois la version prête', () => {
+  it('dit que la version est prête, sans rien demander', () => {
     const card = updateCard(status({ phase: 'ready', version: '0.4.1', percent: 100 }))
-    expect(card).toMatchObject({ line: 'Prête à installer', percent: 100, actions: ['install', 'later'] })
+    expect(card).toMatchObject({ line: 'Prête à installer', percent: 100, bar: 'value' })
   })
 
   /**
@@ -68,8 +81,6 @@ describe('updateCard', () => {
   it('n’invente pas de pourcentage pour l’installation', () => {
     const card = updateCard(status({ phase: 'ready', version: '0.4.1', percent: 100 }), true)
     expect(card).toMatchObject({ line: 'Installation…', percent: null, bar: 'sweep' })
-    // Plus rien à cliquer : l'app se ferme dans la seconde.
-    expect(card?.actions).toEqual([])
   })
 
   it('se passe du numéro de version quand il n’est pas connu', () => {

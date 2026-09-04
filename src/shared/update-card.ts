@@ -2,8 +2,12 @@
  * Ce que la petite fenêtre de mise à jour montre, et à quel moment.
  *
  * Elle ne parle à personne : elle traduit un `UpdateStatus` en une carte —
- * un titre, une ligne, une barre, des boutons — ou en `null` quand il n'y a
- * rien à déranger.
+ * un titre, une ligne, une barre — ou en `null` quand il n'y a plus rien à
+ * suivre.
+ *
+ * **Aucun bouton.** La carte rend compte, elle ne demande rien : la décision a
+ * déjà été prise dans les réglages, et la reposer par-dessus reviendrait à
+ * demander deux fois. Elle s'ouvre sur ce clic-là, et se ferme d'elle-même.
  *
  * **Le pourcentage est celui du téléchargement, pas de l'installation.** La
  * distinction n'est pas un détail de vocabulaire : l'installeur NSIS tourne
@@ -11,14 +15,11 @@
  * personne. Afficher « installation 42 % » serait inventer un chiffre. La
  * dernière étape est donc annoncée sans nombre, et elle dure une seconde.
  *
- * Rien ne s'affiche tant qu'aucune version n'a été trouvée : une recherche
- * qui ne trouve rien est le cas courant, et elle a lieu toutes les six heures.
+ * Le `null` reste utile une fois la carte ouverte : c'est ce qui la ferme
+ * quand le cycle retombe — plus rien à suivre, plus de fenêtre.
  */
 
 import type { UpdateStatus } from './types'
-
-/** Ce que la carte propose de faire. */
-export type UpdateAction = 'download' | 'install' | 'later'
 
 /**
  * La barre : une valeur connue, un va-et-vient quand l'étape n'a pas de
@@ -33,7 +34,6 @@ export interface UpdateCard {
   /** `null` quand la barre n'a pas de valeur à montrer. */
   percent: number | null
   bar: UpdateBar
-  actions: UpdateAction[]
 }
 
 /** Un pourcentage montrable : entier, entre 0 et 100, jamais NaN. */
@@ -56,21 +56,22 @@ export function clampPercent(value: number): number {
 export function updateCard(status: UpdateStatus, installing = false): UpdateCard | null {
   const title = status.version ? `AnimeList ${status.version}` : 'AnimeList'
 
-  if (installing) return { title, line: 'Installation…', percent: null, bar: 'sweep', actions: [] }
+  if (installing) return { title, line: 'Installation…', percent: null, bar: 'sweep' }
 
   switch (status.phase) {
     case 'available':
-      return { title, line: 'Nouvelle version disponible', percent: null, bar: 'none', actions: ['download', 'later'] }
+      // Le téléchargement démarre dans la seconde : la carte annonce ce qui
+      // commence plutôt que de rester vide le temps du premier octet.
+      return { title, line: 'Nouvelle version disponible', percent: 0, bar: 'value' }
     case 'downloading': {
       const percent = clampPercent(status.percent)
-      return { title, line: `Téléchargement… ${percent} %`, percent, bar: 'value', actions: ['later'] }
+      return { title, line: `Téléchargement… ${percent} %`, percent, bar: 'value' }
     }
     case 'ready':
-      return { title, line: 'Prête à installer', percent: 100, bar: 'value', actions: ['install', 'later'] }
+      return { title, line: 'Prête à installer', percent: 100, bar: 'value' }
     default:
-      // « à jour », « recherche », et l'erreur : rien qui mérite une fenêtre
-      // par-dessus ce que quelqu'un est en train de faire. Les réglages le
-      // disent, eux, à qui va les lire.
+      // « à jour », « recherche », et l'erreur : plus rien à suivre. La carte
+      // s'efface, et les réglages disent le reste à qui va les lire.
       return null
   }
 }

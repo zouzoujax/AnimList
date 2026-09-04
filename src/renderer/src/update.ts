@@ -1,20 +1,22 @@
 /**
- * La petite fenêtre de mise à jour : logo, nom, progression.
+ * La petite carte de mise à jour : logo, nom, progression.
  *
- * Sans React et sans le reste de l'app — elle doit s'afficher au moment où une
- * version est trouvée, pas après avoir chargé un mégaoctet de rendu. Ce qu'elle
- * montre est décidé par `updateCard`, testé à part ; il ne reste ici que le
- * dessin et les trois boutons.
+ * Sans React et sans le reste de l'app — elle doit s'afficher à l'instant où
+ * on clique dans les réglages, pas après avoir chargé un mégaoctet de rendu.
+ * Ce qu'elle montre est décidé par `updateCard`, testé à part ; il ne reste
+ * ici que le dessin et le moment de disparaître.
+ *
+ * Aucun bouton : la décision a été prise dans les réglages, et la carte ne la
+ * repose pas. Elle se ferme donc seule — quand l'app se ferme pour installer,
+ * quand le cycle retombe, ou quelques secondes après avoir dit que c'est prêt.
  */
 
-import { updateCard, type UpdateAction, type UpdateCard } from '@shared/update-card'
+import { updateCard, type UpdateCard } from '@shared/update-card'
 import type { UpdateStatus } from '@shared/types'
 
 interface UpdateWindowApi {
   status: () => Promise<UpdateStatus>
-  download: () => Promise<UpdateStatus>
-  install: () => Promise<void>
-  dismiss: (remember: boolean) => void
+  close: () => void
   onStatus: (fn: (status: UpdateStatus) => void) => () => void
 }
 
@@ -31,7 +33,6 @@ const title = el('title')
 const line = el('line')
 const track = el<HTMLDivElement>('track')
 const fill = el<HTMLDivElement>('fill')
-const actions = el<HTMLDivElement>('actions')
 
 /** Le thème de l'app, passé en paramètres d'adresse par le processus principal. */
 const params = new URLSearchParams(location.search)
@@ -41,63 +42,41 @@ for (const name of ['bg', 'fg', 'accent'] as const) {
 }
 
 /**
- * « Redémarrer » a été cliqué : l'app se ferme dans la seconde, et sans cet
- * état la carte afficherait « prête à installer » pendant qu'elle s'installe.
- */
-let installing = false
-
-/**
- * L'aperçu : la carte jouée à vide, depuis les réglages.
+ * Pourquoi la fenêtre est ouverte.
  *
- * Rien de ce qu'elle montre n'est vrai, et rien de ce qu'on y clique ne
- * télécharge — d'où la mention sur chaque ligne. Sans ça, une fenêtre qui
- * n'apparaît qu'au moment d'une vraie mise à jour resterait invisible jusqu'à
- * la prochaine, thème compris.
+ * `install` ne se déduit d'aucun état : le cycle reste sur « prête » pendant
+ * que l'installeur démarre, et la carte annoncerait donc « prête à installer »
+ * pendant qu'elle s'installe. C'est le clic qui le sait, et il l'apporte ici.
+ *
+ * `demo` joue la carte à vide depuis les réglages : rien n'y est vrai, d'où la
+ * mention sur chaque ligne.
  */
-const demo = params.get('demo') === '1'
+const mode = params.get('mode')
+const installing = mode === 'install'
+const demo = mode === 'demo'
 
-const LABEL: Record<UpdateAction, string> = {
-  download: 'Télécharger',
-  install: 'Redémarrer maintenant',
-  later: 'Plus tard'
-}
-
-function run(action: UpdateAction): void {
-  if (demo) return api.dismiss(false)
-  if (action === 'later') return api.dismiss(true)
-  if (action === 'download') return void api.download()
-  installing = true
-  void api.install()
-  // Redessiné tout de suite : l'app met une seconde à se fermer, et un bouton
-  // qui ne réagit pas se reclique.
-  void api.status().then(draw)
-}
+/** Une fois prête, la carte a tout dit : elle s'efface plutôt que de rester. */
+const LINGER_MS = 5000
+let leaving = 0
 
 function draw(status: UpdateStatus): void {
   const card: UpdateCard | null = updateCard(status, installing)
-  // Plus rien à annoncer — « à jour », ou une erreur que les réglages diront
+  // Plus rien à suivre — « à jour », ou une erreur que les réglages diront
   // mieux : la fenêtre n'a plus de raison d'être.
-  if (!card) return api.dismiss(false)
+  if (!card) return api.close()
 
   title.textContent = card.title
   line.textContent = demo ? `Aperçu · ${card.line}` : card.line
 
-  track.hidden = card.bar === 'none'
   track.classList.toggle('sweep', card.bar === 'sweep')
   if (card.bar === 'value') fill.style.width = `${card.percent ?? 0}%`
 
-  actions.replaceChildren(
-    ...card.actions.map((action) => {
-      const button = document.createElement('button')
-      button.className = action === 'later' ? 'act' : 'act primary'
-      button.textContent = LABEL[action]
-      button.onclick = () => run(action)
-      return button
-    })
-  )
+  // L'installation, elle, ne se termine pas ici : l'app se ferme, et la
+  // fenêtre part avec.
+  if (status.phase === 'ready' && !installing && !leaving) {
+    leaving = window.setTimeout(() => api.close(), LINGER_MS)
+  }
 }
-
-el<HTMLButtonElement>('close').onclick = () => api.dismiss(!demo)
 
 /** Les trois moments de la carte, joués une fois, pour l'aperçu. */
 function playDemo(): void {
