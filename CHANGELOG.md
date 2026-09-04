@@ -9,6 +9,29 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.0 — 5 septembre 2026
+
+### Ajouts
+
+- Ton profil Discord peut annoncer ce que tu regardes : la série, l'épisode, la jaquette et le temps qu'il reste, le compte à rebours s'arrêtant quand tu mets en pause. Éteint par défaut — c'est la seule chose de l'app qui sorte du PC de sa propre initiative — et un mode discret annonce « Un anime » sans rien d'autre. Le lecteur intégré comme celui d'Anime-Sama sont reconnus
+- Une télécommande pour le téléphone : un QR code dans les réglages, et le téléphone pilote ce qui joue sur le PC — lecture, pause, volume, plein écran, épisode suivant — en plus de l'accueil, de la bibliothèque et de « Découvrir ». Elle pilote aussi le lecteur d'Anime-Sama, pas seulement celui de l'app
+- « C'est quoi, cet anime ? » a maintenant une réponse : colle ou dépose une capture d'écran, et l'app rend la série, l'épisode et la seconde exacte, vignette à l'appui. Quand l'image ne ressemble à rien de connu, elle le dit au lieu d'affirmer n'importe quoi
+- Importer une liste AniList ou Kitsu depuis un simple pseudo, sans compte, sans clé et sans fichier à exporter à la main
+- L'app s'intègre à Windows : un clic droit sur son icône dans la barre des tâches propose la série en cours, les touches multimédia du clavier pilotent le lecteur pendant qu'un épisode est ouvert, et un mini-lecteur reste visible au-dessus des autres fenêtres
+- Les résumés et les titres d'épisodes sont traduits en français quand AniList ne les publie qu'en anglais
+
+### Modifications
+
+- Le plein écran agrandit la vidéo, pas la fenêtre, et garde les commandes visibles : barre de progression, volume, réglages et minuteur restent à portée. Un épisode lancé depuis une fiche démarre directement ainsi
+- Changer d'épisode sur Anime-Sama ne recharge plus toute la page
+- Les listes s'affichaient parfois longtemps après leur squelette : « Pour toi » réclamait six pages de catalogue dans la file réservée à ce que tu attends à l'écran, et passait devant la page réellement regardée
+
+### Corrections
+
+- Un épisode diffusé depuis quelques heures restait verrouillé : l'app attendait qu'AniList avance son calendrier, ce qui arrive parfois bien après la diffusion. C'est l'heure annoncée qui fait foi maintenant
+- La télécommande proposait « Vu » sur un épisode pas encore sorti, et l'écrivait — la fenêtre s'en gardait déjà, la règle vaut désormais pour les deux
+- La page de la télécommande restait sur « Chargement… »
+
 ## 0.3.18 — 2 septembre 2026
 
 ### Ajouts
