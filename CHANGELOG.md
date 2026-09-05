@@ -9,6 +9,18 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.0 — 5 septembre 2026
+
+### Ajouts
+
+- Un épisode regardé sur Anime-Sama se coche tout seul aux neuf dixièmes de la lecture : ce qui reste après, c'est le générique de fin. Un épisode pas encore diffusé n'est jamais coché
+- L'épisode suivant s'enchaîne à la fin du précédent, dans la fenêtre déjà ouverte, après huit secondes qu'un bouton « Annuler » suffit à interrompre. Une pause volontaire dans le générique n'enchaîne rien, et une saison finie s'arrête d'elle-même
+- Les deux se coupent séparément dans Réglages → Lecture
+
+### Modifications
+
+- Le plein écran ne se coupe plus entre deux épisodes. L'app n'en demande plus à la page — celui-là ne survivait pas au changement d'épisode, d'où la seconde de retour au bureau à chaque fois : elle agrandit la fenêtre et étale le lecteur sur tout l'écran. L'en-tête du site est masqué pendant la lecture, Échap rend l'écran puis ferme, et le bouton du lecteur bascule ce même écran plein
+
 ## 0.4.0 — 5 septembre 2026
 
 ### Ajouts
