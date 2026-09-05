@@ -124,18 +124,3 @@ export function closeUpdateWindow(): void {
   if (win && !win.isDestroyed()) win.destroy()
   win = null
 }
-
-/**
- * Montre la carte à vide, pour la voir sans attendre une vraie version.
- *
- * Une fenêtre qui n'apparaît qu'au moment d'une mise à jour est invisible
- * jusqu'à la prochaine — impossible d'en vérifier l'allure, la position ou la
- * lisibilité du thème avant qu'elle ne serve pour de bon. Les lignes portent
- * la mention « Aperçu », et aucun bouton ne télécharge quoi que ce soit : rien
- * de ce qui s'y affiche n'est vrai.
- */
-export function previewUpdateWindow(version: string): void {
-  closeUpdateWindow()
-  win = create(`${colors()}&mode=demo&version=${encodeURIComponent(version)}`)
-  win.setAlwaysOnTop(true)
-}

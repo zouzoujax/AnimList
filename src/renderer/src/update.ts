@@ -47,13 +47,8 @@ for (const name of ['bg', 'fg', 'accent'] as const) {
  * `install` ne se déduit d'aucun état : le cycle reste sur « prête » pendant
  * que l'installeur démarre, et la carte annoncerait donc « prête à installer »
  * pendant qu'elle s'installe. C'est le clic qui le sait, et il l'apporte ici.
- *
- * `demo` joue la carte à vide depuis les réglages : rien n'y est vrai, d'où la
- * mention sur chaque ligne.
  */
-const mode = params.get('mode')
-const installing = mode === 'install'
-const demo = mode === 'demo'
+const installing = params.get('mode') === 'install'
 
 /** Une fois prête, la carte a tout dit : elle s'efface plutôt que de rester. */
 const LINGER_MS = 5000
@@ -66,7 +61,7 @@ function draw(status: UpdateStatus): void {
   if (!card) return api.close()
 
   title.textContent = card.title
-  line.textContent = demo ? `Aperçu · ${card.line}` : card.line
+  line.textContent = card.line
 
   track.classList.toggle('sweep', card.bar === 'sweep')
   if (card.bar === 'value') fill.style.width = `${card.percent ?? 0}%`
@@ -78,35 +73,5 @@ function draw(status: UpdateStatus): void {
   }
 }
 
-/** Les trois moments de la carte, joués une fois, pour l'aperçu. */
-function playDemo(): void {
-  const version = params.get('version') ?? ''
-  const fake = (patch: Partial<UpdateStatus>): UpdateStatus => ({
-    phase: 'idle',
-    version,
-    percent: 0,
-    message: null,
-    notes: [],
-    ...patch
-  })
-
-  draw(fake({ phase: 'available' }))
-  window.setTimeout(() => {
-    let percent = 0
-    const timer = window.setInterval(() => {
-      percent += 7
-      if (percent >= 100) {
-        window.clearInterval(timer)
-        draw(fake({ phase: 'ready', percent: 100 }))
-        return
-      }
-      draw(fake({ phase: 'downloading', percent }))
-    }, 180)
-  }, 1600)
-}
-
-if (demo) playDemo()
-else {
-  api.onStatus(draw)
-  void api.status().then(draw)
-}
+api.onStatus(draw)
+void api.status().then(draw)
