@@ -22,7 +22,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
-import { autostart, exitFullscreen, playerSignature, videoFrame } from './video-frame'
+import { autostart, exitFullscreen, isCinema, leaveCinema, playerSignature, videoFrame } from './video-frame'
 
 let win: BrowserWindow | null = null
 
@@ -126,6 +126,37 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
   win.on('closed', () => {
     win = null
     openedUrl = ''
+  })
+
+  /**
+   * Échap rend l'écran, puis ferme.
+   *
+   * Le mode cinéma agrandit la fenêtre sans passer par le plein écran de la
+   * page : Chromium n'a donc plus rien à quitter, et la touche ne faisait plus
+   * rien du tout. Elle reprend son rôle en deux temps — sortir de l'écran
+   * plein d'abord, fermer ensuite — ce qui évite de refermer la fenêtre d'un
+   * réflexe pris pour sortir du plein écran.
+   */
+  win.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown' || input.key !== 'Escape') return
+    const target = win
+    if (!target) return
+    event.preventDefault()
+    if (isCinema(target) || target.isFullScreen()) void leaveCinema(target)
+    else target.close()
+  })
+
+  /**
+   * Le bouton de plein écran du lecteur ne fait plus rien, et c'est voulu.
+   *
+   * Il demande un plein écran HTML par-dessus une fenêtre déjà agrandie : la
+   * vidéo n'y gagne pas un pixel, et Chromium pose au passage sa barre
+   * d'information en haut de l'écran. On rend donc la main tout de suite ;
+   * l'image occupe déjà tout.
+   */
+  win.webContents.on('enter-html-full-screen', () => {
+    const target = win
+    if (target && isCinema(target)) void exitFullscreen(target)
   })
 
   /**

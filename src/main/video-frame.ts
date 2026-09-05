@@ -126,12 +126,26 @@ const CINEMA = `
   return true
 `
 
+/**
+ * Les fenêtres en mode cinéma.
+ *
+ * Deux comportements en dépendent — la touche Échap et le refus du plein écran
+ * du lecteur — et ils vivent dans la fenêtre, pas ici. Un ensemble faible :
+ * une fenêtre fermée s'en retire toute seule.
+ */
+const inCinema = new WeakSet<BrowserWindow>()
+
+export function isCinema(win: BrowserWindow): boolean {
+  return inCinema.has(win)
+}
+
 /** Étale le lecteur sur l'écran. Vrai si le cadre a été trouvé. */
 export async function enterCinema(win: BrowserWindow): Promise<boolean> {
   if (win.isDestroyed()) return false
   const done: unknown = await win.webContents.mainFrame
     .executeJavaScript(`(function () { try { ${CINEMA} } catch (e) { return false } })()`, true)
     .catch(() => false)
+  inCinema.add(win)
   win.setFullScreen(true)
   return done === true
 }
@@ -152,6 +166,7 @@ export async function leaveCinema(win: BrowserWindow): Promise<void> {
       true
     )
     .catch(() => false)
+  inCinema.delete(win)
   win.setFullScreen(false)
 }
 
