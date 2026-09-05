@@ -13,7 +13,9 @@ import {
   setPrefs,
   setWatched,
   setWatchedUpTo,
-  snapshot
+  snapshot,
+  startRewatch,
+  updateEvent
 } from './store'
 
 function media(id: number, episodes: number | null, duration: number | null = 24): Media {
@@ -114,6 +116,55 @@ describe('setWatched', () => {
     cacheMedia([media(1, 12)])
     setWatched(1, 1, true)
     expect(entryOf(1)?.status).toBe('watching')
+  })
+
+  // Le défaut qui faussait « Ces 7 jours » : décocher puis recocher redatait
+  // d'aujourd'hui un épisode vu le mois dernier, et le compteur le comptait neuf.
+  it('rend sa date à un épisode recoché', () => {
+    cacheMedia([media(1, 12)])
+    setWatched(1, 3, true)
+    const veille = Date.now() - 30 * 86_400_000
+    updateEvent({ animeId: 1, episode: 3, pass: 0 }, { at: veille, note: 'la scène du train' })
+
+    setWatched(1, 3, false)
+    setWatched(1, 3, true)
+
+    const back = snapshot().history.find((h) => h.animeId === 1 && h.episode === 3)
+    expect(back?.at).toBe(veille)
+    expect(back?.note).toBe('la scène du train')
+  })
+
+  it('date d’aujourd’hui un épisode jamais coché', () => {
+    cacheMedia([media(1, 12)])
+    setWatched(1, 4, true)
+    expect(snapshot().history[0].at).toBeGreaterThan(Date.now() - 5000)
+  })
+
+  // Sinon un vrai second visionnage hériterait de la date du premier.
+  it('ne rend rien à une autre passe', () => {
+    cacheMedia([media(1, 1)])
+    setWatched(1, 1, true)
+    updateEvent({ animeId: 1, episode: 1, pass: 0 }, { at: Date.now() - 30 * 86_400_000 })
+    setWatched(1, 1, false)
+
+    // Le souvenir du décochage porte sur la passe 0 ; la passe 1 ne doit pas y toucher.
+    startRewatch(1)
+    setWatched(1, 1, true)
+
+    const seconde = snapshot().history.find((h) => h.animeId === 1 && h.pass === 1)
+    expect(seconde?.at).toBeGreaterThan(Date.now() - 5000)
+  })
+
+  it('rend leurs dates après un effacement complet', () => {
+    cacheMedia([media(1, 12)])
+    setWatchedUpTo(1, 3)
+    const vieux = Date.now() - 60 * 86_400_000
+    for (const episode of [1, 2, 3]) updateEvent({ animeId: 1, episode, pass: 0 }, { at: vieux })
+
+    clearWatched(1)
+    setWatchedUpTo(1, 3)
+
+    expect(snapshot().history.filter((h) => h.animeId === 1 && h.at === vieux)).toHaveLength(3)
   })
 })
 

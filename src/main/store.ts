@@ -5,6 +5,7 @@ import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
 import { migrate, SCHEMA_VERSION, type MigrationReport, type StoredDb } from './migrations'
 import { MAX_POSITIONS, prunePositions, worthRemembering, type Position } from '@shared/playback'
+import { pruneUndone, undoneKey, type Undone } from '@shared/undone'
 import {
   DEFAULT_PREFS,
   type CustomList,
@@ -40,6 +41,13 @@ interface Db {
   positions: Record<string, Position>
   /** Personnes et studios suivis. Additif lui aussi, pour la même raison. */
   follows: Follow[]
+  /**
+   * Les lignes d'historique retirées par un décochage, gardées de côté.
+   *
+   * Additif comme les deux précédents : un fichier plus ancien n'en a pas, et
+   * `sanitize` le remplace par une table vide.
+   */
+  undone: Record<string, Undone>
 }
 
 const emptyDb = (): Db => ({
@@ -51,7 +59,8 @@ const emptyDb = (): Db => ({
   lists: [],
   folders: {},
   positions: {},
-  follows: []
+  follows: [],
+  undone: {}
 })
 
 export const store = new EventEmitter()
@@ -104,7 +113,8 @@ function sanitize(raw: unknown): Db {
     lists: Array.isArray(input.lists) ? input.lists : [],
     folders: input.folders && typeof input.folders === 'object' ? input.folders : {},
     positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {},
-    follows: Array.isArray(input.follows) ? input.follows.filter((f) => f && typeof f.key === 'string') : []
+    follows: Array.isArray(input.follows) ? input.follows.filter((f) => f && typeof f.key === 'string') : [],
+    undone: input.undone && typeof input.undone === 'object' ? pruneUndone(input.undone) : {}
   }
 }
 
@@ -509,6 +519,10 @@ export function removeEntry(animeId: number): void {
     list.updatedAt = Date.now()
   }
   delete db.folders[String(animeId)]
+  // Plus de série, plus de décochage à rendre.
+  for (const k of Object.keys(db.undone)) {
+    if (db.undone[k].event.animeId === animeId) delete db.undone[k]
+  }
   rebuildIndex()
   changed()
 }
@@ -519,6 +533,29 @@ function newEvent(animeId: number, episode: number, at: number): WatchEvent {
   const ev: WatchEvent = { animeId, episode, at, minutes: runtimeOf(animeId) }
   if (pass > 0) ev.pass = pass
   return ev
+}
+
+/**
+ * L'événement à réinscrire quand on recoche un épisode.
+ *
+ * Recocher n'est pas regarder. Le plus souvent c'est réparer un décochage —
+ * une fausse manœuvre, un essai — et dater cette réparation d'aujourd'hui
+ * ferait remonter dans « Ces 7 jours » des épisodes vus le mois dernier. Si on
+ * se souvient de la ligne effacée, elle revient telle quelle : sa date, sa
+ * durée, sa note. Sinon, c'est un vrai visionnage et il porte l'heure qu'il est.
+ */
+function tickEvent(animeId: number, episode: number, at: number): WatchEvent {
+  const k = undoneKey(animeId, episode, currentPass(animeId))
+  const memo = db.undone[k]
+  if (!memo) return newEvent(animeId, episode, at)
+  delete db.undone[k]
+  return memo.event
+}
+
+/** Met de côté la ligne qu'un décochage retire, pour pouvoir la rendre. */
+function rememberUndone(events: WatchEvent[], now: number): void {
+  for (const ev of events) db.undone[undoneKey(ev.animeId, ev.episode, passOf(ev))] = { event: ev, undoneAt: now }
+  db.undone = pruneUndone(db.undone, now)
 }
 
 /**
@@ -539,13 +576,15 @@ export function setWatched(animeId: number, episode: number, watched: boolean): 
   if (watched === already) return
 
   if (watched) {
-    pushEvent(newEvent(animeId, episode, Date.now()))
+    pushEvent(tickEvent(animeId, episode, Date.now()))
     watchedIndex.add(k)
   } else {
     // Only the current pass is undone; earlier viewings keep their rows.
     touchJournal()
     const pass = currentPass(animeId)
-    db.history = db.history.filter((h) => !(h.animeId === animeId && h.episode === episode && passOf(h) === pass))
+    const hit = (h: WatchEvent): boolean => h.animeId === animeId && h.episode === episode && passOf(h) === pass
+    rememberUndone(db.history.filter(hit), Date.now())
+    db.history = db.history.filter((h) => !hit(h))
     watchedIndex.delete(k)
   }
   syncProgress(animeId)
@@ -557,7 +596,7 @@ export function setWatchedUpTo(animeId: number, episode: number): void {
   for (let ep = 1; ep <= episode; ep += 1) {
     const k = key(animeId, ep)
     if (watchedIndex.has(k)) continue
-    pushEvent(newEvent(animeId, ep, now))
+    pushEvent(tickEvent(animeId, ep, now))
     watchedIndex.add(k)
   }
   syncProgress(animeId)
@@ -567,6 +606,7 @@ export function setWatchedUpTo(animeId: number, episode: number): void {
 /** Wipes a series' progress — every pass, not just the current one. */
 export function clearWatched(animeId: number): void {
   touchJournal()
+  rememberUndone(db.history.filter((h) => h.animeId === animeId), Date.now())
   db.history = db.history.filter((h) => h.animeId !== animeId)
   const entry = db.entries[String(animeId)]
   if (entry) entry.rewatches = 0
@@ -682,7 +722,14 @@ export function dropOrphanEvents(): number {
   return before - kept.length
 }
 
-/** Removes a single watch event, from any pass. */
+/**
+ * Removes a single watch event, from any pass.
+ *
+ * Rien n'est mis de côté ici, à la différence d'un décochage : supprimer une
+ * ligne de l'historique est un geste explicite, qui veut dire « celle-ci n'a
+ * pas lieu d'être ». La faire revenir à la première case recochée serait la
+ * contredire.
+ */
 export function removeEvent(ref: WatchEventRef): boolean {
   touchJournal()
   const before = db.history.length
@@ -925,7 +972,7 @@ export function markAllWatched(animeIds: number[]): number {
     for (let ep = 1; ep <= total; ep += 1) {
       const k = key(animeId, ep)
       if (watchedIndex.has(k)) continue
-      pushEvent(newEvent(animeId, ep, now))
+      pushEvent(tickEvent(animeId, ep, now))
       watchedIndex.add(k)
       added += 1
     }
