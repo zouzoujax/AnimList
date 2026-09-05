@@ -15,12 +15,17 @@ import { startFollowWatcher } from './follows'
 import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
 import { startUpdateWatcher } from './updater'
 import { startBinge } from './binge'
+import { useDevProfile } from './profile'
 
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore, store } from './store'
 
 const isDev = !app.isPackaged
+
+// Avant le verrou d'instance : il se déduit du dossier de données, que ceci
+// déplace. Voir profile.ts — les deux versions partageaient tout.
+if (isDev) useDevProfile()
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
