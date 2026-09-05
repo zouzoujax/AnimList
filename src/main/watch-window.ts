@@ -22,7 +22,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
-import { autostart } from './video-frame'
+import { autostart, playerSignature, videoFrame } from './video-frame'
 
 let win: BrowserWindow | null = null
 
@@ -69,10 +69,14 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
   // numéro. C'est la différence entre un clic dans un menu et une visite
   // entière, publicités comprises.
   if (win && !win.isDestroyed() && openedUrl === url && Number.isInteger(episode) && (episode as number) > 0) {
+    // Relevée avant le changement : c'est elle qui permettra de ne pas
+    // reprendre le lecteur de l'épisode qu'on quitte.
+    const before = await videoFrame(win)
+    const stale = before ? playerSignature(before) : null
     if (await switchEpisode(win, episode as number)) {
       win.focus()
       // Le lecteur se recharge derrière le changement : on relance dessus.
-      void autostart(win, true)
+      void autostart(win, true, stale)
       return true
     }
   }
@@ -182,7 +186,14 @@ export function closeWatchWindow(): void {
 export async function playNext(episode: number): Promise<boolean> {
   const target = watchWindow()
   if (!target || !Number.isInteger(episode) || episode < 1) return false
+
+  // Relevée avant le changement : sans elle, le premier tour de `autostart`
+  // retombe sur le lecteur de l'épisode qu'on quitte, et le plein écran
+  // demandé disparaît avec le cadre remplacé.
+  const before = await videoFrame(target)
+  const stale = before ? playerSignature(before) : null
+
   if (!(await switchEpisode(target, episode))) return false
-  void autostart(target, true)
+  void autostart(target, true, stale)
   return true
 }

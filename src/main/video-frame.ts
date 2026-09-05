@@ -25,6 +25,8 @@ export interface VideoState {
   playing?: boolean
   /** Vrai quand c'est la vidéo qui est en plein écran, pas la fenêtre. */
   full?: boolean
+  /** L'adresse du fichier joué : ce qui distingue un épisode du suivant. */
+  src?: string
 }
 
 /**
@@ -51,9 +53,28 @@ export const PROBE = videoScript(`
     duration: isFinite(v.duration) ? v.duration : 0,
     volume: Math.round((v.muted ? 0 : v.volume) * 100),
     playing: !v.paused,
-    full: document.fullscreenElement !== null
+    full: document.fullscreenElement !== null,
+    src: v.currentSrc || ''
   }
 `)
+
+/**
+ * De quoi reconnaître un lecteur d'un autre.
+ *
+ * Le cadre et le fichier joué : deux épisodes ne partagent pas la seconde, et
+ * un lecteur remplacé change généralement la première. C'est ce qui permet de
+ * dire « ce n'est plus le même » sans avoir à le supposer.
+ */
+export function playerSignature(found: { frame: WebFrameMain; state: VideoState }): string {
+  // Un cadre détruit entre-temps refuse de dire son adresse.
+  let url: string
+  try {
+    url = found.frame.url
+  } catch {
+    url = ''
+  }
+  return `${url}|${found.state.src ?? ''}`
+}
 
 /** Le premier cadre qui contient une vidéo, et ce qu'elle raconte. */
 export async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameMain; state: VideoState } | null> {
@@ -111,6 +132,14 @@ export async function videoFullscreen(win: BrowserWindow): Promise<boolean> {
 }
 
 /**
+ * Combien de tours on accepte d'attendre le *nouveau* lecteur avant de se
+ * contenter de celui qui est là. Certains lecteurs se réutilisent tels quels,
+ * et attendre indéfiniment un remplacement qui n'arrive pas ne démarrerait
+ * jamais rien.
+ */
+const STALE_TRIES = 16
+
+/**
  * Attend que le lecteur soit là, démarre la vidéo et la passe en plein écran.
  *
  * Rien n'est garanti : certains lecteurs ne créent leur `video` qu'après un
@@ -118,20 +147,46 @@ export async function videoFullscreen(win: BrowserWindow): Promise<boolean> {
  * un autre domaine, et un clic injecté n'y entre pas. On repasse pendant une
  * quinzaine de secondes, puis on renonce en silence : la page reste ouverte,
  * et il suffit alors de cliquer soi-même.
+ *
+ * `stale` est la signature du lecteur qu'on vient de quitter, lors d'un
+ * changement d'épisode. Sans elle, le plein écran se perdait une fois sur
+ * deux : le premier tour tombait sur l'ancien lecteur, encore en place, le
+ * démarrait et l'agrandissait — puis le site remplaçait le cadre, l'élément
+ * agrandi disparaissait avec lui, et personne ne redemandait rien.
  */
-export async function autostart(win: BrowserWindow, wantFullscreen: boolean): Promise<boolean> {
+export async function autostart(
+  win: BrowserWindow,
+  wantFullscreen: boolean,
+  stale: string | null = null
+): Promise<boolean> {
   for (let i = 0; i < TRIES; i += 1) {
     await new Promise((resolve) => setTimeout(resolve, EVERY_MS))
     if (win.isDestroyed()) return false
 
     const video = await videoFrame(win)
     if (!video) continue
+    if (stale && i < STALE_TRIES && playerSignature(video) === stale) continue
 
     // Le son est remis : un lecteur démarre parfois muet pour contourner les
     // règles de démarrage automatique, et une vidéo muette a l'air en panne.
     await video.frame.executeJavaScript(videoScript('v.muted = false; v.play(); return true'), true).catch(() => false)
 
-    if (wantFullscreen) await videoFullscreen(win)
+    if (!wantFullscreen) return true
+    await videoFullscreen(win)
+
+    /**
+     * Une seule reprise, deux secondes plus tard.
+     *
+     * Il arrive qu'un lecteur se reconstruise une fois de plus juste après son
+     * démarrage — une publicité qui se referme, une source de secours : le
+     * plein écran obtenu part alors avec l'ancien élément. Une seule reprise
+     * couvre ce cas sans se mettre à lutter contre quelqu'un qui vient d'en
+     * sortir volontairement.
+     */
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    if (win.isDestroyed()) return true
+    const again = await videoFrame(win)
+    if (again && again.state.full !== true && again.state.playing === true) await videoFullscreen(win)
     return true
   }
   return false
