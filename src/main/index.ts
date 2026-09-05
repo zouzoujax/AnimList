@@ -16,7 +16,6 @@ import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
 import { startUpdateWatcher } from './updater'
 import { startBinge } from './binge'
 
-
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore, store } from './store'
