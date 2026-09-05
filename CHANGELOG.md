@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.3 — 5 septembre 2026
+
+### Modifications
+
+- Aucun changement visible : cette version existe pour vérifier, depuis l'app installée, que la carte de mise à jour s'ouvre bien au moment du téléchargement et de l'installation. Le seul moyen honnête de tester ce chemin est de le parcourir en vrai
+
 ## 0.4.2 — 5 septembre 2026
 
 ### Ajouts
