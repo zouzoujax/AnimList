@@ -34,6 +34,16 @@ const HEIGHT = 104
 
 let win: BrowserWindow | null = null
 
+/**
+ * La carte d'installation doit survivre à la fermeture qu'elle annonce.
+ *
+ * C'est ce qui la rendait invisible : `quitAndInstall` déclenche `before-quit`,
+ * qui referme la carte — elle naissait et mourait dans le même souffle, et le
+ * clic sur « Redémarrer » ne montrait rien du tout. Tant qu'elle tient ce
+ * rôle-là, seule une fermeture explicite l'emporte.
+ */
+let holding = false
+
 /** Vrai pendant qu'un épisode ou une bande-annonce joue, ici ou ailleurs. */
 function watching(): boolean {
   return getLocalWatching() !== null || trailerWindow() !== null || watchWindow() !== null
@@ -112,15 +122,33 @@ function create(search: string): BrowserWindow {
  * Une fois ouverte, elle suit le cycle toute seule : les changements d'état
  * lui parviennent comme à toutes les fenêtres.
  */
-export function showUpdateWindow(mode: 'download' | 'install'): void {
-  closeUpdateWindow()
-  win = create(`${colors()}&mode=${mode}`)
+export function showUpdateWindow(mode: 'download' | 'install'): Promise<void> {
+  closeUpdateWindow(true)
+  holding = mode === 'install'
+  const target = create(`${colors()}&mode=${mode}`)
+  win = target
   // Au-dessus du reste, sauf pendant un épisode : la carte attendra la fin
   // plutôt que de se poser sur la vidéo.
-  win.setAlwaysOnTop(!watching())
+  target.setAlwaysOnTop(!watching())
+
+  // Rendue avant de continuer. L'appelant qui enchaîne sur une fermeture doit
+  // attendre ici, sinon il ferme l'app avant que la page ne soit dessinée.
+  return new Promise((resolve) => {
+    target.once('ready-to-show', () => resolve())
+    // Une page qui ne se charge pas ne doit pas retenir une fermeture.
+    setTimeout(resolve, 2000)
+  })
 }
 
-export function closeUpdateWindow(): void {
+/**
+ * `force` passe outre la carte d'installation.
+ *
+ * La fermeture de l'app, elle, ne doit pas l'emporter : c'est précisément ce
+ * qu'elle est en train d'annoncer.
+ */
+export function closeUpdateWindow(force = false): void {
+  if (holding && !force) return
+  holding = false
   if (win && !win.isDestroyed()) win.destroy()
   win = null
 }
