@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.4 — 5 septembre 2026
+
+### Corrections
+
+- « Redémarrer maintenant » ne montrait rien : la carte de mise à jour était créée puis emportée par la fermeture de l'app dans la même fraction de seconde. Elle s'affiche maintenant le temps d'être lue avant que tout ne ferme. Les quelques secondes où l'installeur travaille, l'app éteinte, restent sans affichage — aucune fenêtre de l'app ne peut vivre à ce moment-là
+
 ## 0.4.3 — 5 septembre 2026
 
 ### Modifications
