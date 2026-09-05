@@ -21,17 +21,6 @@ import type { ReleaseNote, UpdateStatus } from '@shared/types'
 import { parseReleaseNote } from '@shared/release-notes'
 import { getPrefs } from './store'
 import { setTaskbarProgress } from './taskbar'
-import { closeUpdateWindow, showUpdateWindow } from './update-window'
-
-/**
- * Le temps que la carte d'installation reste lisible avant que tout ne ferme.
- *
- * Sans cette pause, le clic sur « Redémarrer » ne montrait rien : la fenêtre
- * était créée puis emportée par la fermeture dans la même poignée de
- * millisecondes. Une seconde et demie suffit à la lire, et retarde une mise à
- * jour d'autant — ce qui n'est rien à côté de l'installation elle-même.
- */
-const INSTALL_LINGER_MS = 1500
 
 let state: UpdateStatus = { phase: 'idle', version: null, percent: 0, message: null, notes: [] }
 let started = false
@@ -66,9 +55,6 @@ function broadcast(): void {
 
 function set(next: Partial<UpdateStatus>): void {
   state = { ...state, ...next }
-  // La petite carte, quand elle est ouverte, reçoit l'état comme toutes les
-  // fenêtres : elle suit le cycle sans qu'on ait à la prévenir. Ce qu'elle ne
-  // fait pas, c'est s'ouvrir ici — elle ne paraît que sur un clic.
   broadcast()
 }
 
@@ -177,9 +163,6 @@ export async function checkForUpdates(): Promise<UpdateStatus> {
 export async function downloadUpdate(): Promise<UpdateStatus> {
   if (state.phase !== 'available') return state
 
-  // Demandé depuis les réglages : la carte montre où ça en est pendant qu'on
-  // retourne à autre chose. Rien à attendre ici, l'app ne ferme pas.
-  void showUpdateWindow('download')
   set({ phase: 'downloading', percent: 0, message: null })
   try {
     const auto = await attach()
@@ -196,10 +179,6 @@ export async function installUpdate(): Promise<void> {
   if (state.phase !== 'ready') return
   const auto = await attach().catch(() => null)
   if (!auto) return
-  // Attendue, pas seulement demandée : `quitAndInstall` referme tout, et une
-  // fenêtre pas encore dessinée n'aura jamais l'occasion de l'être.
-  await showUpdateWindow('install')
-  await new Promise((resolve) => setTimeout(resolve, INSTALL_LINGER_MS))
   /**
    * Silencieux, et l'app revient d'elle-même.
    *
@@ -213,14 +192,7 @@ export async function installUpdate(): Promise<void> {
    * rien dire — mais c'est exactement le risque déjà pris à chaque fermeture,
    * pas un nouveau.
    */
-  try {
-    auto.quitAndInstall(true, true)
-  } catch (err) {
-    // L'installeur n'est pas parti : la carte resterait sinon à annoncer une
-    // fermeture qui n'arrive pas.
-    closeUpdateWindow(true)
-    set({ phase: 'error', message: (err as Error).message })
-  }
+  auto.quitAndInstall(true, true)
 }
 
 /** Une session ouverte plusieurs jours doit voir passer une version. */

@@ -9,40 +9,6 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
-## 0.4.5 — 5 septembre 2026
-
-### Modifications
-
-- Aucun changement visible : cette version sert de cible au test de la carte de mise à jour, que la 0.4.4 venait de réparer. Il fallait une version installée qui contienne le correctif, et une autre à installer par-dessus — la première n'a pas pu se montrer elle-même
-
-## 0.4.4 — 5 septembre 2026
-
-### Corrections
-
-- « Redémarrer maintenant » ne montrait rien : la carte de mise à jour était créée puis emportée par la fermeture de l'app dans la même fraction de seconde. Elle s'affiche maintenant le temps d'être lue avant que tout ne ferme. Les quelques secondes où l'installeur travaille, l'app éteinte, restent sans affichage — aucune fenêtre de l'app ne peut vivre à ce moment-là
-
-## 0.4.3 — 5 septembre 2026
-
-### Modifications
-
-- Aucun changement visible : cette version existe pour vérifier, depuis l'app installée, que la carte de mise à jour s'ouvre bien au moment du téléchargement et de l'installation. Le seul moyen honnête de tester ce chemin est de le parcourir en vrai
-
-## 0.4.2 — 5 septembre 2026
-
-### Ajouts
-
-- Une mise à jour lancée depuis les réglages s'affiche dans une petite carte au centre de l'écran : le logo, le nom, la version et la progression du téléchargement. Aucun bouton — la décision vient d'être prise une seconde plus tôt — et elle se ferme d'elle-même une fois qu'il n'y a plus rien à suivre
-
-### Suppressions
-
-- Le bouton « Aperçu » des réglages, qui jouait une fausse mise à jour pour montrer la carte : il servait à vérifier son allure pendant le développement, il n'avait rien à faire dans l'app installée
-
-## 0.4.1 — 5 septembre 2026
-
-### Ajouts
-
-- Une mise à jour lancée depuis les réglages s'affiche dans une petite carte au centre de l'écran : le logo, le nom, la version et la progression du téléchargement. Aucun bouton — la décision vient d'être prise une seconde plus tôt — et elle se ferme d'elle-même une fois qu'il n'y a plus rien à suivre. Un bouton « Aperçu » dans les réglages permet de la voir sans attendre une vraie mise à jour
-
 ## 0.4.0 — 5 septembre 2026
 
 ### Ajouts

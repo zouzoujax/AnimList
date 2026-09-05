@@ -10,7 +10,6 @@ import { stopRemote } from './remote'
 import { applyDiscord, stopDiscord } from './discord'
 import { registerMediaScheme, serveMedia } from './videos'
 import { registerIpc } from './ipc'
-import { closeUpdateWindow } from './update-window'
 import { startAiringWatcher } from './notifications'
 import { startFollowWatcher } from './follows'
 import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
@@ -222,9 +221,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', async (event) => {
-  // Une fenêtre sans barre des tâches survivrait à la fermeture sans que rien
-  // ne la rappelle : l'app resterait en vie sur une carte de mise à jour.
-  closeUpdateWindow()
   stopWatcher?.()
   stopWatcher = null
   stopUpdateCheck?.()

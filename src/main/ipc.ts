@@ -16,7 +16,6 @@ import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
-import { closeUpdateWindow } from './update-window'
 import { closeTrailerWindow, openTrailerWindow, trailerUrl } from './trailer'
 import { fillerFor } from './filler'
 import { chooseFolder, forgetFolder, forgetPosition, openInSystemPlayer, rememberPosition, scanFolder } from './videos'
@@ -266,9 +265,6 @@ export function registerIpc(): void {
   ipcMain.handle('update:check', () => checkForUpdates())
   ipcMain.handle('update:download', () => downloadUpdate())
   ipcMain.handle('update:install', () => installUpdate())
-  // La carte n'a aucun bouton : c'est elle qui demande à disparaître, une fois
-  // qu'il n'y a plus rien à suivre.
-  ipcMain.on('update:close', () => closeUpdateWindow())
   ipcMain.handle('app:open-external', (_e, url: string) => {
     if (/^https?:\/\//i.test(url)) return shell.openExternal(url)
     return undefined
