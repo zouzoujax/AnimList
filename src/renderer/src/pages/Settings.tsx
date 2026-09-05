@@ -16,6 +16,7 @@ import {
   Languages,
   Layers,
   Palette,
+  PlayCircle,
   Sparkles,
   Trash2,
   Upload,
@@ -480,6 +481,22 @@ export default function SettingsPage(): React.JSX.Element {
 
         <Row label="Séries en silence" hint={mutedNames || 'Aucune série coupée pour l’instant.'}>
           <span className="text-[0.8rem] tabular-nums text-muted">{muted.length}</span>
+        </Row>
+      </Card>
+
+      <Card title="Lecture" icon={<PlayCircle size={17} />}>
+        <Row
+          label="Cocher l’épisode fini"
+          hint="Aux neuf dixièmes de la lecture chez Anime-Sama, l’épisode est marqué vu sans que tu aies à y penser. Ce qui reste après, c’est le générique de fin. Un épisode pas encore diffusé n’est jamais coché."
+        >
+          <Toggle on={prefs.autoTick} onChange={(autoTick) => setPrefs({ autoTick })} />
+        </Row>
+
+        <Row
+          label="Enchaîner l’épisode suivant"
+          hint="À la fin d’un épisode, le suivant démarre dans la fenêtre déjà ouverte, après huit secondes qu’un bouton « Annuler » suffit à interrompre. Une pause volontaire dans le générique n’enchaîne rien, et une saison finie s’arrête d’elle-même."
+        >
+          <Toggle on={prefs.autoNext} onChange={(autoNext) => setPrefs({ autoNext })} />
         </Row>
       </Card>
 

@@ -260,6 +260,16 @@ export interface Prefs {
    * fermeture de l'app. Coupé, tout reste manuel depuis les Réglages.
    */
   autoUpdate: boolean
+  /**
+   * Coche l'épisode tout seul quand la lecture en atteint les neuf dixièmes,
+   * chez Anime-Sama. Le reste est le générique de fin.
+   */
+  autoTick: boolean
+  /**
+   * Enchaîne sur l'épisode suivant à la fin du précédent, après un compte à
+   * rebours annulable posé dans le lecteur.
+   */
+  autoNext: boolean
   /** Add a series' sequels to the library on their own, once they have aired. */
   autoSequels: boolean
   /**
@@ -704,6 +714,8 @@ export const DEFAULT_PREFS: Prefs = {
   weekStart: 1,
   lastAiringCheck: 0,
   autoUpdate: true,
+  autoTick: true,
+  autoNext: true,
   autoSequels: true,
   sequelsAdded: [],
   lastSequelSweep: 0,

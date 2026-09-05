@@ -521,6 +521,17 @@ function newEvent(animeId: number, episode: number, at: number): WatchEvent {
   return ev
 }
 
+/**
+ * Vrai si l'épisode est coché pour la passe en cours.
+ *
+ * Passe par l'index plutôt que par l'historique : la question se pose à chaque
+ * tour d'horloge pendant une lecture, et parcourir des milliers de lignes pour
+ * y répondre serait cher pour une réponse déjà calculée.
+ */
+export function isWatched(animeId: number, episode: number): boolean {
+  return watchedIndex.has(key(animeId, episode))
+}
+
 /** Marks or unmarks a single episode, keeping the entry status in sync. */
 export function setWatched(animeId: number, episode: number, watched: boolean): void {
   const k = key(animeId, episode)

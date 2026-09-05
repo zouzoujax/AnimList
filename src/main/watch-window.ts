@@ -169,3 +169,20 @@ export function watchWindow(): BrowserWindow | null {
 export function closeWatchWindow(): void {
   win?.close()
 }
+
+/**
+ * Passe à un autre épisode dans la fenêtre déjà ouverte.
+ *
+ * Rend faux quand ce numéro n'existe pas chez eux — dernier épisode d'une
+ * saison, page pas encore chargée. C'est le contrôle de disponibilité le plus
+ * honnête qui soit : leur propre menu. Ouvrir une nouvelle fenêtre en cas
+ * d'échec serait pire que ne rien faire, puisqu'elle tomberait sur une page
+ * d'épisode inexistant.
+ */
+export async function playNext(episode: number): Promise<boolean> {
+  const target = watchWindow()
+  if (!target || !Number.isInteger(episode) || episode < 1) return false
+  if (!(await switchEpisode(target, episode))) return false
+  void autostart(target, true)
+  return true
+}

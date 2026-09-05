@@ -55,6 +55,10 @@ chaque allumage.
 **Sans rien ressaisir** — import depuis MyAnimeList, TV Time, ou simplement un pseudo AniList ou
 Kitsu. Résumés et titres d'épisodes traduits en français avec une clé DeepL.
 
+**Sans y penser** — un épisode regardé sur Anime-Sama se coche tout seul aux neuf dixièmes, et
+le suivant s'enchaîne dans la fenêtre déjà ouverte, après huit secondes qu'un bouton suffit à
+interrompre. Les deux se coupent dans les réglages.
+
 **Sur Discord** — ton profil peut annoncer la série, l'épisode, la jaquette et le
 temps restant, pendant une lecture seulement. Éteint par défaut : c'est la seule
 chose ici qui sorte du PC d'elle-même. Un mode discret n'annonce que « un anime ».

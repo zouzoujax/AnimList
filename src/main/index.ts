@@ -14,6 +14,9 @@ import { startAiringWatcher } from './notifications'
 import { startFollowWatcher } from './follows'
 import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
 import { startUpdateWatcher } from './updater'
+import { startBinge } from './binge'
+
+
 import { startSequelWatcher } from './sequels'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore, store } from './store'
@@ -35,6 +38,7 @@ let stopWatcher: (() => void) | null = null
 let stopFollows: (() => void) | null = null
 let stopUpdateCheck: (() => void) | null = null
 let stopSequelWatcher: (() => void) | null = null
+let stopBinge: (() => void) | null = null
 
 const CSP = [
   "default-src 'self'",
@@ -199,6 +203,7 @@ void app.whenReady().then(() => {
   stopFollows = startFollowWatcher(mainWindow)
   stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
+  stopBinge = startBinge()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
@@ -227,6 +232,8 @@ app.on('before-quit', async (event) => {
   stopUpdateCheck = null
   stopSequelWatcher?.()
   stopSequelWatcher = null
+  stopBinge?.()
+  stopBinge = null
   stopFollows?.()
   stopFollows = null
   // Une touche multimédia retenue après la sortie resterait prise pour toute
