@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.2 — 5 septembre 2026
+
+### Suppressions
+
+- Le bouton « Aperçu » des réglages, qui jouait une fausse mise à jour pour montrer la carte : il servait à vérifier son allure pendant le développement, il n'avait rien à faire dans l'app installée
+
 ## 0.4.1 — 5 septembre 2026
 
 ### Ajouts
