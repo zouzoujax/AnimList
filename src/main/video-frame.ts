@@ -104,8 +104,20 @@ export async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameM
  * aucun état de plein écran à perdre : le cadre reste à 1920x1080 pendant que
  * sa source change, mesuré à toutes les demi-secondes de la bascule.
  *
- * La règle vise un attribut qu'on pose nous-mêmes, et tout est réversible : le
- * style reste inerte tant que la classe n'est pas sur `<html>`.
+ * **Couvrir ne suffisait pas, il faut masquer.** Mesuré en capture d'écran :
+ * l'en-tête du site — logo, recherche, catalogue, profil — se peignait
+ * par-dessus le lecteur malgré un `z-index` maximal. Un ancêtre du cadre crée
+ * son propre contexte d'empilement, et une valeur, si grande soit-elle, n'en
+ * sort pas. On masque donc tout ce qui n'est pas sur le chemin du lecteur : en
+ * remontant de cadre en parent, chaque voisin est mis de côté.
+ *
+ * Masqué, pas retiré. Leur sélecteur d'épisodes reste dans le document et
+ * répond toujours — c'est par lui qu'on change d'épisode. Déplacer le cadre
+ * pour l'affranchir de son parent aurait été l'autre solution, mais un cadre
+ * déplacé dans le document se recharge, et la vidéo repartirait de zéro.
+ *
+ * La règle vise des attributs qu'on pose nous-mêmes, et tout est réversible :
+ * le style reste inerte tant que la classe n'est pas sur `<html>`.
  */
 const CINEMA = `
   var f = document.getElementById('playerDF')
@@ -115,11 +127,21 @@ const CINEMA = `
   }
   if (!f) return false
   f.setAttribute('data-animelist-cine', '1')
+  var el = f
+  while (el && el.parentElement) {
+    var sibs = el.parentElement.children
+    for (var i = 0; i < sibs.length; i++) {
+      var sib = sibs[i]
+      if (sib !== el && sib.tagName !== 'SCRIPT' && sib.tagName !== 'STYLE') sib.setAttribute('data-animelist-hidden', '1')
+    }
+    el = el.parentElement
+    if (el === document.body) break
+  }
   var st = document.getElementById('animelist-cine-style')
   if (!st) {
     st = document.createElement('style')
     st.id = 'animelist-cine-style'
-    st.textContent = 'html.animelist-cine, html.animelist-cine body { overflow:hidden !important; background:#000 !important; } html.animelist-cine [data-animelist-cine] { position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; max-width:none !important; max-height:none !important; margin:0 !important; border:0 !important; z-index:2147483646 !important; }'
+    st.textContent = 'html.animelist-cine, html.animelist-cine body { overflow:hidden !important; background:#000 !important; } html.animelist-cine [data-animelist-hidden] { display:none !important; } html.animelist-cine [data-animelist-cine] { position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; max-width:none !important; max-height:none !important; margin:0 !important; border:0 !important; z-index:2147483646 !important; }'
     document.head.appendChild(st)
   }
   document.documentElement.classList.add('animelist-cine')
@@ -159,6 +181,8 @@ export async function leaveCinema(win: BrowserWindow): Promise<void> {
         document.documentElement.classList.remove('animelist-cine')
         var f = document.querySelector('[data-animelist-cine]')
         if (f) f.removeAttribute('data-animelist-cine')
+        var caches = document.querySelectorAll('[data-animelist-hidden]')
+        for (var i = 0; i < caches.length; i++) caches[i].removeAttribute('data-animelist-hidden')
         // Le plein écran du lecteur, s'il a été pris par leur bouton.
         if (document.fullscreenElement) document.exitFullscreen()
         return true
