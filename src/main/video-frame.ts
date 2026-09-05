@@ -132,6 +132,31 @@ export async function videoFullscreen(win: BrowserWindow): Promise<boolean> {
 }
 
 /**
+ * Sort du plein écran partout, et attend que ce soit fait.
+ *
+ * **À appeler avant de remplacer le lecteur.** Chromium tient l'état du plein
+ * écran dans le document du haut autant que dans le cadre agrandi ; un élément
+ * agrandi qui disparaît du document sans que personne n'ait quitté le plein
+ * écran laisse cet état à moitié posé. La page du haut se croit encore
+ * agrandie, et toute demande suivante est refusée — la nôtre comme celle du
+ * bouton de leur lecteur, qui cesse alors de fonctionner jusqu'au rechargement.
+ *
+ * En sortir volontairement d'abord coûte le même dixième de seconde et ne
+ * laisse rien derrière.
+ */
+export async function exitFullscreen(win: BrowserWindow): Promise<void> {
+  if (win.isDestroyed()) return
+  for (const frame of win.webContents.mainFrame.framesInSubtree) {
+    await frame
+      .executeJavaScript('if (document.fullscreenElement) document.exitFullscreen(); true', true)
+      .catch(() => false)
+  }
+  // La sortie est différée : demander tout de suite si c'est fait répondrait
+  // toujours non, et remplacer le cadre dans la foulée annulerait le bénéfice.
+  await new Promise((resolve) => setTimeout(resolve, 200))
+}
+
+/**
  * Combien de tours on accepte d'attendre le *nouveau* lecteur avant de se
  * contenter de celui qui est là. Certains lecteurs se réutilisent tels quels,
  * et attendre indéfiniment un remplacement qui n'arrive pas ne démarrerait

@@ -22,7 +22,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
-import { autostart, playerSignature, videoFrame } from './video-frame'
+import { autostart, exitFullscreen, playerSignature, videoFrame } from './video-frame'
 
 let win: BrowserWindow | null = null
 
@@ -73,6 +73,8 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
     // reprendre le lecteur de l'épisode qu'on quitte.
     const before = await videoFrame(win)
     const stale = before ? playerSignature(before) : null
+    // Avant de remplacer leur cadre, pas après : voir `exitFullscreen`.
+    if (before?.state.full === true) await exitFullscreen(win)
     if (await switchEpisode(win, episode as number)) {
       win.focus()
       // Le lecteur se recharge derrière le changement : on relance dessus.
@@ -206,6 +208,11 @@ export async function playNext(episode: number): Promise<boolean> {
   // demandé disparaît avec le cadre remplacé.
   const before = await videoFrame(target)
   const stale = before ? playerSignature(before) : null
+
+  // Avant de remplacer leur cadre, pas après : un élément agrandi qui
+  // disparaît sous Chromium laisse le plein écran coincé pour tout le monde,
+  // le bouton de leur lecteur compris.
+  if (before?.state.full === true) await exitFullscreen(target)
 
   if (!(await switchEpisode(target, episode))) return false
   void autostart(target, true, stale)
