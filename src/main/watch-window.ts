@@ -22,7 +22,15 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { ORIGIN } from './animesama'
-import { autostart, exitFullscreen, isCinema, leaveCinema, playerSignature, videoFrame } from './video-frame'
+import {
+  autostart,
+  enterCinema,
+  exitFullscreen,
+  isCinema,
+  leaveCinema,
+  playerSignature,
+  videoFrame
+} from './video-frame'
 
 let win: BrowserWindow | null = null
 
@@ -147,16 +155,26 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
   })
 
   /**
-   * Le bouton de plein écran du lecteur ne fait plus rien, et c'est voulu.
+   * Le bouton de plein écran du lecteur bascule le mode cinéma.
    *
-   * Il demande un plein écran HTML par-dessus une fenêtre déjà agrandie : la
-   * vidéo n'y gagne pas un pixel, et Chromium pose au passage sa barre
-   * d'information en haut de l'écran. On rend donc la main tout de suite ;
-   * l'image occupe déjà tout.
+   * Le laisser faire son plein écran HTML ne va pas : la vidéo n'y gagne pas un
+   * pixel puisque la fenêtre est déjà agrandie, Chromium pose sa barre
+   * d'information en haut, et surtout ce plein écran-là ne survit pas au
+   * changement d'épisode — c'est tout le problème qu'on vient de contourner.
+   *
+   * Le neutraliser tout court laissait un bouton mort. Il pilote donc ce qui
+   * lui ressemble le plus : notre écran plein à nous. Un appui pour y entrer,
+   * un autre pour en sortir.
    */
   win.webContents.on('enter-html-full-screen', () => {
     const target = win
-    if (target && isCinema(target)) void exitFullscreen(target)
+    if (!target) return
+    void (async () => {
+      // Rendre la main d'abord : sans ça, la barre de Chromium s'installe.
+      await exitFullscreen(target)
+      if (isCinema(target)) await leaveCinema(target)
+      else await enterCinema(target)
+    })()
   })
 
   /**
