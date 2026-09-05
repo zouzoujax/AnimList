@@ -11,6 +11,10 @@ le code.
 
 ## 0.4.2 — 5 septembre 2026
 
+### Ajouts
+
+- Une mise à jour lancée depuis les réglages s'affiche dans une petite carte au centre de l'écran : le logo, le nom, la version et la progression du téléchargement. Aucun bouton — la décision vient d'être prise une seconde plus tôt — et elle se ferme d'elle-même une fois qu'il n'y a plus rien à suivre
+
 ### Suppressions
 
 - Le bouton « Aperçu » des réglages, qui jouait une fausse mise à jour pour montrer la carte : il servait à vérifier son allure pendant le développement, il n'avait rien à faire dans l'app installée
