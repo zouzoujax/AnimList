@@ -32,7 +32,7 @@
  */
 
 import type { BrowserWindow } from 'electron'
-import { videoFrame, videoFullscreen, videoScript, type VideoState } from './video-frame'
+import { enterCinema, leaveCinema, videoFrame, videoScript, type VideoState } from './video-frame'
 import { closeTrailerWindow, trailerWindow } from './trailer'
 import { closeWatchWindow, watchWindow } from './watch-window'
 
@@ -157,14 +157,11 @@ export async function playerCommand(action: PlayerAction, params: PlayerParams =
     const video = await videoFrame(found.win)
 
     if (video && action === 'windowed') {
-      await video.frame
-        .executeJavaScript('document.exitFullscreen && document.exitFullscreen(), true', true)
-        .catch(() => false)
-      found.win.setFullScreen(false)
+      await leaveCinema(found.win)
       return true
     }
 
-    if (video && action === 'fullscreen' && (await videoFullscreen(found.win))) return true
+    if (video && action === 'fullscreen' && (await enterCinema(found.win))) return true
 
     found.win.setFullScreen(action === 'fullscreen')
     return true

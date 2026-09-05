@@ -90,45 +90,69 @@ export async function videoFrame(win: BrowserWindow): Promise<{ frame: WebFrameM
 }
 
 /**
- * Passe le lecteur en plein écran, et vérifie qu'il l'a obtenu.
+ * Le plein écran, sans demander de plein écran.
  *
- * **Le conteneur, pas la vidéo.** Mettre l'élément `video` seul en plein écran
- * marche — et fait disparaître toutes les commandes du lecteur : sa barre de
- * progression, son volume, ses réglages vivent *à côté* de la vidéo dans le
- * document, pas dedans. Seul le contenu de l'élément agrandi reste visible.
+ * **Mesuré sur leur site, et c'est ce qui a tranché.** Leur page ne remplace
+ * pas le cadre du lecteur quand on change d'épisode : elle en change l'adresse.
+ * Or Chromium quitte le plein écran dès qu'un cadre agrandi navigue — que ce
+ * soit celui du document intérieur ou le cadre lui-même. Le plein écran était
+ * donc perdu à chaque épisode, la fenêtre revenait une seconde à sa taille,
+ * puis on le redemandait. C'est cette seconde qu'on voyait.
  *
- * Le conteneur, c'est la racine du document du lecteur quand il est dans son
- * propre cadre — ce qui est le cas chez eux. Si la vidéo se trouvait dans la
- * page principale, agrandir sa racine montrerait le site entier : on prend
- * alors le parent direct de la vidéo, qui porte les commandes sans le reste.
+ * Alors on ne le demande plus. La fenêtre est agrandie par l'app, et le cadre
+ * du lecteur est étalé sur toute la page par une règle de style. Il n'y a plus
+ * aucun état de plein écran à perdre : le cadre reste à 1920x1080 pendant que
+ * sa source change, mesuré à toutes les demi-secondes de la bascule.
  *
- * La demande peut être refusée — un cadre sans autorisation de plein écran, un
- * lecteur qui l'intercepte. Le plein écran arrivant de façon différée,
- * demander tout de suite si c'est fait répondrait toujours non : d'où
- * l'attente avant de constater.
+ * La règle vise un attribut qu'on pose nous-mêmes, et tout est réversible : le
+ * style reste inerte tant que la classe n'est pas sur `<html>`.
  */
-export async function videoFullscreen(win: BrowserWindow): Promise<boolean> {
-  const video = await videoFrame(win)
-  if (!video) return false
+const CINEMA = `
+  var f = document.getElementById('playerDF')
+  if (!f) {
+    var all = Array.prototype.slice.call(document.querySelectorAll('iframe'))
+    f = all.sort(function (a, b) { return b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight })[0]
+  }
+  if (!f) return false
+  f.setAttribute('data-animelist-cine', '1')
+  var st = document.getElementById('animelist-cine-style')
+  if (!st) {
+    st = document.createElement('style')
+    st.id = 'animelist-cine-style'
+    st.textContent = 'html.animelist-cine, html.animelist-cine body { overflow:hidden !important; background:#000 !important; } html.animelist-cine [data-animelist-cine] { position:fixed !important; top:0 !important; left:0 !important; width:100vw !important; height:100vh !important; max-width:none !important; max-height:none !important; margin:0 !important; border:0 !important; z-index:2147483646 !important; }'
+    document.head.appendChild(st)
+  }
+  document.documentElement.classList.add('animelist-cine')
+  return true
+`
 
-  const asked: unknown = await video.frame
+/** Étale le lecteur sur l'écran. Vrai si le cadre a été trouvé. */
+export async function enterCinema(win: BrowserWindow): Promise<boolean> {
+  if (win.isDestroyed()) return false
+  const done: unknown = await win.webContents.mainFrame
+    .executeJavaScript(`(function () { try { ${CINEMA} } catch (e) { return false } })()`, true)
+    .catch(() => false)
+  win.setFullScreen(true)
+  return done === true
+}
+
+/** Rend la page à sa mise en page, et la fenêtre à sa taille. */
+export async function leaveCinema(win: BrowserWindow): Promise<void> {
+  if (win.isDestroyed()) return
+  await win.webContents.mainFrame
     .executeJavaScript(
-      videoScript(`
-        var root = window.parent !== window ? document.documentElement : v.parentElement || v
-        if (!root.requestFullscreen) return false
-        root.requestFullscreen()
+      `(function () {
+        document.documentElement.classList.remove('animelist-cine')
+        var f = document.querySelector('[data-animelist-cine]')
+        if (f) f.removeAttribute('data-animelist-cine')
+        // Le plein écran du lecteur, s'il a été pris par leur bouton.
+        if (document.fullscreenElement) document.exitFullscreen()
         return true
-      `),
+      })()`,
       true
     )
     .catch(() => false)
-  if (asked !== true) return false
-
-  await new Promise((resolve) => setTimeout(resolve, 350))
-  const took: unknown = await video.frame
-    .executeJavaScript('document.fullscreenElement !== null', true)
-    .catch(() => false)
-  return took === true
+  win.setFullScreen(false)
 }
 
 /**
@@ -200,7 +224,7 @@ export async function autostart(
     await video.frame.executeJavaScript(videoScript('v.muted = false; v.play(); return true'), true).catch(() => false)
 
     if (!wantFullscreen) return true
-    await videoFullscreen(win)
+    await enterCinema(win)
 
     /**
      * Une seule reprise, deux secondes plus tard.
@@ -213,8 +237,9 @@ export async function autostart(
      */
     await new Promise((resolve) => setTimeout(resolve, 2000))
     if (win.isDestroyed()) return true
-    const again = await videoFrame(win)
-    if (again && again.state.full !== true && again.state.playing === true) await videoFullscreen(win)
+    // Le cadre a pu être remis en place derrière nous — une publicité qui se
+    // referme, une source de secours : la règle se repose sans rien coûter.
+    await enterCinema(win)
     return true
   }
   return false
