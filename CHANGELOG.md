@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.4.5 — 5 septembre 2026
+
+### Modifications
+
+- Aucun changement visible : cette version sert de cible au test de la carte de mise à jour, que la 0.4.4 venait de réparer. Il fallait une version installée qui contienne le correctif, et une autre à installer par-dessus — la première n'a pas pu se montrer elle-même
+
 ## 0.4.4 — 5 septembre 2026
 
 ### Corrections
