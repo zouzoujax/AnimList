@@ -165,6 +165,9 @@ export async function autostart(
 
     const video = await videoFrame(win)
     if (!video) continue
+    // L'ancien lecteur est encore en place : le démarrer maintenant rejouerait
+    // ce qu'on vient de quitter, et le plein écran demandé partirait avec le
+    // cadre remplacé.
     if (stale && i < STALE_TRIES && playerSignature(video) === stale) continue
 
     // Le son est remis : un lecteur démarre parfois muet pour contourner les

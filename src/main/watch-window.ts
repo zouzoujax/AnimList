@@ -175,6 +175,20 @@ export function closeWatchWindow(): void {
 }
 
 /**
+ * **La seconde de plein écran perdue au changement est irréductible.**
+ *
+ * Mesuré sur leur lecteur : entre la bascule et le retour du plein écran, il
+ * s'écoule 1,1 seconde. Le site remplace son cadre, l'élément agrandi disparaît
+ * avec lui, Chromium quitte le plein écran, et le nouveau lecteur doit le
+ * redemander une fois en place. Rien dans ce chemin ne nous appartient.
+ *
+ * Retenir la *fenêtre* pendant ce temps a été essayé, et abandonné : la page
+ * reste bien à l'écran entier, mais le lecteur ne reprend alors plus son propre
+ * plein écran — il joue en petit dans une page géante — et la touche Échap ne
+ * sort plus de rien. Le remède était pire que le défaut.
+ */
+
+/**
  * Passe à un autre épisode dans la fenêtre déjà ouverte.
  *
  * Rend faux quand ce numéro n'existe pas chez eux — dernier épisode d'une
