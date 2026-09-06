@@ -15,7 +15,7 @@
 import { Clapperboard, Clock, Dices, Play, RotateCcw, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { isUnaired } from '@shared/airing'
-import { buildSession, usualEvening, type Candidate, type Reason, type Slot } from '@shared/soiree'
+import { buildSession, usualEvening, type Candidate, type Reason } from '@shared/soiree'
 import { Poster } from '@/components/ui'
 // Celui de `lib/watch`, pas celui de `@shared/titles` : c'est la forme que la
 // résolution Anime-Sama attend, et celle qu'emploie déjà `useAnimeSama`.
@@ -139,17 +139,34 @@ export function Soiree(): React.JSX.Element | null {
   // Rien à proposer : la carte ne s'affiche pas plutôt que de s'excuser.
   if (candidates.length === 0) return null
 
-  async function launch(slot: Slot): Promise<void> {
-    const media = mediaMap.get(slot.animeId)
-    if (!media) return
+  /**
+   * Ouvre un épisode, et confie le reste de la liste au processus principal.
+   *
+   * Déposée avant l'ouverture, pas après : c'est lui qui enchaîne, et une liste
+   * arrivée en retard laisserait le premier épisode se terminer sous l'ancien
+   * régime — le numéro d'après, sans fin. Retirée si l'ouverture échoue, pour
+   * ne pas laisser une soirée fantôme gouverner la prochaine lecture.
+   */
+  async function launch(index: number): Promise<void> {
+    if (session === null) return
+    const slot = session.slots[index]
+    const media = slot ? mediaMap.get(slot.animeId) : undefined
+    if (!slot || !media) return
+
+    await window.api.watch.setSoiree(session.slots.slice(index))
+
     const target = await window.api.watch.animeSama(media.id, searchTitles(media))
     if (!target?.url || !target.episodes) {
+      await window.api.watch.setSoiree([])
       toast('Anime-Sama ne donne pas de page d’épisodes pour cette série.', 'info')
       navigate({ name: 'anime', id: media.id })
       return
     }
     const ok = await window.api.watch.openEpisode(target.url, slot.episode, media.id)
-    if (!ok) toast('Cet épisode n’a pas pu être ouvert.', 'error')
+    if (!ok) {
+      await window.api.watch.setSoiree([])
+      toast('Cet épisode n’a pas pu être ouvert.', 'error')
+    }
   }
 
   return (
@@ -255,8 +272,8 @@ export function Soiree(): React.JSX.Element | null {
 
                   <button
                     className="btn !h-8 !px-2.5"
-                    title={`Ouvrir l’épisode ${slot.episode}`}
-                    onClick={() => void launch(slot)}
+                    title={`Commencer la soirée ici, à l’épisode ${slot.episode}`}
+                    onClick={() => void launch(i)}
                   >
                     <Play size={13} />
                   </button>
@@ -273,7 +290,7 @@ export function Soiree(): React.JSX.Element | null {
           </ul>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-3">
-            <button className="btn btn-primary !h-9" onClick={() => void launch(session.slots[0])}>
+            <button className="btn btn-primary !h-9" onClick={() => void launch(0)}>
               <Play size={14} />
               Lancer la soirée
             </button>

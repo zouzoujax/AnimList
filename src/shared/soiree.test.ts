@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { buildSession, DEFAULT_EVENING, MAX_EVENING, MIN_EVENING, rank, usualEvening, type Candidate } from './soiree'
+import {
+  buildSession,
+  nextInSession,
+  DEFAULT_EVENING,
+  MAX_EVENING,
+  MIN_EVENING,
+  rank,
+  usualEvening,
+  type Candidate
+} from './soiree'
 
 const DAY = 86_400_000
 const now = new Date(2026, 8, 6, 21, 0, 0).getTime()
@@ -179,5 +188,36 @@ describe('buildSession', () => {
 
   it('garde le budget demandé dans sa réponse', () => {
     expect(buildSession([serie({ animeId: 1 })], 90).budget).toBe(90)
+  })
+})
+
+describe('nextInSession', () => {
+  const slots = [
+    { animeId: 1, title: 'A', episode: 3, minutes: 24, reason: 'reprise' as const },
+    { animeId: 1, title: 'A', episode: 4, minutes: 24, reason: 'suite' as const },
+    { animeId: 2, title: 'B', episode: 1, minutes: 10, reason: 'decouverte' as const }
+  ]
+
+  it('enchaîne dans la même série', () => {
+    expect(nextInSession(slots, 1, 3)).toEqual({ next: slots[1], inSession: true })
+  })
+
+  it('change de série au bon moment', () => {
+    expect(nextInSession(slots, 1, 4)).toEqual({ next: slots[2], inSession: true })
+  })
+
+  // La fin de la liste : la soirée est finie, la fenêtre peut se fermer.
+  it('annonce la fin après le dernier', () => {
+    expect(nextInSession(slots, 2, 1)).toEqual({ next: null, inSession: true })
+  })
+
+  // Ouvrir autre chose à la main ne doit pas être pris pour une fin de soirée.
+  it('se tait sur un épisode hors liste', () => {
+    expect(nextInSession(slots, 9, 1)).toEqual({ next: null, inSession: false })
+    expect(nextInSession(slots, 1, 12)).toEqual({ next: null, inSession: false })
+  })
+
+  it('se tait quand aucune soirée ne tourne', () => {
+    expect(nextInSession([], 1, 3).inSession).toBe(false)
   })
 })

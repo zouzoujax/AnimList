@@ -185,3 +185,30 @@ export function buildSession(candidates: Candidate[], budget: number): Session {
 
   return { slots, minutes, budget }
 }
+
+/** Ce que la soirée réserve après l'épisode qui vient de finir. */
+export interface NextStep {
+  /** L'épisode suivant, ou `null` quand la liste est épuisée. */
+  next: Slot | null
+  /** Faux quand l'épisode qui joue ne fait pas partie de la soirée. */
+  inSession: boolean
+}
+
+/**
+ * Suivre la liste plutôt que de compter.
+ *
+ * L'enchaînement de la 0.5.0 ne sait faire qu'une chose : le numéro d'après,
+ * dans la même série, sans fin. C'est juste quand on regarde une série ; ça ne
+ * l'est plus quand on a demandé une soirée de deux heures, qui doit changer de
+ * série au bon moment et s'arrêter au bout.
+ *
+ * `inSession` faux distingue « la soirée est finie » de « on ne la suit plus ».
+ * Ouvrir autre chose à la main pendant une soirée ne doit ni l'interrompre à
+ * tort ni fermer la fenêtre : l'enchaînement ordinaire reprend simplement la
+ * main, et la soirée redevient maîtresse si on retombe dessus.
+ */
+export function nextInSession(slots: Slot[], animeId: number, episode: number): NextStep {
+  const at = slots.findIndex((s) => s.animeId === animeId && s.episode === episode)
+  if (at === -1) return { next: null, inSession: false }
+  return { next: slots[at + 1] ?? null, inSession: true }
+}

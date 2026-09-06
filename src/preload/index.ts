@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
+import type { Slot } from '@shared/soiree'
 import type {
   AiringEntry,
   AiringItem,
@@ -131,7 +132,12 @@ const api = {
      * l'URL ne vient pas de chez eux.
      */
     openEpisode: (url: string, episode: number | null, animeId?: number): Promise<boolean> =>
-      ipcRenderer.invoke('watch:open-episode', url, episode, animeId)
+      ipcRenderer.invoke('watch:open-episode', url, episode, animeId),
+    /**
+     * Confie la soirée au surveillant de lecture, qui changera de série au bon
+     * moment et fermera la fenêtre au bout. Une liste vide l'annule.
+     */
+    setSoiree: (slots: Slot[]): Promise<void> => ipcRenderer.invoke('soiree:start', slots)
   },
   lists: {
     create: (name: string, emoji?: string): Promise<CustomList | null> =>

@@ -22,10 +22,13 @@
 
 import { shouldAdvance, shouldTick, type Playing } from '@shared/binge'
 import { canTick } from '@shared/airing'
-import { videoFrame } from './video-frame'
+import { searchTitles } from '@shared/titles'
+import { isCinema, leaveCinema, videoFrame } from './video-frame'
+import { resolve as resolveAnimeSama } from './animesama'
 import { getLaunched, rememberLaunch } from './now'
 import { getMedia, getPrefs, isWatched, setWatched } from './store'
-import { playNext, watchWindow } from './watch-window'
+import { soireeNext, stopSoiree } from './soiree-queue'
+import { openAnimeSamaEpisode, playNext, watchWindow } from './watch-window'
 
 /** Assez souvent pour ne pas manquer une fin, assez rare pour ne rien coûter. */
 const POLL_MS = 5000
@@ -35,6 +38,9 @@ const COUNTDOWN_S = 8
 
 /** Le drapeau que pose le bouton « Annuler », lu depuis le processus principal. */
 const CANCEL_FLAG = '__animelistNextCancelled'
+
+/** Le temps laissé au carton de fin avant que la fenêtre ne se ferme. */
+const END_LINGER_MS = 4000
 
 /**
  * L'épisode dont on s'est déjà occupé.
@@ -63,7 +69,7 @@ const keyOf = (animeId: number, episode: number): string => `${animeId}:${episod
  * compte à rebours. Le seul moyen de le savoir est de l'exécuter dans une
  * vraie page.
  */
-export function countdownScript(seconds: number, episode: number): string {
+export function countdownScript(seconds: number, label: string): string {
   return `(function () {
     try {
       window.${CANCEL_FLAG} = false
@@ -86,7 +92,7 @@ export function countdownScript(seconds: number, episode: number): string {
 
       var text = document.createElement('span')
       var left = ${seconds}
-      var say = function () { text.textContent = 'Épisode ${episode} dans ' + left + ' s' }
+      var say = function () { text.textContent = ${JSON.stringify(label)} + ' dans ' + left + ' s' }
       say()
 
       var stop = document.createElement('button')
@@ -152,17 +158,98 @@ function tickIfDone(now: Playing, animeId: number, episode: number, key: string)
   ticked = key
 }
 
-/** Propose le suivant, puis le lance si personne n'a dit non. */
+/**
+ * Le carton de fin de soirée : rien à décider, juste de quoi comprendre.
+ *
+ * Sans lui, la fenêtre disparaîtrait sans explication au bout du dernier
+ * épisode, et on croirait à un plantage plutôt qu'à une liste terminée.
+ */
+export function noticeScript(text: string): string {
+  return `(function () {
+    try {
+      var old = document.getElementById('animelist-next')
+      if (old && old.parentNode) old.parentNode.removeChild(old)
+      var host = document.fullscreenElement || document.body
+      if (!host) return false
+      var box = document.createElement('div')
+      box.id = 'animelist-next'
+      box.style.cssText = [
+        'position:fixed', 'right:22px', 'bottom:22px', 'z-index:2147483647',
+        'padding:12px 16px', 'border-radius:12px',
+        'background:rgba(12,14,24,.92)', 'color:#e8ecf8',
+        'font:500 14px/1.3 "Segoe UI",system-ui,sans-serif',
+        'box-shadow:0 10px 30px rgba(0,0,0,.5)'
+      ].join(';')
+      box.textContent = ${JSON.stringify(text)}
+      host.appendChild(box)
+      return true
+    } catch (e) {
+      return false
+    }
+  })()`
+}
+
+/**
+ * La soirée est finie : on rend l'écran, puis on ferme.
+ *
+ * Rendre l'écran avant de fermer plutôt que l'inverse : une fenêtre agrandie
+ * qui disparaît laisse le bureau se réafficher d'un coup, et c'est le genre de
+ * secousse qu'on remarque à une heure du matin.
+ */
+async function endSoiree(): Promise<void> {
+  stopSoiree()
+  const win = watchWindow()
+  if (!win) return
+
+  const video = await videoFrame(win)
+  if (video) await video.frame.executeJavaScript(noticeScript('Soirée terminée'), true).catch(() => false)
+  await new Promise((resolve) => setTimeout(resolve, END_LINGER_MS))
+
+  const still = watchWindow()
+  if (!still || still.isDestroyed()) return
+  if (isCinema(still)) await leaveCinema(still)
+  still.close()
+}
+
+/** Ouvre une autre série dans la fenêtre de lecture. */
+async function openOther(animeId: number, episode: number): Promise<boolean> {
+  const media = getMedia(animeId)
+  if (!media) return false
+  const target = await resolveAnimeSama(animeId, searchTitles(media.title)).catch(() => null)
+  // Sans menu d'épisodes, viser un numéro n'a pas de sens : mieux vaut arrêter
+  // la soirée que d'ouvrir une page au hasard pendant que personne ne regarde.
+  if (!target?.url || !target.episodes) return false
+  return openAnimeSamaEpisode(target.url, episode)
+}
+
+/**
+ * Propose la suite, puis la lance si personne n'a dit non.
+ *
+ * Deux régimes. Sans soirée, le comportement d'origine : le numéro d'après,
+ * dans la même série, indéfiniment. Avec une soirée, c'est la liste qui décide
+ * — elle change de série au bon moment et s'arrête au bout, ce qu'un simple
+ * `épisode + 1` ne saura jamais faire.
+ */
 async function advanceUnlessRefused(animeId: number, episode: number, key: string): Promise<void> {
   advancing = key
-  const next = episode + 1
+  const step = soireeNext(animeId, episode)
+
+  // Dernier épisode de la liste : plus rien à proposer, la soirée s'achève.
+  if (step.inSession && step.next === null) {
+    await endSoiree()
+    return
+  }
+
+  const target = step.next ?? { animeId, episode: episode + 1, title: null }
+  const sameShow = target.animeId === animeId
+  const label = sameShow ? `Épisode ${target.episode}` : `${target.title ?? 'Suite'} — épisode ${target.episode}`
 
   const win = watchWindow()
   const video = win ? await videoFrame(win) : null
   // Le carton peut ne pas s'afficher — cadre disparu, page remplacée. Ce n'est
   // pas une raison de renoncer : le compte à rebours court quand même, et
   // fermer la fenêtre reste la façon la plus directe de dire non.
-  if (video) await video.frame.executeJavaScript(countdownScript(COUNTDOWN_S, next), true).catch(() => false)
+  if (video) await video.frame.executeJavaScript(countdownScript(COUNTDOWN_S, label), true).catch(() => false)
 
   await new Promise((resolve) => setTimeout(resolve, COUNTDOWN_S * 1000))
 
@@ -174,12 +261,17 @@ async function advanceUnlessRefused(animeId: number, episode: number, key: strin
     : false
   if (cancelled === true) {
     refused.add(key)
+    // « Annuler » veut dire s'arrêter là, pas sauter un épisode : une soirée
+    // qui repartirait toute seule au suivant n'aurait pas été annulée.
+    if (step.inSession) stopSoiree()
     return
   }
 
   // Faux veut dire que ce numéro n'existe pas dans leur menu : la saison est
   // finie. Rien à faire, et surtout pas ouvrir une page d'épisode inexistant.
-  if (await playNext(next)) rememberLaunch(animeId, next)
+  const opened = sameShow ? await playNext(target.episode) : await openOther(target.animeId, target.episode)
+  if (opened) rememberLaunch(target.animeId, target.episode)
+  else if (step.inSession) stopSoiree()
 }
 
 async function tick(): Promise<void> {

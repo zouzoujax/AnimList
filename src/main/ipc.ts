@@ -30,6 +30,8 @@ import { importAniList, importKitsu } from './import-list'
 import { setPlayerActive } from './taskbar'
 import { canTranslate, purgeTranslations, translate } from './translate'
 import { remoteStatus, startRemote, stopRemote } from './remote'
+import { startSoiree } from './soiree-queue'
+import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
 import { rememberLaunch, setLocalWatching, type LocalWatching } from './now'
 import {
@@ -210,6 +212,10 @@ export function registerIpc(): void {
     rememberLaunch(animeId, episode)
     return openAnimeSamaEpisode(url, episode)
   })
+
+  // La liste d'une soirée, composée dans la fenêtre et suivie par le
+  // surveillant de lecture. Elle ne survit pas à la fermeture de l'app.
+  ipcMain.handle('soiree:start', (_e, slots: Slot[]) => startSoiree(slots))
 
   // ---- image d'une carte -----------------------------------------------
   ipcMain.handle('card:save', (_e, rect: CardRect, name: string) => saveCard(rect, name))
