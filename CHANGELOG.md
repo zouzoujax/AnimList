@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.1 — 6 septembre 2026
+
+### Corrections
+
+- Recocher un épisode ne le redate plus d'aujourd'hui. Décocher par erreur puis rétablir faisait remonter dans « Ces 7 jours » des épisodes vus des semaines plus tôt : le compteur mesurait les corrections au lieu du visionnage. La ligne décochée est mise de côté et revient telle quelle — sa date, sa durée, sa note. Passé un an, un retour est traité comme un vrai second visionnage et prend la date du jour
+- La grille d'épisodes ne saute plus quand on promène le curseur dessus. Le texte de droite passait à la ligne ou non selon sa longueur, et l'en-tête changeait de hauteur à chaque survol — d'autant plus visible sur une série de cent cinquante épisodes
+
 ## 0.5.0 — 5 septembre 2026
 
 ### Ajouts
