@@ -1,0 +1,251 @@
+/**
+ * « J'ai deux heures. » — la soirée composée d'un clic.
+ *
+ * L'accueil répondait déjà à trois questions voisines : ce qui est en cours, ce
+ * qui est sorti sans être vu, ce qui arrive. Aucune ne dit dans quel ordre, ni
+ * combien tiennent dans le temps qu'on a — si bien qu'on refaisait le calcul
+ * de tête, chaque soir, devant la même liste.
+ *
+ * La règle vit dans `@shared/soiree`, à part et testée. Ce fichier ne fait que
+ * la montrer : rassembler ce qui est regardable, afficher la proposition, et
+ * ouvrir le premier épisode. Rien n'est écrit dans la bibliothèque tant que la
+ * lecture n'a pas commencé.
+ */
+
+import { Clapperboard, Clock, Play, RotateCcw, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { isUnaired } from '@shared/airing'
+import { buildSession, usualEvening, type Candidate, type Reason, type Slot } from '@shared/soiree'
+import { Poster } from '@/components/ui'
+// Celui de `lib/watch`, pas celui de `@shared/titles` : c'est la forme que la
+// résolution Anime-Sama attend, et celle qu'emploie déjà `useAnimeSama`.
+import { searchTitles } from '@/lib/watch'
+import { minutesToHuman, titleOf } from '@/lib/format'
+import { rgba, toneAccent } from '@/lib/color'
+import { useApp } from '@/store/app'
+
+/** Assez pour la plus longue soirée possible, sans parcourir cent épisodes. */
+const MAX_PER_SERIES = 12
+
+const CHOICES: { label: string; value: number | 'auto' }[] = [
+  { label: '30 min', value: 30 },
+  { label: '1 h', value: 60 },
+  { label: '2 h', value: 120 },
+  { label: 'Aucune idée', value: 'auto' }
+]
+
+const REASONS: Record<Reason, string> = {
+  retard: 'en retard',
+  reprise: 'tu y étais',
+  decouverte: 'jamais commencée',
+  suite: 'la suite'
+}
+
+export function Soiree(): React.JSX.Element | null {
+  const entries = useApp((s) => s.entries)
+  const mediaMap = useApp((s) => s.media)
+  const watchedMap = useApp((s) => s.watched)
+  const events = useApp((s) => s.events)
+  const lang = useApp((s) => s.prefs.titleLang)
+  const runtime = useApp((s) => s.prefs.defaultRuntime)
+  const navigate = useApp((s) => s.navigate)
+  const toast = useApp((s) => s.toast)
+
+  const [choice, setChoice] = useState<number | 'auto' | null>(null)
+  const [dropped, setDropped] = useState<number[]>([])
+
+  /**
+   * La dernière séance sur chaque série.
+   *
+   * Les lignes importées sont mises à part : deux cents épisodes cochés le même
+   * jour par une autre app diraient que toute la bibliothèque est également
+   * fraîche. Elles servent quand même de repli — c'est mieux que rien pour une
+   * série qu'on n'a jamais ouverte ici.
+   */
+  const lastSeen = useMemo(() => {
+    const real = new Map<number, number>()
+    const fallback = new Map<number, number>()
+    for (const e of events) {
+      const target = e.imported ? fallback : real
+      if ((target.get(e.animeId) ?? 0) < e.at) target.set(e.animeId, e.at)
+    }
+    return { real, fallback }
+  }, [events])
+
+  const candidates = useMemo<Candidate[]>(() => {
+    const out: Candidate[] = []
+    for (const entry of entries.values()) {
+      if (entry.status !== 'watching' && entry.status !== 'planned') continue
+      const media = mediaMap.get(entry.animeId)
+      if (!media) continue
+
+      // Sans total connu, l'épisode annoncé donne quand même une borne.
+      const cap = media.episodes ?? media.nextAiring?.episode ?? 0
+      if (cap <= 0) continue
+
+      const seen = watchedMap.get(media.id)
+      const episodes: number[] = []
+      for (let n = 1; n <= cap && episodes.length < MAX_PER_SERIES; n += 1) {
+        if (seen?.has(n)) continue
+        // Le premier épisode à venir arrête tout : ceux d'après le sont aussi.
+        if (isUnaired(media, n)) break
+        episodes.push(n)
+      }
+      if (episodes.length === 0) continue
+
+      out.push({
+        animeId: media.id,
+        title: titleOf(media, lang),
+        episodes,
+        minutes: media.duration ?? runtime,
+        airing: media.nextAiring !== null,
+        lastWatchedAt: lastSeen.real.get(media.id) ?? lastSeen.fallback.get(media.id) ?? 0
+      })
+    }
+    return out
+  }, [entries, mediaMap, watchedMap, lang, runtime, lastSeen])
+
+  const usual = useMemo(() => usualEvening(events), [events])
+  const budget = choice === 'auto' ? usual : choice
+  const session = useMemo(
+    () =>
+      budget === null
+        ? null
+        : buildSession(
+            candidates.filter((c) => !dropped.includes(c.animeId)),
+            budget
+          ),
+    [candidates, dropped, budget]
+  )
+
+  // Rien à proposer : la carte ne s'affiche pas plutôt que de s'excuser.
+  if (candidates.length === 0) return null
+
+  async function launch(slot: Slot): Promise<void> {
+    const media = mediaMap.get(slot.animeId)
+    if (!media) return
+    const target = await window.api.watch.animeSama(media.id, searchTitles(media))
+    if (!target?.url || !target.episodes) {
+      toast('Anime-Sama ne donne pas de page d’épisodes pour cette série.', 'info')
+      navigate({ name: 'anime', id: media.id })
+      return
+    }
+    const ok = await window.api.watch.openEpisode(target.url, slot.episode, media.id)
+    if (!ok) toast('Cet épisode n’a pas pu être ouvert.', 'error')
+  }
+
+  return (
+    <div className="glass span-all mb-9 rounded-[22px] p-5">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <span
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+          style={{ background: rgba(toneAccent(null), 0.16) }}
+        >
+          <Clapperboard size={17} />
+        </span>
+        <div className="mr-auto">
+          <p className="text-[0.95rem] font-semibold">Soirée anime</p>
+          <p className="text-[0.78rem] text-faint">
+            {session === null
+              ? 'Dis combien de temps tu as, l’app compose la suite'
+              : `${session.slots.length} épisode${session.slots.length > 1 ? 's' : ''} · ${minutesToHuman(session.minutes)}`}
+          </p>
+        </div>
+
+        {session !== null && (
+          <button
+            className="btn !h-8 text-[0.75rem]"
+            onClick={() => {
+              setChoice(null)
+              setDropped([])
+            }}
+          >
+            <RotateCcw size={13} />
+            Changer
+          </button>
+        )}
+      </div>
+
+      {session === null ? (
+        <div className="flex flex-wrap gap-2">
+          {CHOICES.map((c) => (
+            <button key={String(c.value)} className="btn !h-9" onClick={() => setChoice(c.value)}>
+              {c.value === 'auto' ? <Clock size={14} /> : null}
+              {c.label}
+              {c.value === 'auto' && <span className="text-faint">· {minutesToHuman(usual)}</span>}
+            </button>
+          ))}
+        </div>
+      ) : session.slots.length === 0 ? (
+        <p className="text-[0.82rem] text-muted">
+          Rien d’assez court pour {minutesToHuman(budget as number)}. Essaie un créneau plus large — le plus court de
+          tes épisodes disponibles dure plus longtemps que ça.
+        </p>
+      ) : (
+        <>
+          {choice === 'auto' && (
+            <p className="mb-3 text-[0.76rem] text-faint">
+              Aucune idée, donc {minutesToHuman(usual)} : c’est la durée médiane de tes journées de visionnage.
+            </p>
+          )}
+
+          <ul className="flex flex-col gap-2">
+            {session.slots.map((slot, i) => {
+              const media = mediaMap.get(slot.animeId)
+              return (
+                <li
+                  key={`${slot.animeId}:${slot.episode}`}
+                  className="flex items-center gap-3 rounded-2xl px-2.5 py-2"
+                  style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}
+                >
+                  <span className="w-4 shrink-0 text-center text-[0.72rem] tabular-nums text-faint">{i + 1}</span>
+                  {media && (
+                    <Poster
+                      src={media.cover.large}
+                      alt=""
+                      className="h-[46px] w-[32px] shrink-0"
+                      rounded="rounded-lg"
+                    />
+                  )}
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[0.84rem] font-medium">{slot.title}</p>
+                    <p className="text-[0.74rem] text-faint">
+                      Épisode {slot.episode} · {slot.minutes} min · {REASONS[slot.reason]}
+                    </p>
+                  </div>
+
+                  <button
+                    className="btn !h-8 !px-2.5"
+                    title={`Ouvrir l’épisode ${slot.episode}`}
+                    onClick={() => void launch(slot)}
+                  >
+                    <Play size={13} />
+                  </button>
+                  <button
+                    className="btn !h-8 !px-2.5"
+                    title="Retirer cette série de la soirée"
+                    onClick={() => setDropped((d) => [...d, slot.animeId])}
+                  >
+                    <X size={13} />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+
+          <div className="mt-3.5 flex flex-wrap items-center gap-3">
+            <button className="btn btn-primary !h-9" onClick={() => void launch(session.slots[0])}>
+              <Play size={14} />
+              Lancer la soirée
+            </button>
+            <p className="text-[0.76rem] text-faint">
+              {minutesToHuman(session.minutes)} pour {minutesToHuman(budget as number)} demandées
+              {session.minutes > (budget as number) ? ' — un épisode de rab' : ''}
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}

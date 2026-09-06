@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FollowNews, Media } from '@shared/types'
 import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
+import { Soiree } from '@/components/Soiree'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
@@ -338,6 +339,8 @@ export default function HomePage(): React.JSX.Element {
         ) : (
           <div className="skeleton span-all mb-9 h-[300px] rounded-[26px]" />
         )}
+
+        {!empty && <Soiree />}
 
         {empty && (
           <div className="span-all mb-9">
