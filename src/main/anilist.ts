@@ -1,4 +1,5 @@
 import { failureOf } from '@shared/api-outage'
+import type { Edge } from '@shared/franchise'
 import { app } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
@@ -877,6 +878,32 @@ export async function personWorks(kind: 'character' | 'staff', id: number): Prom
   }
 
   return { id: person.id, kind, name: person.name.full, image: person.image?.large ?? null, roles }
+}
+
+/**
+ * Les liens d'une série vers ses voisines, bruts.
+ *
+ * Passe par la même entrée de cache que la fiche détaillée : ouvrir une fiche
+ * puis son arbre ne coûte donc rien de plus, et l'arbre reste consultable quand
+ * leur API est coupée — `cached` sert ce qu'il a plutôt que d'échouer.
+ *
+ * Le libellé français que la fiche affiche ne suffisait pas ici : il confond
+ * `SIDE_STORY` et `SPIN_OFF` sous « Spin-off », alors que l'arbre doit ranger
+ * chaque lien à sa place. C'est le type brut qui compte.
+ */
+export async function relationsOf(id: number): Promise<Edge[]> {
+  const { data } = await cached(`detail:${id}`, TTL.detail, () =>
+    request<{ Media: RawDetail }>(DETAIL_QUERY, { id }, 'background', `detail:${id}`)
+  )
+  return (data.Media.relations?.edges ?? [])
+    .filter((e) => e.node.type === 'ANIME')
+    .map((e) => ({
+      relationType: e.relationType,
+      id: e.node.id,
+      title: e.node.title.romaji ?? e.node.title.english ?? `#${e.node.id}`,
+      cover: e.node.coverImage?.large ?? null,
+      format: e.node.format
+    }))
 }
 
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {

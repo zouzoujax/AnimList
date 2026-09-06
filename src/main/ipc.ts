@@ -31,6 +31,7 @@ import { setPlayerActive } from './taskbar'
 import { canTranslate, purgeTranslations, translate } from './translate'
 import { remoteStatus, startRemote, stopRemote } from './remote'
 import { startSoiree } from './soiree-queue'
+import { franchiseTree } from './franchise'
 import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
 import { rememberLaunch, setLocalWatching, type LocalWatching } from './now'
@@ -183,6 +184,8 @@ export function registerIpc(): void {
   ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
   ipcMain.handle('anime:sweep-sequels', (e) => sweepSequels(ownerOf(e)))
   ipcMain.handle('anime:seasons', (_e, id: number) => anilist.seasonChain(id))
+  // Essai : l'arbre d'une franchise. Voir src/main/franchise.ts.
+  ipcMain.handle('anime:franchise', (_e, id: number) => franchiseTree(id))
 
   // ---- suivis : personnes et studios ---------------------------------
   ipcMain.handle('follows:list', () => getFollows())

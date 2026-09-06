@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
+import type { Tree } from '@shared/franchise'
 import type {
   AiringEntry,
   AiringItem,
@@ -103,6 +104,8 @@ const api = {
     filler: (malId: number | null): Promise<FillerInfo | null> => ipcRenderer.invoke('anime:filler', malId),
     /** Every season of this anime's franchise, in broadcast order. */
     seasons: (id: number): Promise<SeasonEntry[]> => ipcRenderer.invoke('anime:seasons', id),
+    /** Essai : l'arbre d'une franchise, tronc et branches. */
+    franchise: (id: number): Promise<Tree> => ipcRenderer.invoke('anime:franchise', id),
     /** Looks for aired sequels of followed series and adds the new ones. */
     sweepSequels: (): Promise<{ added: Media[]; checked: number }> => ipcRenderer.invoke('anime:sweep-sequels'),
     onSequelsAdded: (cb: (added: Media[]) => void): (() => void) => {

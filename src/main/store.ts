@@ -473,7 +473,8 @@ function runtimeOf(animeId: number): number {
 }
 
 /** Episodes seen in the current pass — what drives the entry's status. */
-function watchedCount(animeId: number): number {
+/** Combien d'épisodes sont cochés pour la passe en cours. */
+export function watchedCount(animeId: number): number {
   const pass = currentPass(animeId)
   let n = 0
   for (const ev of db.history) if (ev.animeId === animeId && passOf(ev) === pass) n += 1

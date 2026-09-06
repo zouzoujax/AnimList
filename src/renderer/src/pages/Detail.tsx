@@ -10,6 +10,7 @@ import {
   EyeOff,
   ExternalLink,
   FolderPlus,
+  GitBranch,
   Heart,
   Maximize2,
   Play,
@@ -37,6 +38,7 @@ import ListPicker from '@/components/ListPicker'
 import LocalFiles from '@/components/LocalFiles'
 import { MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, Spinner } from '@/components/ui'
+import { Franchise } from '@/components/Franchise'
 import { originTitle } from '@shared/origin'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonLabel, titleOf } from '@/lib/format'
@@ -160,8 +162,11 @@ function EpisodeGrid({
   const startRewatch = useApp((s) => s.startRewatch)
   const cancelRewatch = useApp((s) => s.cancelRewatch)
   const toast = useApp((s) => s.toast)
+  const navigate = useApp((s) => s.navigate)
   const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
+  // ESSAI — arbre des franchises, voir plus bas dans le rendu.
+  const [tree, setTree] = useState(false)
   const [hideFiller, setHideFiller] = useState(false)
   const fillerInfo = useFiller(detail.idMal)
 
@@ -211,6 +216,24 @@ function EpisodeGrid({
   return (
     <div>
       <SeasonStrip animeId={detail.id} />
+
+      {/* ESSAI — arbre des franchises. Retirer ce bloc, l'import et l'état
+          `tree` suffit à l'enlever ; voir src/renderer/src/components/Franchise.tsx. */}
+      <button className="btn mb-3 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
+        <GitBranch size={13} />
+        Arbre de la franchise
+      </button>
+      <Modal open={tree} onClose={() => setTree(false)} width={680}>
+        {tree && (
+          <Franchise
+            animeId={detail.id}
+            onOpen={(id) => {
+              setTree(false)
+              navigate({ name: 'anime', id })
+            }}
+          />
+        )}
+      </Modal>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Stops at the last broadcast episode: marking one that has not aired
