@@ -9,6 +9,14 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.2 — 6 septembre 2026
+
+### Ajouts
+
+- Un mode « Soirée anime » sur l'accueil : dis si tu as trente minutes, une heure, deux heures — ou que tu n'en sais rien — et l'app compose la suite avec ce qui est regardable tout de suite. Chaque épisode dit pourquoi il est là : tu y étais, en retard, jamais commencée
+- « Aucune idée » n'est pas un tirage au sort : c'est la durée médiane de tes journées de visionnage, lue dans ton propre historique. La médiane et non la moyenne, sans quoi un week-end de douze heures déciderait de tes mardis
+- « Autre idée » propose une autre soirée pour la même durée, et se grise quand plus rien ne rentre. Une croix écarte une série, et l'app recompose sans elle
+
 ## 0.5.1 — 6 septembre 2026
 
 ### Corrections
