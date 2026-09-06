@@ -9,6 +9,17 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.3 — 6 septembre 2026
+
+### Modifications
+
+- La Soirée anime enchaîne vraiment sa liste : à la fin d'un épisode elle passe au suivant, change de série quand la première est épuisée, et se ferme au bout après un carton « Soirée terminée ». Elle ne se contentait plus que d'ouvrir le premier épisode. « Annuler » pendant le compte à rebours arrête la soirée entière, et ouvrir autre chose à la main lui rend simplement la main sans rien fermer
+- La liste affichée ne bouge plus une fois la soirée lancée : les épisodes vus s'y cochent, mais rien ne s'y ajoute. Elle se recomposait à chaque coche et finissait par proposer des épisodes que personne n'allait regarder
+
+### Corrections
+
+- L'app ne perd plus la fenêtre de lecture en changeant de série. La fenêtre neuve était aussitôt oubliée par la fermeture de l'ancienne, si bien que plus rien ne se cochait et que rien ne s'enchaînait — une soirée s'arrêtait pile au premier changement de série. Le défaut touchait déjà l'ouverture d'une autre série depuis une fiche
+
 ## 0.5.2 — 6 septembre 2026
 
 ### Ajouts
