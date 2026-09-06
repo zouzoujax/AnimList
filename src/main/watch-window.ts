@@ -131,7 +131,23 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
     }
   })
 
+  /**
+   * La fenêtre qui vient de naître, retenue pour elle-même.
+   *
+   * Les trois gestionnaires ci-dessous parlaient de `win`, la variable du
+   * module — pas de la fenêtre qui les a posés. Changer de série ferme la
+   * précédente puis en ouvre une neuve, et `close()` ne rend pas la main tout
+   * de suite : l'événement `closed` de l'ancienne arrivait **après**
+   * l'affectation de la nouvelle, et remettait `win` à `null`. La fenêtre
+   * existait, l'app la croyait fermée. Le surveillant de lecture, qui sort dès
+   * qu'il n'y a rien à surveiller, ne cochait plus rien et n'enchaînait plus :
+   * une soirée s'arrêtait pile au premier changement de série.
+   */
+  const self = win
+
   win.on('closed', () => {
+    // Seulement si c'est bien celle-ci qui est encore en poste.
+    if (win !== self) return
     win = null
     openedUrl = ''
   })
@@ -147,8 +163,8 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
    */
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown' || input.key !== 'Escape') return
-    const target = win
-    if (!target) return
+    const target = self
+    if (target.isDestroyed()) return
     event.preventDefault()
     if (isCinema(target) || target.isFullScreen()) void leaveCinema(target)
     else target.close()
@@ -167,8 +183,8 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
    * un autre pour en sortir.
    */
   win.webContents.on('enter-html-full-screen', () => {
-    const target = win
-    if (!target) return
+    const target = self
+    if (target.isDestroyed()) return
     void (async () => {
       // Rendre la main d'abord : sans ça, la barre de Chromium s'installe.
       await exitFullscreen(target)
