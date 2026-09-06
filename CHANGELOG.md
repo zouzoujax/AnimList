@@ -9,6 +9,14 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.4 — 6 septembre 2026
+
+### Corrections
+
+- Quand le catalogue AniList est indisponible, l'app le dit en français et précise ce qui marche encore : la bibliothèque, les épisodes et les statistiques ne touchent jamais au réseau. Elle affichait jusqu'ici un message technique venu des entrailles d'Electron. AniList a désactivé son API publique le 6 septembre, ce qui rendait la panne très visible
+- Une panne générale du catalogue met les appels en pause un quart d'heure au lieu de faire clignoter la même erreur sur chaque page, à chaque veille de diffusion et à chaque balayage de suites. Tout ce que l'app sait déjà reste servi depuis son cache, et elle repart d'elle-même dès que le service revient
+- Les messages d'erreur ne portent plus le nom de la méthode interne qui a échoué, où qu'ils s'affichent
+
 ## 0.5.3 — 6 septembre 2026
 
 ### Modifications
