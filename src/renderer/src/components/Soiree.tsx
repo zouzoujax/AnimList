@@ -12,10 +12,10 @@
  * lecture n'a pas commencé.
  */
 
-import { Clapperboard, Clock, Dices, Play, RotateCcw, X } from 'lucide-react'
+import { Check, Clapperboard, Clock, Dices, Play, RotateCcw, Square, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { isUnaired } from '@shared/airing'
-import { buildSession, usualEvening, type Candidate, type Reason } from '@shared/soiree'
+import { buildSession, usualEvening, type Candidate, type Reason, type Slot } from '@shared/soiree'
 import { Poster } from '@/components/ui'
 // Celui de `lib/watch`, pas celui de `@shared/titles` : c'est la forme que la
 // résolution Anime-Sama attend, et celle qu'emploie déjà `useAnimeSama`.
@@ -53,6 +53,18 @@ export function Soiree(): React.JSX.Element | null {
 
   const [choice, setChoice] = useState<number | 'auto' | null>(null)
   const [dropped, setDropped] = useState<number[]>([])
+
+  /**
+   * La soirée lancée, figée telle qu'elle est partie.
+   *
+   * La proposition, elle, se recompose à chaque coche : l'épisode qui vient
+   * d'être vu sort des candidats et un autre vient combler le temps libéré.
+   * C'est ce qu'on veut d'une proposition — pas de ce qui joue. Sans cette
+   * copie, la liste affichée s'éloignait de celle que le processus principal
+   * suit vraiment, et on voyait apparaître des épisodes que personne n'allait
+   * regarder.
+   */
+  const [running, setRunning] = useState<Slot[] | null>(null)
 
   /**
    * La dernière séance sur chaque série.
@@ -136,8 +148,16 @@ export function Soiree(): React.JSX.Element | null {
     )
   }, [session, candidates, dropped, budget])
 
+  /**
+   * Ce que la carte montre : la soirée lancée si elle tourne, la proposition
+   * sinon. Une seule liste à l'écran, jamais deux qui se contredisent.
+   */
+  const rows = running ?? session?.slots ?? []
+  const seen = (slot: Slot): boolean => watchedMap.get(slot.animeId)?.has(slot.episode) ?? false
+  const done = running ? running.filter(seen).length : 0
+
   // Rien à proposer : la carte ne s'affiche pas plutôt que de s'excuser.
-  if (candidates.length === 0) return null
+  if (candidates.length === 0 && running === null) return null
 
   /**
    * Ouvre un épisode, et confie le reste de la liste au processus principal.
@@ -148,12 +168,12 @@ export function Soiree(): React.JSX.Element | null {
    * ne pas laisser une soirée fantôme gouverner la prochaine lecture.
    */
   async function launch(index: number): Promise<void> {
-    if (session === null) return
-    const slot = session.slots[index]
+    const slot = rows[index]
     const media = slot ? mediaMap.get(slot.animeId) : undefined
     if (!slot || !media) return
 
-    await window.api.watch.setSoiree(session.slots.slice(index))
+    const suite = rows.slice(index)
+    await window.api.watch.setSoiree(suite)
 
     const target = await window.api.watch.animeSama(media.id, searchTitles(media))
     if (!target?.url || !target.episodes) {
@@ -166,7 +186,14 @@ export function Soiree(): React.JSX.Element | null {
     if (!ok) {
       await window.api.watch.setSoiree([])
       toast('Cet épisode n’a pas pu être ouvert.', 'error')
+      return
     }
+    setRunning(suite)
+  }
+
+  async function stopRunning(): Promise<void> {
+    setRunning(null)
+    await window.api.watch.setSoiree([])
   }
 
   return (
@@ -181,13 +208,22 @@ export function Soiree(): React.JSX.Element | null {
         <div className="mr-auto">
           <p className="text-[0.95rem] font-semibold">Soirée anime</p>
           <p className="text-[0.78rem] text-faint">
-            {session === null
-              ? 'Dis combien de temps tu as, l’app compose la suite'
-              : `${session.slots.length} épisode${session.slots.length > 1 ? 's' : ''} · ${minutesToHuman(session.minutes)}`}
+            {running !== null
+              ? `Soirée en cours · ${done} sur ${running.length} vus`
+              : session === null
+                ? 'Dis combien de temps tu as, l’app compose la suite'
+                : `${session.slots.length} épisode${session.slots.length > 1 ? 's' : ''} · ${minutesToHuman(session.minutes)}`}
           </p>
         </div>
 
-        {session !== null && (
+        {running !== null && (
+          <button className="btn !h-8 text-[0.75rem]" onClick={() => void stopRunning()}>
+            <Square size={12} />
+            Arrêter la soirée
+          </button>
+        )}
+
+        {running === null && session !== null && (
           <>
             {/* Pas un tirage au sort : la proposition est la meilleure que la
                 règle sache faire, et la rejouer à l'identique rendrait la même
@@ -221,39 +257,44 @@ export function Soiree(): React.JSX.Element | null {
         )}
       </div>
 
-      {session === null ? (
-        <div className="flex flex-wrap gap-2">
-          {CHOICES.map((c) => (
-            <button key={String(c.value)} className="btn !h-9" onClick={() => setChoice(c.value)}>
-              {c.value === 'auto' ? <Clock size={14} /> : null}
-              {c.label}
-              {c.value === 'auto' && <span className="text-faint">· {minutesToHuman(usual)}</span>}
-            </button>
-          ))}
-        </div>
-      ) : session.slots.length === 0 ? (
-        <p className="text-[0.82rem] text-muted">
-          Rien d’assez court pour {minutesToHuman(budget as number)}. Essaie un créneau plus large — le plus court de
-          tes épisodes disponibles dure plus longtemps que ça.
-        </p>
+      {rows.length === 0 ? (
+        session === null ? (
+          <div className="flex flex-wrap gap-2">
+            {CHOICES.map((c) => (
+              <button key={String(c.value)} className="btn !h-9" onClick={() => setChoice(c.value)}>
+                {c.value === 'auto' ? <Clock size={14} /> : null}
+                {c.label}
+                {c.value === 'auto' && <span className="text-faint">· {minutesToHuman(usual)}</span>}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[0.82rem] text-muted">
+            Rien d’assez court pour {minutesToHuman(budget as number)}. Essaie un créneau plus large — le plus court de
+            tes épisodes disponibles dure plus longtemps que ça.
+          </p>
+        )
       ) : (
         <>
-          {choice === 'auto' && (
+          {running === null && choice === 'auto' && (
             <p className="mb-3 text-[0.76rem] text-faint">
               Aucune idée, donc {minutesToHuman(usual)} : c’est la durée médiane de tes journées de visionnage.
             </p>
           )}
 
           <ul className="flex flex-col gap-2">
-            {session.slots.map((slot, i) => {
+            {rows.map((slot, i) => {
               const media = mediaMap.get(slot.animeId)
+              const vu = running !== null && seen(slot)
               return (
                 <li
                   key={`${slot.animeId}:${slot.episode}`}
-                  className="flex items-center gap-3 rounded-2xl px-2.5 py-2"
+                  className={`flex items-center gap-3 rounded-2xl px-2.5 py-2 ${vu ? 'opacity-45' : ''}`}
                   style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}
                 >
-                  <span className="w-4 shrink-0 text-center text-[0.72rem] tabular-nums text-faint">{i + 1}</span>
+                  <span className="grid w-4 shrink-0 place-items-center text-[0.72rem] tabular-nums text-faint">
+                    {vu ? <Check size={13} strokeWidth={3} /> : i + 1}
+                  </span>
                   {media && (
                     <Poster
                       src={media.cover.large}
@@ -277,27 +318,38 @@ export function Soiree(): React.JSX.Element | null {
                   >
                     <Play size={13} />
                   </button>
-                  <button
-                    className="btn !h-8 !px-2.5"
-                    title="Retirer cette série de la soirée"
-                    onClick={() => setDropped((d) => [...d, slot.animeId])}
-                  >
-                    <X size={13} />
-                  </button>
+                  {running === null && (
+                    <button
+                      className="btn !h-8 !px-2.5"
+                      title="Retirer cette série de la soirée"
+                      onClick={() => setDropped((d) => [...d, slot.animeId])}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
                 </li>
               )
             })}
           </ul>
 
           <div className="mt-3.5 flex flex-wrap items-center gap-3">
-            <button className="btn btn-primary !h-9" onClick={() => void launch(0)}>
-              <Play size={14} />
-              Lancer la soirée
-            </button>
-            <p className="text-[0.76rem] text-faint">
-              {minutesToHuman(session.minutes)} pour {minutesToHuman(budget as number)} demandées
-              {session.minutes > (budget as number) ? ' — un épisode de rab' : ''}
-            </p>
+            {running === null ? (
+              <>
+                <button className="btn btn-primary !h-9" onClick={() => void launch(0)}>
+                  <Play size={14} />
+                  Lancer la soirée
+                </button>
+                <p className="text-[0.76rem] text-faint">
+                  {minutesToHuman(session?.minutes ?? 0)} pour {minutesToHuman(budget as number)} demandées
+                  {(session?.minutes ?? 0) > (budget as number) ? ' — un épisode de rab' : ''}
+                </p>
+              </>
+            ) : (
+              <p className="text-[0.76rem] text-faint">
+                L’app enchaîne toute seule et fermera la fenêtre au bout de la liste. Cette liste-ci ne bouge plus :
+                elle est celle qui joue.
+              </p>
+            )}
           </div>
         </>
       )}
