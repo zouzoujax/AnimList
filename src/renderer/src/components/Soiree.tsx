@@ -12,7 +12,7 @@
  * lecture n'a pas commencé.
  */
 
-import { Clapperboard, Clock, Play, RotateCcw, X } from 'lucide-react'
+import { Clapperboard, Clock, Dices, Play, RotateCcw, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { isUnaired } from '@shared/airing'
 import { buildSession, usualEvening, type Candidate, type Reason, type Slot } from '@shared/soiree'
@@ -118,6 +118,24 @@ export function Soiree(): React.JSX.Element | null {
     [candidates, dropped, budget]
   )
 
+  /**
+   * Reste-t-il quelque chose une fois la tête écartée ?
+   *
+   * Répondre en composant vraiment la soirée suivante, plutôt qu'en comptant
+   * les séries : un budget de trente minutes peut n'avoir aucune place pour ce
+   * qui reste, et un bouton qui promet une autre idée doit en avoir une.
+   */
+  const alternative = useMemo(() => {
+    if (session === null || session.slots.length === 0 || budget === null) return false
+    const sans = [...dropped, ...new Set(session.slots.map((x) => x.animeId))]
+    return (
+      buildSession(
+        candidates.filter((c) => !sans.includes(c.animeId)),
+        budget
+      ).slots.length > 0
+    )
+  }, [session, candidates, dropped, budget])
+
   // Rien à proposer : la carte ne s'affiche pas plutôt que de s'excuser.
   if (candidates.length === 0) return null
 
@@ -153,16 +171,36 @@ export function Soiree(): React.JSX.Element | null {
         </div>
 
         {session !== null && (
-          <button
-            className="btn !h-8 text-[0.75rem]"
-            onClick={() => {
-              setChoice(null)
-              setDropped([])
-            }}
-          >
-            <RotateCcw size={13} />
-            Changer
-          </button>
+          <>
+            {/* Pas un tirage au sort : la proposition est la meilleure que la
+                règle sache faire, et la rejouer à l'identique rendrait la même
+                liste. « Autre idée » écarte donc toutes les séries proposées,
+                pas seulement celle en tête — sinon le format court qui bouche
+                le trou de fin revient à chaque appui, et la moitié de la
+                soirée ne change jamais. */}
+            <button
+              className="btn !h-8 text-[0.75rem]"
+              disabled={!alternative}
+              title={
+                alternative ? 'Écarter la série en tête et recomposer' : 'Plus rien d’autre à proposer pour cette durée'
+              }
+              onClick={() => setDropped((d) => [...d, ...new Set(session.slots.map((x) => x.animeId))])}
+            >
+              <Dices size={13} />
+              Autre idée
+            </button>
+
+            <button
+              className="btn !h-8 text-[0.75rem]"
+              onClick={() => {
+                setChoice(null)
+                setDropped([])
+              }}
+            >
+              <RotateCcw size={13} />
+              Changer la durée
+            </button>
+          </>
         )}
       </div>
 
