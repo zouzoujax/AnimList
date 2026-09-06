@@ -282,7 +282,12 @@ function EpisodeGrid({
           </>
         )}
 
-        <p className="ml-auto min-h-[1.2rem] text-[0.76rem] text-muted">
+        {/* Toujours sur sa propre ligne, et toujours sur une seule.
+            Dans le flux des boutons, la phrase d'aide passait à la ligne et un
+            titre court non : survoler un épisode faisait donc perdre une ligne
+            à l'en-tête et sauter toute la grille de 25 px. `truncate` couvre
+            l'autre moitié du piège, un titre assez long pour tenir sur deux. */}
+        <p className="min-h-[1.2rem] basis-full truncate text-right text-[0.76rem] text-muted">
           {hoveredMeta?.title ? (
             <span>
               <span className="text-faint">EP {hoveredMeta.number} · </span>
