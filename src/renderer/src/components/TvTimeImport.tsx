@@ -7,6 +7,7 @@
  * corrected by hand, then replayed without leaving the app.
  */
 
+import { humanMessage } from '@shared/api-outage'
 import { useEffect, useRef, useState } from 'react'
 import { AlertTriangle, Check, ExternalLink, Search, SkipForward, Upload, X } from 'lucide-react'
 import type { TvTimeProgress, TvTimeReport, TvTimeShowResult } from '@shared/types'
@@ -138,7 +139,7 @@ export default function TvTimeImport(): React.JSX.Element {
       setReport(result)
       if (result.message) toast(result.message, result.ok ? 'ok' : 'info')
     } catch (err) {
-      toast((err as Error).message, 'error')
+      toast(humanMessage((err as Error).message), 'error')
     } finally {
       running.current = false
       setProgress(null)

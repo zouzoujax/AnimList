@@ -11,6 +11,7 @@
  * avoir trouvé est une réponse.
  */
 
+import { humanMessage } from '@shared/api-outage'
 import { useEffect, useRef, useState } from 'react'
 import { ImageUp, ScanSearch, TriangleAlert } from 'lucide-react'
 import type { Identification } from '@shared/types'
@@ -48,7 +49,7 @@ export default function IdentifyImage({ initial }: { initial?: File | null }): R
       const bytes = new Uint8Array(await file.arrayBuffer())
       setFound(await window.api.anime.identify(bytes, file.type))
     } catch (err) {
-      setError((err as Error).message)
+      setError(humanMessage((err as Error).message))
     } finally {
       setBusy(false)
     }

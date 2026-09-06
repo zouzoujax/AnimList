@@ -10,6 +10,7 @@
  * à jour sans savoir ce qu'elle fait, c'est signer sans lire.
  */
 
+import { humanMessage } from '@shared/api-outage'
 import { useEffect, useState } from 'react'
 import {
   Check,
@@ -207,7 +208,7 @@ export default function UpdatePanel({ version }: { version: string | null }): Re
                 })
                 // Sans ce filet, un rejet du canal laissait le bouton sans effet
                 // visible : rien ne se passait, et rien ne disait pourquoi.
-                .catch((err: Error) => toast(`Vérification impossible : ${err.message}`, 'error'))
+                .catch((err: Error) => toast(`Vérification impossible : ${humanMessage(err.message)}`, 'error'))
             }
           >
             <RefreshCw size={14} className={busy ? 'animate-spin' : undefined} />

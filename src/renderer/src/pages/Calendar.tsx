@@ -1,3 +1,4 @@
+import { humanMessage } from '@shared/api-outage'
 import { CalendarDays, ChevronLeft, ChevronRight, Globe, LibraryBig, Radio } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
@@ -206,7 +207,7 @@ export default function CalendarPage(): React.JSX.Element {
 
     request
       .then((res) => alive && setHeld({ key, slots: res, error: null }))
-      .catch((err: Error) => alive && setHeld({ key, slots: [], error: err.message }))
+      .catch((err: Error) => alive && setHeld({ key, slots: [], error: humanMessage(err.message) }))
 
     return () => {
       alive = false

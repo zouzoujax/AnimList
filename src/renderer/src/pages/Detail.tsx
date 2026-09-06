@@ -1,3 +1,4 @@
+import { humanMessage } from '@shared/api-outage'
 import {
   ArrowLeft,
   Bell,
@@ -590,7 +591,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
     void window.api.manga
       .detail(mangaId)
       .then((data) => alive && setMangaSheet({ id: mangaId, data, error: null }))
-      .catch((err: Error) => alive && setMangaSheet({ id: mangaId, data: null, error: err.message }))
+      .catch((err: Error) => alive && setMangaSheet({ id: mangaId, data: null, error: humanMessage(err.message) }))
     return () => {
       alive = false
     }

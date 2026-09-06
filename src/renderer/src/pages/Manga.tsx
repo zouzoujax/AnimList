@@ -15,6 +15,7 @@
  * Rien n'est écrit dans la bibliothèque depuis cette page.
  */
 
+import { humanMessage } from '@shared/api-outage'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
 import { Flame, Search, Star, TrendingUp, X } from 'lucide-react'
@@ -95,7 +96,9 @@ export default function MangaPage(): React.JSX.Element {
       .then(
         (res) => alive && setHeld({ key, items: res.items, hasMore: res.pageInfo.hasNextPage, page: 1, error: null })
       )
-      .catch((err: Error) => alive && setHeld({ key, items: [], hasMore: false, page: 1, error: err.message }))
+      .catch(
+        (err: Error) => alive && setHeld({ key, items: [], hasMore: false, page: 1, error: humanMessage(err.message) })
+      )
     return () => {
       alive = false
     }
@@ -127,7 +130,9 @@ export default function MangaPage(): React.JSX.Element {
           }
         })
       })
-      .catch((err: Error) => setHeld((prev) => (prev.key === key ? { ...prev, error: err.message } : prev)))
+      .catch((err: Error) =>
+        setHeld((prev) => (prev.key === key ? { ...prev, error: humanMessage(err.message) } : prev))
+      )
       .finally(() => setLoadingMore(false))
   }
   const sentinel = useInView(loadMore)

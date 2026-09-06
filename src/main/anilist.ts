@@ -1,3 +1,4 @@
+import { failureOf } from '@shared/api-outage'
 import { app } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
@@ -264,7 +265,32 @@ export function purgeCache(): void {
  */
 const gate = createQueue({ minGapMs: MIN_GAP_MS })
 
+/**
+ * Le disjoncteur.
+ *
+ * Quand AniList coupe son API, tout ce qui l'interroge échoue : chaque page,
+ * la veille des diffusions, le balayage des suites. Insister n'obtient rien et
+ * fait clignoter la même erreur partout. On se tait donc un moment, en
+ * répondant tout de suite ce qu'on sait déjà, et la première requête passée le
+ * délai rouvre le circuit d'elle-même — il n'y a rien à réarmer à la main.
+ */
+let mutedUntil = 0
+let mutedWhy = ''
+
+/** Le message qu'AniList joint à son refus, quand il en joint un. */
+async function apiMessage(res: Response): Promise<string | null> {
+  try {
+    const body = (await res.json()) as { errors?: { message?: string }[] }
+    return body.errors?.[0]?.message ?? null
+  } catch {
+    // Une page d'erreur en HTML, une réponse tronquée : le code parlera seul.
+    return null
+  }
+}
+
 async function raw<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+  if (Date.now() < mutedUntil) throw new Error(mutedWhy)
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
@@ -277,11 +303,22 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
       await new Promise((r) => setTimeout(r, Math.min(wait, 60_000)))
       continue
     }
-    if (!res.ok) throw new Error(`AniList HTTP ${res.status}`)
+    if (!res.ok) {
+      // Le corps avant le code : c'est lui qui porte l'explication, et la
+      // jeter pour n'en garder qu'un numéro était toute la faute d'origine.
+      const failure = failureOf(res.status, await apiMessage(res))
+      if (failure.pauseMs > 0) {
+        mutedUntil = Date.now() + failure.pauseMs
+        mutedWhy = failure.message
+      }
+      throw new Error(failure.message)
+    }
 
     const body = (await res.json()) as { data?: T; errors?: { message: string }[] }
     if (body.errors?.length) throw new Error(body.errors[0].message)
     if (!body.data) throw new Error('Réponse AniList vide')
+    // Une réponse complète prouve que le service est revenu.
+    mutedUntil = 0
     return body.data
   }
   throw new Error('AniList : trop de requêtes, réessaie dans une minute')

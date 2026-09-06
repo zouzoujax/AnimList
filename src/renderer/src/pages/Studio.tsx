@@ -1,3 +1,4 @@
+import { humanMessage } from '@shared/api-outage'
 import { ArrowLeft, Boxes } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { Media, StudioWorks } from '@shared/types'
@@ -45,7 +46,8 @@ export default function StudioPage({ studio }: { studio: string }): React.JSX.El
       })
       .catch(
         (err: Error) =>
-          alive && setHeld({ studio, name: studio, items: [], hasMore: false, page: 1, error: err.message })
+          alive &&
+          setHeld({ studio, name: studio, items: [], hasMore: false, page: 1, error: humanMessage(err.message) })
       )
     return () => {
       alive = false
@@ -78,7 +80,9 @@ export default function StudioPage({ studio }: { studio: string }): React.JSX.El
           }
         })
       })
-      .catch((err: Error) => setHeld((prev) => (prev.studio === studio ? { ...prev, error: err.message } : prev)))
+      .catch((err: Error) =>
+        setHeld((prev) => (prev.studio === studio ? { ...prev, error: humanMessage(err.message) } : prev))
+      )
       .finally(() => setLoadingMore(false))
   }
   const sentinel = useInView(loadMore)

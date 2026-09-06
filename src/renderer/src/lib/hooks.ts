@@ -1,3 +1,4 @@
+import { humanMessage } from '@shared/api-outage'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { BrowseQuery, FillerInfo, Media, MediaDetail, SeasonEntry } from '@shared/types'
 import { searchTitles, type AnimeSamaTarget } from '@/lib/watch'
@@ -109,7 +110,7 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
         setHeld({ key, items: res.items, stale: res.stale, hasMore: res.pageInfo.hasNextPage, error: null })
       })
       .catch((err: Error) => {
-        if (alive) setHeld({ key, items: [], stale: false, hasMore: false, error: err.message })
+        if (alive) setHeld({ key, items: [], stale: false, hasMore: false, error: humanMessage(err.message) })
       })
 
     return () => {
@@ -144,7 +145,9 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
           }
         })
       })
-      .catch((err: Error) => setHeld((prev) => (prev.key === key ? { ...prev, error: err.message } : prev)))
+      .catch((err: Error) =>
+        setHeld((prev) => (prev.key === key ? { ...prev, error: humanMessage(err.message) } : prev))
+      )
       .finally(() => setLoadingMore(false))
   }, [key, query, loading, loadingMore, hasMore])
 
@@ -181,7 +184,7 @@ export function useDetail(id: number | null): {
     window.api.anime
       .detail(id as number)
       .then((res) => alive && setHeld({ key, data: res, error: null }))
-      .catch((err: Error) => alive && setHeld({ key, data: null, error: err.message }))
+      .catch((err: Error) => alive && setHeld({ key, data: null, error: humanMessage(err.message) }))
     return () => {
       alive = false
     }

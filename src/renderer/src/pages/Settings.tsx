@@ -1,3 +1,4 @@
+import { humanMessage } from '@shared/api-outage'
 import {
   AtSign,
   Bell,
@@ -248,7 +249,7 @@ export default function SettingsPage(): React.JSX.Element {
       const report = await action()
       if (report.message) toast(report.message, report.ok ? 'ok' : 'info')
     } catch (err) {
-      toast((err as Error).message, 'error')
+      toast(humanMessage((err as Error).message), 'error')
     } finally {
       setBusy(null)
     }
@@ -531,7 +532,7 @@ export default function SettingsPage(): React.JSX.Element {
                     'ok'
                   )
                 } catch (err) {
-                  toast((err as Error).message, 'error')
+                  toast(humanMessage((err as Error).message), 'error')
                 } finally {
                   setBusy(null)
                 }
@@ -664,8 +665,8 @@ export default function SettingsPage(): React.JSX.Element {
                 ) : (
                   <span className="text-muted">
                     Rien en cours de lecture. Lance un épisode : cette ligne dira ce qui part sur ton profil. Si elle se
-                    remplit et que Discord n’affiche toujours rien, c’est son réglage «&nbsp;Statut d’activité&nbsp;» qui
-                    est en cause, pas l’app.
+                    remplit et que Discord n’affiche toujours rien, c’est son réglage «&nbsp;Statut d’activité&nbsp;»
+                    qui est en cause, pas l’app.
                   </span>
                 )}
               </div>
@@ -769,7 +770,7 @@ export default function SettingsPage(): React.JSX.Element {
                     'ok'
                   )
                 } catch (err) {
-                  toast((err as Error).message, 'error')
+                  toast(humanMessage((err as Error).message), 'error')
                 } finally {
                   setBusy(null)
                 }
