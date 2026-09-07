@@ -9,6 +9,16 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.7 — 7 septembre 2026
+
+### Ajouts
+
+- **WIP** — Un bouton dans le coin du lecteur pour passer l'opening et le générique de fin. Quand le générique de fin termine l'épisode, il annonce l'épisode suivant et y va directement, sans compte à rebours. Les minutages viennent d'AniSkip, une base tenue par des bénévoles : neuf séries sur dix en ont un, rien ne s'affiche pour les autres. Le saut automatique existe dans Réglages → Lecture, éteint volontairement — un contributeur peut se tromper d'étiquette, et sur l'épisode 1 de Naruto le prologue narré est donné pour un générique. En chantier, donc, et signalé comme tel dans les réglages
+
+### Modifications
+
+- L'app regarde où en est la lecture toutes les trois secondes au lieu de cinq. Ce battement ne servait qu'à cocher l'épisode fini, où le retard ne se voyait pas ; il remplit maintenant la case de l'épisode en cours et fait apparaître le bouton d'un générique
+
 ## 0.5.6 — 7 septembre 2026
 
 ### Ajouts

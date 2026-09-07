@@ -79,6 +79,19 @@ function notes() {
 }
 
 /** Reuses the release when the tag already has one, so a retry is harmless. */
+/**
+ * Le titre de la release.
+ *
+ * « WIP » dans les notes se retrouve dans le titre : qui parcourt la liste des
+ * versions doit voir qu'elle contient quelque chose d'inachevé sans avoir à
+ * déplier les notes. Ce n'est pas une préversion pour autant — la marquer comme
+ * telle la rendrait invisible aux apps installées, qui ne cherchent que les
+ * versions stables.
+ */
+function releaseName() {
+  return RELEASE_BODY.includes('WIP') ? `AnimeList ${version} — WIP` : `AnimeList ${version}`
+}
+
 async function release() {
   const sharing = await json(`${api}/releases`).then((all) => all.filter((r) => r.tag_name === TAG))
   // Le désordre laissé par les publications précédentes : deux releases sur un
@@ -107,7 +120,7 @@ async function release() {
   const created = await json(`${api}/releases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ tag_name: TAG, name: `AnimeList ${version}`, body: RELEASE_BODY })
+    body: JSON.stringify({ tag_name: TAG, name: releaseName(), body: RELEASE_BODY })
   })
   console.log(`Release ${TAG} créée (id ${created.id}).`)
   return created

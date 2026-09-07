@@ -91,14 +91,39 @@ function Card({ title, icon, children }: { title: string; icon: ReactNode; child
   )
 }
 
-function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }): React.JSX.Element {
+function Row({
+  label,
+  hint,
+  badge,
+  children
+}: {
+  label: string
+  hint?: string
+  /** « WIP » et compagnie : dire qu'un réglage n'est pas encore stabilisé. */
+  badge?: string
+  children: ReactNode
+}): React.JSX.Element {
   return (
     <div
       className="flex items-center justify-between gap-6 border-t py-3 first:border-t-0 first:pt-0"
       style={{ borderColor: 'var(--line)' }}
     >
       <div className="min-w-0">
-        <p className="text-[0.85rem] font-medium">{label}</p>
+        <p className="flex items-center gap-2 text-[0.85rem] font-medium">
+          {label}
+          {badge && (
+            <span
+              className="shrink-0 rounded-full px-1.5 py-0.5 text-[0.6rem] font-semibold tracking-wide uppercase"
+              style={{
+                background: 'rgba(255,255,255,.09)',
+                border: '1px solid var(--line-2)',
+                color: 'var(--color-faint)'
+              }}
+            >
+              {badge}
+            </span>
+          )}
+        </p>
         {hint && <p className="mt-0.5 text-[0.74rem] leading-snug text-faint">{hint}</p>}
       </div>
       <div className="shrink-0">{children}</div>
@@ -501,13 +526,15 @@ export default function SettingsPage(): React.JSX.Element {
         </Row>
 
         <Row
+          badge="WIP"
           label="Proposer de passer les génériques"
-          hint="Un bouton dans le coin du lecteur pendant l’opening et le générique de fin, quand un minutage existe. Les minutages viennent d’AniSkip, une base tenue par des bénévoles : environ neuf séries sur dix en ont un, et rien ne s’affiche pour les autres."
+          hint="En chantier. Un bouton dans le coin du lecteur pendant l’opening et le générique de fin, quand un minutage existe. Les minutages viennent d’AniSkip, une base tenue par des bénévoles : environ neuf séries sur dix en ont un, et rien ne s’affiche pour les autres. Un contributeur peut se tromper d’étiquette — sur l’épisode 1 de Naruto, le prologue narré est donné pour un générique."
         >
           <Toggle on={prefs.skipHint} onChange={(skipHint) => setPrefs({ skipHint })} />
         </Row>
 
         <Row
+          badge="WIP"
           label="Les passer sans rien demander"
           hint="Éteint volontairement. Le minutage est relevé par des inconnus, sur une copie qui n’est pas forcément celle que tu regardes : un bouton ignoré ne coûte rien, un saut de travers coupe une scène. L’app refuse déjà de proposer quand la durée de référence s’écarte trop de la tienne."
         >
