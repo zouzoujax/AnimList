@@ -162,6 +162,7 @@ function EpisodeGrid({
   const startRewatch = useApp((s) => s.startRewatch)
   const cancelRewatch = useApp((s) => s.cancelRewatch)
   const toast = useApp((s) => s.toast)
+  const progress = useApp((st) => st.progress)
   const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
   const [hideFiller, setHideFiller] = useState(false)
@@ -325,6 +326,17 @@ function EpisodeGrid({
           // décocher enferme la coche qui a réussi à passer. La porte doit
           // s'ouvrir dans les deux sens.
           const locked = notOut && !watched
+          /**
+           * L'épisode en train d'être lu, et où il en est.
+           *
+           * Seulement tant qu'il n'est pas coché : passé les neuf dixièmes la
+           * case devient pleine et colorée, et un remplissage par-dessus
+           * n'ajouterait rien qu'un artefact.
+           */
+          const lecture =
+            !watched && progress && progress.animeId === detail.id && progress.episode === ep.number
+              ? progress.ratio
+              : null
           const label = ep.title ? `EP ${ep.number} — ${ep.title}` : `Épisode ${ep.number}`
           const note = notOut
             ? watched
@@ -346,7 +358,7 @@ function EpisodeGrid({
                 e.preventDefault()
                 if (!notOut) setEditing(ep.number)
               }}
-              title={`${label}${note}`}
+              title={`${label}${note}${lecture !== null ? ` · en cours, ${Math.round(lecture * 100)} %` : ''}`}
               className={`group relative grid h-[38px] w-[42px] place-items-center rounded-[10px] text-[0.75rem] font-semibold tabular-nums transition-all duration-150 ${
                 locked ? 'cursor-not-allowed' : 'hover:scale-110'
               }`}
@@ -382,7 +394,14 @@ function EpisodeGrid({
                           }
               }
             >
-              {watched ? <Check size={14} strokeWidth={3} /> : ep.number}
+              {lecture !== null && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 rounded-[9px] transition-[width] duration-700"
+                  style={{ width: `${lecture * 100}%`, background: rgba(glow, 0.34) }}
+                />
+              )}
+              <span className="relative">{watched ? <Check size={14} strokeWidth={3} /> : ep.number}</span>
               {(annotated.has(ep.number) || pinned.has(ep.number)) && (
                 <span
                   className="absolute right-1 top-1 h-[5px] w-[5px] rounded-full"

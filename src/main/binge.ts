@@ -20,12 +20,12 @@
  * seul ce qui vit dans l'élément agrandi reste visible.
  */
 
-import { shouldAdvance, shouldTick, type Playing } from '@shared/binge'
+import { shouldAdvance, shouldTick, watchedRatio, type Playing } from '@shared/binge'
 import { canTick } from '@shared/airing'
 import { searchTitles } from '@shared/titles'
 import { isCinema, leaveCinema, videoFrame } from './video-frame'
 import { resolve as resolveAnimeSama } from './animesama'
-import { getLaunched, rememberLaunch } from './now'
+import { getLaunched, rememberLaunch, sendProgress } from './now'
 import { getMedia, getPrefs, isWatched, setWatched } from './store'
 import { soireeNext, stopSoiree } from './soiree-queue'
 import { openAnimeSamaEpisode, playNext, watchWindow } from './watch-window'
@@ -276,7 +276,6 @@ async function advanceUnlessRefused(animeId: number, episode: number, key: strin
 
 async function tick(): Promise<void> {
   const prefs = getPrefs()
-  if (!prefs.autoTick && !prefs.autoNext) return
 
   if (!watchWindow()) {
     // Fenêtre fermée : la prochaine ouverture repart de zéro, sinon un épisode
@@ -284,6 +283,7 @@ async function tick(): Promise<void> {
     ticked = null
     advancing = null
     refused.clear()
+    sendProgress(null)
     return
   }
 
@@ -293,6 +293,11 @@ async function tick(): Promise<void> {
 
   const now = await playing()
   if (!now) return
+
+  // Avant les réglages, et non après : le remplissage des cases n'est pas la
+  // coche automatique, et couper celle-ci ne doit pas aveugler celui-là.
+  sendProgress({ animeId: launched.animeId, episode: launched.episode, ratio: watchedRatio(now) })
+  if (!prefs.autoTick && !prefs.autoNext) return
 
   const key = keyOf(launched.animeId, launched.episode)
   if (prefs.autoTick) tickIfDone(now, launched.animeId, launched.episode, key)

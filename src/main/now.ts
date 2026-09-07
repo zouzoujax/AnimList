@@ -16,7 +16,9 @@
  * noté ici, l'état réel se demande à la page au moment où on en a besoin.
  */
 
+import { BrowserWindow } from 'electron'
 import type { LocalWatching } from '@shared/discord'
+import type { WatchProgress } from '@shared/types'
 import { getMedia } from './store'
 
 /** Ce qu'on a lancé dans une fenêtre extérieure, que son titre ne dit pas. */
@@ -51,6 +53,49 @@ export type { LocalWatching }
 
 export function setLocalWatching(value: LocalWatching | null): void {
   local = value
+  sendProgress(
+    value && value.episode !== null ? { animeId: value.animeId, episode: value.episode, ratio: ratioOf(value) } : null
+  )
+}
+
+const ratioOf = (v: { position: number; duration: number }): number =>
+  v.duration > 0 && Number.isFinite(v.position) ? Math.min(1, Math.max(0, v.position / v.duration)) : 0
+
+/**
+ * La position, poussée vers les fenêtres.
+ *
+ * Aucune ne peut la deviner : elle vit dans la vidéo d'une autre fenêtre, ou
+ * dans celle d'Anime-Sama. Envoyée plutôt que demandée, parce que la grille
+ * d'épisodes n'a aucune raison d'interroger un lecteur toutes les secondes
+ * pour s'entendre répondre qu'il ne joue rien.
+ *
+ * Le dernier état est retenu : une fiche ouverte au milieu d'un épisode doit
+ * afficher le remplissage tout de suite, sans attendre le prochain tour.
+ */
+let progress: WatchProgress | null = null
+
+export function sendProgress(next: WatchProgress | null): void {
+  // Égalité stricte, sans seuil de tolérance : un seuil réglé sur un épisode
+  // de vingt-quatre minutes ne se franchit jamais en cinq secondes sur un film
+  // de deux heures, et le remplissage s'y figerait. La position ne bouge pas
+  // pendant une pause, ce qui suffit à ne rien envoyer pour rien.
+  const pareil =
+    progress === next ||
+    (progress !== null &&
+      next !== null &&
+      progress.animeId === next.animeId &&
+      progress.episode === next.episode &&
+      progress.ratio === next.ratio)
+  if (pareil) return
+
+  progress = next
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('watch:progress', next)
+  }
+}
+
+export function getProgress(): WatchProgress | null {
+  return progress
 }
 
 export function getLocalWatching(): LocalWatching | null {

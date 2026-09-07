@@ -34,7 +34,7 @@ import { startSoiree } from './soiree-queue'
 import { franchiseTree } from './franchise'
 import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
-import { rememberLaunch, setLocalWatching, type LocalWatching } from './now'
+import { getProgress, rememberLaunch, setLocalWatching, type LocalWatching } from './now'
 import {
   cacheMedia,
   cancelRewatch,
@@ -252,6 +252,7 @@ export function registerIpc(): void {
    * demande. Rien n'est écrit sur le disque — c'est de l'état vivant.
    */
   ipcMain.handle('now:watching', (_e, info: LocalWatching | null) => setLocalWatching(info))
+  ipcMain.handle('now:progress', () => getProgress())
 
   // ---- statut Discord --------------------------------------------------
   ipcMain.handle('discord:status', () => discordStatus())

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
+
 import type {
   AiringEntry,
   AiringItem,
@@ -35,7 +36,8 @@ import type {
   TvTimeReport,
   UpdateStatus,
   WatchEventPatch,
-  WatchEventRef
+  WatchEventRef,
+  WatchProgress
 } from '@shared/types'
 
 const api = {
@@ -245,6 +247,14 @@ const api = {
      * sans qu'on ait à l'interroger. `null` quand il se ferme.
      */
     watching: (info: LocalWatching | null): Promise<void> => ipcRenderer.invoke('now:watching', info),
+    /** Où en est l'épisode qui joue, à l'ouverture d'une fiche. */
+    progress: (): Promise<WatchProgress | null> => ipcRenderer.invoke('now:progress'),
+    /** La même chose, poussée à chaque avancée notable de la lecture. */
+    onProgress: (cb: (p: WatchProgress | null) => void): (() => void) => {
+      const handler = (_e: unknown, p: WatchProgress | null): void => cb(p)
+      ipcRenderer.on('watch:progress', handler)
+      return () => ipcRenderer.off('watch:progress', handler)
+    },
     /** Une touche multimédia pressée pendant la lecture. */
     onCommand: (handler: (command: string) => void): (() => void) => {
       const listener = (_e: unknown, command: string): void => handler(command)

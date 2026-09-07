@@ -194,6 +194,20 @@ export interface Entry {
 
 export type EntryPatch = Partial<Omit<Entry, 'animeId' | 'addedAt' | 'updatedAt'>>
 
+/**
+ * Où en est l'épisode qui joue, poussé du processus principal vers les fenêtres.
+ *
+ * Partagé plutôt que défini côté principal : le préchargement et la grille
+ * d'épisodes s'en servent tous les deux, et un type qui traverse le pont n'a
+ * rien à faire dans le seul module qui l'émet.
+ */
+export interface WatchProgress {
+  animeId: number
+  episode: number
+  /** Entre 0 et 1. */
+  ratio: number
+}
+
 export interface WatchEvent {
   animeId: number
   episode: number

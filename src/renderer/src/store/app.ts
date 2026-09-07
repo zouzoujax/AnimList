@@ -8,6 +8,7 @@ import {
   type Prefs,
   type Snapshot,
   type WatchEvent,
+  type WatchProgress,
   type WatchEventPatch,
   type WatchEventRef
 } from '@shared/types'
@@ -39,6 +40,13 @@ interface AppState {
   entries: Map<number, Entry>
   media: Map<number, Media>
   watched: Map<number, Set<number>>
+  /**
+   * Où en est l'épisode qui joue, quel que soit le lecteur.
+   *
+   * Poussé par le processus principal : lui seul voit la vidéo, qui vit dans
+   * une autre fenêtre. `null` quand rien ne joue.
+   */
+  progress: WatchProgress | null
   events: WatchEvent[]
   lists: CustomList[]
   toasts: Toast[]
@@ -129,6 +137,7 @@ export const useApp = create<AppState>((set, get) => ({
   entries: new Map(),
   media: new Map(),
   watched: new Map(),
+  progress: null,
   events: [],
   lists: [],
   toasts: [],
@@ -149,6 +158,11 @@ export const useApp = create<AppState>((set, get) => ({
         set(indexSnapshot(await window.api.library.snapshot()))
       }, 120)
     })
+
+    // Demandé une fois puis écouté : une fiche ouverte au milieu d'un épisode
+    // doit montrer le remplissage tout de suite, sans attendre le tour suivant.
+    void window.api.videos.progress().then((p) => set({ progress: p }))
+    window.api.videos.onProgress((p) => set({ progress: p }))
 
     window.api.app.onOpenAnime((id) => get().navigate({ name: 'anime', id }))
     window.api.app.onGoto((route) => get().navigate(route as Route))

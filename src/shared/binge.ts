@@ -50,6 +50,22 @@ export function playable(now: Playing): boolean {
 }
 
 /** Vrai quand l'épisode mérite d'être coché, et ne l'est pas déjà. */
+/**
+ * Où en est la lecture, entre 0 et 1.
+ *
+ * La même mesure que celle qui décide de cocher, exprès : le remplissage d'une
+ * case et la coche automatique doivent raconter la même chose. Une case pleine
+ * aux neuf dixièmes qui ne se coche pas — ou l'inverse — se lirait comme un
+ * bug, et il faudrait aller vérifier laquelle des deux ment.
+ *
+ * Zéro quand la lecture n'est pas mesurable : mieux vaut ne rien montrer qu'un
+ * remplissage inventé.
+ */
+export function watchedRatio(now: Playing): number {
+  if (!playable(now)) return 0
+  return Math.min(1, Math.max(0, now.position / now.duration))
+}
+
 export function shouldTick(now: Playing, alreadySeen: boolean): boolean {
   if (alreadySeen || !playable(now)) return false
   return now.position / now.duration >= SEEN_RATIO

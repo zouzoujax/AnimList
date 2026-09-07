@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { playable, shouldAdvance, shouldTick, MIN_DURATION_S } from './binge'
+import { MIN_DURATION_S, playable, SEEN_RATIO, shouldAdvance, shouldTick, watchedRatio, type Playing } from './binge'
 
 /** Un épisode de vingt-quatre minutes, en cours de lecture. */
 const at = (
@@ -81,5 +81,32 @@ describe('shouldAdvance', () => {
   // ne s'obtient qu'en ayant laissé l'épisode finir.
   it('enchaîne sur un lecteur arrivé au bout', () => {
     expect(shouldAdvance(at(1440, { playing: false }))).toBe(true)
+  })
+})
+
+describe('watchedRatio', () => {
+  const lit = (position: number, duration = 1440): Playing => ({ position, duration, playing: true })
+
+  it('rend la fraction lue', () => {
+    expect(watchedRatio(lit(720))).toBeCloseTo(0.5)
+    expect(watchedRatio(lit(0))).toBe(0)
+  })
+
+  // La même mesure que la coche : à 90 %, les deux doivent basculer ensemble.
+  it('s’accorde avec le seuil de la coche', () => {
+    const juste = lit(1440 * SEEN_RATIO)
+    expect(watchedRatio(juste)).toBeCloseTo(SEEN_RATIO)
+    expect(shouldTick(juste, false)).toBe(true)
+  })
+
+  it('ne dépasse jamais un', () => {
+    expect(watchedRatio(lit(1441))).toBe(1)
+  })
+
+  // Mieux vaut ne rien montrer qu'un remplissage inventé.
+  it('rend zéro quand rien n’est mesurable', () => {
+    expect(watchedRatio(lit(60, 30))).toBe(0)
+    expect(watchedRatio({ position: NaN, duration: 1440, playing: true })).toBe(0)
+    expect(watchedRatio(lit(700, 0))).toBe(0)
   })
 })
