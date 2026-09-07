@@ -278,7 +278,13 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       'interactive'
     ).catch((err: Error) => err)
 
-    if (found instanceof Error) return json(res, 502, { error: `AniList : ${found.message}` })
+    if (found instanceof Error) {
+      // Le préfixe datait des messages techniques — « HTTP 403 » ne disait pas
+      // de qui il venait. Ceux d'aujourd'hui nomment déjà la source, et
+      // l'ajouter donnait « AniList : Le catalogue AniList est indisponible ».
+      const dit = found.message.includes('AniList') ? found.message : `AniList : ${found.message}`
+      return json(res, 502, { error: dit })
+    }
 
     const owned = new Set(snapshot().entries.map((e) => e.animeId))
     return json(res, 200, {
