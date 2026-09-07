@@ -136,9 +136,12 @@ export function Spinner({ label }: { label?: string }): React.JSX.Element {
 
 export function ErrorBox({ message, onRetry }: { message: string; onRetry?: () => void }): React.JSX.Element {
   return (
-    <div className="glass flex items-center gap-3.5 rounded-2xl px-4 py-3.5 text-sm">
+    <div className="glass flex flex-wrap items-center gap-x-3.5 gap-y-2.5 rounded-2xl px-4 py-3.5 text-sm">
       <TriangleAlert size={18} className="shrink-0 text-amber-300" />
-      <span className="flex-1 text-muted">{message}</span>
+      {/* `min-w-[10rem]` force le bouton à passer dessous plutôt que de réduire
+          le texte à un ruban : cet encadré s'affiche aussi dans la colonne
+          étroite d'une fiche. */}
+      <span className="min-w-[10rem] flex-1 text-muted">{message}</span>
       {onRetry && (
         <button className="btn" onClick={onRetry}>
           Réessayer

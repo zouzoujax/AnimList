@@ -45,9 +45,12 @@ const DISABLED = /disabled/i
 export function failureOf(status: number, apiMessage: string | null): Failure {
   if (status === 403 && apiMessage && DISABLED.test(apiMessage)) {
     return {
+      // Court, parce qu'il s'affiche aussi dans une colonne étroite : la
+      // version longue s'y déroulait sur dix lignes. Il dit quand même les deux
+      // choses qui comptent — ce qui est cassé, et ce qui ne l'est pas.
       message:
-        'Le catalogue AniList est indisponible : ils ont coupé leur API le temps de régler des problèmes de ' +
-        'stabilité. Ta bibliothèque, tes épisodes et tes statistiques n’en dépendent pas.',
+        'Le catalogue AniList est indisponible : ils ont coupé leur API. ' +
+        'Ta bibliothèque et tes statistiques n’en dépendent pas.',
       pauseMs: OUTAGE_MS
     }
   }

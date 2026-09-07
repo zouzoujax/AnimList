@@ -24,8 +24,15 @@ import { join } from 'node:path'
 
 const DEV_DIR = 'animelist-dev'
 
-/** Le noyau et son journal. Le reste (caches, session) se reconstruit seul. */
-const SEEDED = ['animelist.json', 'animelist-history.jsonl']
+/**
+ * Le noyau, son journal, et le cache du catalogue.
+ *
+ * Le cache aurait pu se reconstruire seul — sauf quand AniList est coupé. Une
+ * version de développement partie de zéro n'avait alors ni fiche ni chaîne de
+ * saisons, là où l'app installée continuait de tout afficher : on ne
+ * développait plus sur la même app.
+ */
+const SEEDED = ['animelist.json', 'animelist-history.jsonl', 'anilist-cache.json']
 
 export function useDevProfile(): void {
   const installed = app.getPath('userData')

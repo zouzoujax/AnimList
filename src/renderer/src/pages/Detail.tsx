@@ -181,11 +181,42 @@ function EpisodeGrid({
   const titles = useTranslated(rawEpisodes.map((ep) => ep.title ?? ''))
   const episodes = rawEpisodes.map((ep, i) => (ep.title ? { ...ep, title: titles[i] || ep.title } : ep))
 
+  /**
+   * ESSAI — arbre des franchises.
+   *
+   * Défini au-dessus du retour anticipé, et affiché des deux côtés : la liste
+   * d'épisodes manque dès qu'AniList ne répond pas, et l'arbre — qui se
+   * reconstruit très bien sans eux — devenait alors injoignable, précisément
+   * quand il rend le plus service.
+   */
+  const arbre = (
+    <>
+      <button className="btn mb-3 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
+        <GitBranch size={13} />
+        Arbre de la franchise
+      </button>
+      <Modal open={tree} onClose={() => setTree(false)} width={680}>
+        {tree && (
+          <Franchise
+            animeId={detail.id}
+            onOpen={(id) => {
+              setTree(false)
+              navigate({ name: 'anime', id })
+            }}
+          />
+        )}
+      </Modal>
+    </>
+  )
+
   if (!episodes.length) {
     return (
-      <p className="glass rounded-2xl px-4 py-6 text-center text-[0.82rem] text-faint">
-        La liste d'épisodes n'est pas encore publiée pour ce titre.
-      </p>
+      <div>
+        {arbre}
+        <p className="glass rounded-2xl px-4 py-6 text-center text-[0.82rem] text-faint">
+          La liste d'épisodes n'est pas encore publiée pour ce titre.
+        </p>
+      </div>
     )
   }
 
@@ -216,24 +247,7 @@ function EpisodeGrid({
   return (
     <div>
       <SeasonStrip animeId={detail.id} />
-
-      {/* ESSAI — arbre des franchises. Retirer ce bloc, l'import et l'état
-          `tree` suffit à l'enlever ; voir src/renderer/src/components/Franchise.tsx. */}
-      <button className="btn mb-3 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
-        <GitBranch size={13} />
-        Arbre de la franchise
-      </button>
-      <Modal open={tree} onClose={() => setTree(false)} width={680}>
-        {tree && (
-          <Franchise
-            animeId={detail.id}
-            onOpen={(id) => {
-              setTree(false)
-              navigate({ name: 'anime', id })
-            }}
-          />
-        )}
-      </Modal>
+      {arbre}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Stops at the last broadcast episode: marking one that has not aired
