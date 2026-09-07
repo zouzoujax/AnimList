@@ -43,21 +43,33 @@ function Bar({ seen, total }: { seen: number; total: number | null }): React.JSX
 function Leaf({ node, onOpen }: { node: Node; onOpen: (id: number) => void }): React.JSX.Element {
   const complet = node.total !== null && node.total > 0 && node.seen >= node.total
   const glow = toneAccent(null)
+
+  /**
+   * Trois états, trois pastilles — et la légende doit dire vrai.
+   *
+   * Une série absente de la bibliothèque et une série suivie mais pas encore
+   * commencée se dessinaient pareil : un cercle vide. La légende annonçait
+   * pourtant trois cas. Ce qui n'est pas suivi n'a plus de contour du tout.
+   */
+  const pastille = complet
+    ? { background: glow, border: 'none' }
+    : node.seen > 0
+      ? { background: rgba(glow, 0.5), border: 'none' }
+      : node.tracked
+        ? { background: 'transparent', border: '1px solid var(--line-2)' }
+        : { background: 'var(--line)', border: 'none' }
+
   return (
     <button
       onClick={() => onOpen(node.id)}
       title={node.tracked ? `${node.seen} vu${node.seen > 1 ? 's' : ''}` : 'Pas dans ta bibliothèque'}
       className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/6"
     >
-      <span
-        className="h-[6px] w-[6px] shrink-0 rounded-full"
-        style={{
-          background: complet ? glow : node.seen > 0 ? rgba(glow, 0.5) : 'transparent',
-          border: node.seen > 0 ? 'none' : '1px solid var(--line-2)'
-        }}
-      />
+      <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={pastille} />
       <span className={`truncate text-[0.76rem] ${node.tracked ? 'text-muted' : 'text-faint'}`}>{node.title}</span>
-      {node.format && <span className="shrink-0 text-[0.66rem] text-faint">{node.format}</span>}
+      {/* Poussé à droite : accolé au titre, il sautait d'une ligne à l'autre au
+          gré de la longueur des noms, et la colonne devenait illisible. */}
+      {node.format && <span className="ml-auto shrink-0 pl-2 text-[0.66rem] text-faint">{node.format}</span>}
     </button>
   )
 }
@@ -180,8 +192,8 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
       </ol>
 
       <p className="mt-2 text-[0.7rem] text-faint">
-        Les branches viennent des relations qu’AniList déclare. Un point plein signale une série finie, un point creux
-        une série commencée, rien du tout une série absente de ta bibliothèque.
+        Les branches viennent des relations qu’AniList déclare. Point plein : série finie. Point à demi rempli :
+        commencée. Cercle vide : suivie mais pas entamée. Point gris : absente de ta bibliothèque.
       </p>
     </div>
   )
