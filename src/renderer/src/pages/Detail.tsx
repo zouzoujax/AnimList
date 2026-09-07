@@ -162,11 +162,8 @@ function EpisodeGrid({
   const startRewatch = useApp((s) => s.startRewatch)
   const cancelRewatch = useApp((s) => s.cancelRewatch)
   const toast = useApp((s) => s.toast)
-  const navigate = useApp((s) => s.navigate)
   const [hovered, setHovered] = useState<number | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
-  // ESSAI — arbre des franchises, voir plus bas dans le rendu.
-  const [tree, setTree] = useState(false)
   const [hideFiller, setHideFiller] = useState(false)
   const fillerInfo = useFiller(detail.idMal)
 
@@ -181,42 +178,11 @@ function EpisodeGrid({
   const titles = useTranslated(rawEpisodes.map((ep) => ep.title ?? ''))
   const episodes = rawEpisodes.map((ep, i) => (ep.title ? { ...ep, title: titles[i] || ep.title } : ep))
 
-  /**
-   * ESSAI — arbre des franchises.
-   *
-   * Défini au-dessus du retour anticipé, et affiché des deux côtés : la liste
-   * d'épisodes manque dès qu'AniList ne répond pas, et l'arbre — qui se
-   * reconstruit très bien sans eux — devenait alors injoignable, précisément
-   * quand il rend le plus service.
-   */
-  const arbre = (
-    <>
-      <button className="btn mb-3 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
-        <GitBranch size={13} />
-        Arbre de la franchise
-      </button>
-      <Modal open={tree} onClose={() => setTree(false)} width={680}>
-        {tree && (
-          <Franchise
-            animeId={detail.id}
-            onOpen={(id) => {
-              setTree(false)
-              navigate({ name: 'anime', id })
-            }}
-          />
-        )}
-      </Modal>
-    </>
-  )
-
   if (!episodes.length) {
     return (
-      <div>
-        {arbre}
-        <p className="glass rounded-2xl px-4 py-6 text-center text-[0.82rem] text-faint">
-          La liste d'épisodes n'est pas encore publiée pour ce titre.
-        </p>
-      </div>
+      <p className="glass rounded-2xl px-4 py-6 text-center text-[0.82rem] text-faint">
+        La liste d'épisodes n'est pas encore publiée pour ce titre.
+      </p>
     )
   }
 
@@ -247,7 +213,6 @@ function EpisodeGrid({
   return (
     <div>
       <SeasonStrip animeId={detail.id} />
-      {arbre}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Stops at the last broadcast episode: marking one that has not aired
@@ -607,6 +572,10 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const [synopsis] = useTranslated(media?.description ? [media.description] : [])
   const [draft, setDraft] = useState<{ animeId: number; text: string }>({ animeId: id, text: entry?.notes ?? '' })
   const [expanded, setExpanded] = useState(false)
+  // ESSAI — arbre des franchises. Ici, et non dans la grille : l'arbre n'a
+  // besoin que d'un identifiant, alors que la grille n'est pas même montée
+  // quand la fiche AniList manque à l'appel.
+  const [tree, setTree] = useState(false)
   const [picking, setPicking] = useState(false)
 
   /**
@@ -957,12 +926,37 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             </section>
           )}
 
+          {/* ESSAI — arbre des franchises. Supprimer ce bloc, l'état `tree` et
+              l'import suffit à le retirer. */}
+          <button className="btn mb-4 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
+            <GitBranch size={13} />
+            Arbre de la franchise
+          </button>
+          <Modal open={tree} onClose={() => setTree(false)} width={680}>
+            {tree && (
+              <Franchise
+                animeId={id}
+                onOpen={(other) => {
+                  setTree(false)
+                  navigate({ name: 'anime', id: other })
+                }}
+              />
+            )}
+          </Modal>
+
           <Section title="Épisodes" subtitle={episodesSubtitle}>
             {loading && !detail ? (
               <Skeleton className="h-28 w-full" />
             ) : detail ? (
               <EpisodeGrid detail={detail} glow={glow} watchUrl={animeSama?.episodes ? animeSama.url : null} />
-            ) : null}
+            ) : (
+              // Sans cette ligne, la section n'affichait rien : un titre, un
+              // décompte, puis un trou. On croit l'app cassée alors qu'elle a
+              // simplement perdu le catalogue.
+              <p className="text-[0.82rem] text-faint">
+                La liste des épisodes n’a pas pu être chargée. Ta progression, elle, est intacte.
+              </p>
+            )}
           </Section>
 
           <LocalFiles animeId={id} title={titleOf(media, lang)} glow={glow} />
