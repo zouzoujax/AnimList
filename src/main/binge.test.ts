@@ -87,6 +87,15 @@ describe('skipScript', () => {
     expect(skipScript(102, 'x', 0.2)).toContain('setTimeout(partir, 1 * 1000)')
   })
 
+  // Quand rien ne suit le générique, le bouton ne saute pas : il demande la
+  // suite, et le processus principal relit ce drapeau dix fois par seconde.
+  it('pose un drapeau plutôt que d’avancer quand la destination est nulle', () => {
+    const code = skipScript(null, 'Épisode suivant', 60)
+    expect(parses(code)).toBe(true)
+    expect(code).toContain('__animelistSkipNext = true')
+    expect(code).not.toContain('currentTime')
+  })
+
   it('échappe un libellé hostile', () => {
     expect(parses(skipScript(10, 'L\'"opening" \\ ici', 30))).toBe(true)
   })

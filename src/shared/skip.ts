@@ -46,6 +46,15 @@ export const LENGTH_TOLERANCE_S = 60
 /** En deçà, le bouton coûte plus d'attention qu'il n'en fait gagner. */
 export const MIN_SKIP_S = 5
 
+/**
+ * Ce qui peut rester après un générique de fin sans que l'épisode soit fini.
+ *
+ * Beaucoup de séries collent un aperçu du prochain épisode après le générique,
+ * et certains le regardent. Au-delà de ce seuil on suppose qu'il y a quelque
+ * chose à voir ; en deçà, il n'y a plus que du noir.
+ */
+export const TAIL_S = 15
+
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : NaN)
 
 /**
@@ -105,4 +114,18 @@ export function activeSkip(ranges: SkipRange[], position: number, duration: numb
     if (position >= range.start && position < range.end - 1) return range
   }
   return null
+}
+
+/**
+ * Ce générique de fin termine-t-il l'épisode ?
+ *
+ * La question change ce que le bouton doit faire. Quand rien ne suit, sauter
+ * le générique dépose sur du noir, et il faut encore attendre le compte à
+ * rebours de l'enchaînement : on a remplacé une attente par une autre. Mieux
+ * vaut alors passer directement à l'épisode suivant.
+ */
+export function endsTheEpisode(range: SkipRange, duration: number): boolean {
+  if (range.kind !== 'ed') return false
+  if (!Number.isFinite(duration) || duration <= 0) return false
+  return duration - range.end <= TAIL_S
 }

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { activeSkip, LENGTH_TOLERANCE_S, MIN_SKIP_S, parseSkipTimes, usable, type SkipRange } from './skip'
+import {
+  activeSkip,
+  endsTheEpisode,
+  LENGTH_TOLERANCE_S,
+  MIN_SKIP_S,
+  parseSkipTimes,
+  TAIL_S,
+  usable,
+  type SkipRange
+} from './skip'
 
 /** La vraie réponse d'AniSkip pour Naruto épisode 1, relevée le 7 septembre 2026. */
 const NARUTO = {
@@ -114,5 +123,27 @@ describe('activeSkip', () => {
   it('se tait sans minutage', () => {
     expect(activeSkip([], 40, 1440)).toBeNull()
     expect(activeSkip(ranges, NaN, 1440)).toBeNull()
+  })
+})
+
+describe('endsTheEpisode', () => {
+  const ed = (end: number): SkipRange => ({ kind: 'ed', start: end - 90, end, reference: 1440 })
+
+  it('reconnaît un générique qui termine', () => {
+    expect(endsTheEpisode(ed(1440), 1440)).toBe(true)
+    expect(endsTheEpisode(ed(1440 - TAIL_S), 1440)).toBe(true)
+  })
+
+  // Un aperçu du prochain épisode : il y a encore quelque chose à voir.
+  it('laisse sa place à ce qui suit', () => {
+    expect(endsTheEpisode(ed(1440 - TAIL_S - 1), 1440)).toBe(false)
+  })
+
+  it('ne dit jamais oui d’un opening', () => {
+    expect(endsTheEpisode({ kind: 'op', start: 0, end: 90, reference: 1440 }, 90)).toBe(false)
+  })
+
+  it('se tait sur une durée inconnue', () => {
+    expect(endsTheEpisode(ed(1440), 0)).toBe(false)
   })
 })

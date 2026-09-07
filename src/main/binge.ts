@@ -22,7 +22,7 @@
 
 import { shouldAdvance, shouldTick, watchedRatio, type Playing } from '@shared/binge'
 import { canTick } from '@shared/airing'
-import { activeSkip, SKIP_LABELS } from '@shared/skip'
+import { activeSkip, endsTheEpisode, SKIP_LABELS } from '@shared/skip'
 import { searchTitles } from '@shared/titles'
 import { isCinema, leaveCinema, videoFrame } from './video-frame'
 import { resolve as resolveAnimeSama } from './animesama'
@@ -131,19 +131,26 @@ export function countdownScript(seconds: number, label: string): string {
   })()`
 }
 
+/** Le drapeau que pose le bouton quand il n'y a plus qu'à passer au suivant. */
+const NEXT_FLAG = '__animelistSkipNext'
+
 /**
- * Le bouton « passer le générique », posé dans le cadre du lecteur.
+ * Le bouton d'un générique, posé dans le cadre du lecteur.
  *
- * Il agit sur place plutôt que de poser un drapeau qu'on relirait cinq secondes
- * plus tard : un générique dure une minute et demie, et une réponse différée
- * d'un tour d'horloge ferait sauter au mauvais endroit. Il se retire tout seul
- * quand le générique est passé, sans quoi il resterait à proposer un saut vers
- * une seconde déjà franchie.
+ * Deux comportements, selon ce qui suit le générique. Une seconde de
+ * destination, et le bouton avance la vidéo sur place — un générique dure une
+ * minute et demie, et une réponse différée d'un tour d'horloge ferait sauter au
+ * mauvais endroit. `null`, et il pose un drapeau : il n'y a plus rien à voir
+ * dans cet épisode, la suite se décide dans le processus principal, qui relit
+ * ce drapeau dix fois par seconde tant que le bouton est affiché.
+ *
+ * Il se retire tout seul quand le générique est passé, sans quoi il resterait à
+ * proposer un saut vers une seconde déjà franchie.
  *
  * Plus haut que le carton de l'épisode suivant, qui occupe le même coin : sur
  * un générique de fin, les deux peuvent s'afficher ensemble.
  */
-export function skipScript(to: number, label: string, seconds: number): string {
+export function skipScript(to: number | null, label: string, seconds: number): string {
   return `(function () {
     try {
       var old = document.getElementById('animelist-skip')
@@ -165,8 +172,11 @@ export function skipScript(to: number, label: string, seconds: number): string {
 
       var partir = function () { if (b.parentNode) b.parentNode.removeChild(b) }
       b.onclick = function () {
-        var v = document.querySelector('video')
-        if (v) v.currentTime = ${to}
+        ${
+          to === null
+            ? `window.${NEXT_FLAG} = true`
+            : `var v = document.querySelector('video'); if (v) v.currentTime = ${to}`
+        }
         partir()
       }
       setTimeout(partir, ${Math.max(1, Math.round(seconds))} * 1000)
@@ -327,11 +337,33 @@ async function advanceUnlessRefused(animeId: number, episode: number, key: strin
     return
   }
 
-  // Faux veut dire que ce numéro n'existe pas dans leur menu : la saison est
-  // finie. Rien à faire, et surtout pas ouvrir une page d'épisode inexistant.
-  const opened = sameShow ? await playNext(target.episode) : await openOther(target.animeId, target.episode)
+  await goNext(animeId, episode)
+}
+
+/**
+ * Passe à la suite, tout de suite.
+ *
+ * Séparé du compte à rebours parce que deux chemins y mènent : son expiration,
+ * et le bouton « Épisode suivant » d'un générique de fin — celui-là ne doit
+ * justement pas attendre.
+ *
+ * Faux veut dire que ce numéro n'existe pas dans leur menu : la saison est
+ * finie. Rien à faire, et surtout pas ouvrir une page d'épisode inexistant.
+ */
+async function goNext(animeId: number, episode: number): Promise<boolean> {
+  const step = soireeNext(animeId, episode)
+  if (step.inSession && step.next === null) {
+    await endSoiree()
+    return true
+  }
+
+  const target = step.next ?? { animeId, episode: episode + 1, title: null }
+  const opened =
+    target.animeId === animeId ? await playNext(target.episode) : await openOther(target.animeId, target.episode)
+
   if (opened) rememberLaunch(target.animeId, target.episode)
   else if (step.inSession) stopSoiree()
+  return opened
 }
 
 /**
@@ -361,18 +393,72 @@ async function offerSkip(animeId: number, episode: number, now: Playing, auto: b
   if (offered.has(key)) return
   offered.add(key)
 
+  /**
+   * Un générique de fin que rien ne suit ne se saute pas, il se quitte.
+   *
+   * Sauter déposait sur du noir, où il fallait encore attendre le compte à
+   * rebours de l'enchaînement : une attente remplacée par une autre. Le bouton
+   * annonce donc l'épisode suivant, et y va.
+   */
+  const terminal = endsTheEpisode(active, now.duration)
+  const reste = active.end - now.position
+
   if (auto) {
-    await video.frame
-      .executeJavaScript(
-        `(function(){var v=document.querySelector('video');if(v)v.currentTime=${active.end};return true})()`,
-        true
-      )
-      .catch(() => false)
+    if (terminal) await goNext(animeId, episode)
+    else await seekTo(video, active.end)
     return
   }
 
-  const reste = active.end - now.position
-  await video.frame.executeJavaScript(skipScript(active.end, SKIP_LABELS[active.kind], reste), true).catch(() => false)
+  const label = terminal ? 'Épisode suivant' : SKIP_LABELS[active.kind]
+  const posed = await video.frame
+    .executeJavaScript(skipScript(terminal ? null : active.end, label, reste), true)
+    .catch(() => false)
+
+  if (terminal && posed === true) watchNextFlag(animeId, episode, reste)
+}
+
+type Frame = NonNullable<Awaited<ReturnType<typeof videoFrame>>>
+
+const seekTo = async (video: Frame, to: number): Promise<void> => {
+  await video.frame
+    .executeJavaScript(
+      `(function(){var v=document.querySelector('video');if(v)v.currentTime=${to};return true})()`,
+      true
+    )
+    .catch(() => false)
+}
+
+/** Le tour d'horloge du surveillant, quand un clic est attendu. */
+const FLAG_POLL_MS = 100
+
+/**
+ * Guette le bouton « Épisode suivant ».
+ *
+ * Dix fois par seconde, et seulement tant que le bouton est affiché : c'est le
+ * prix d'un clic qui répond tout de suite. Le surveillant ordinaire tourne
+ * toutes les cinq secondes, ce qui ferait attendre autant qu'un compte à
+ * rebours — précisément ce qu'on cherchait à supprimer.
+ */
+function watchNextFlag(animeId: number, episode: number, seconds: number): void {
+  const jusqua = Date.now() + Math.max(2, seconds) * 1000
+  const timer = setInterval(() => {
+    void (async () => {
+      const win = watchWindow()
+      if (!win || Date.now() > jusqua) return clearInterval(timer)
+
+      const video = await videoFrame(win)
+      const clicked: unknown = video
+        ? await video.frame.executeJavaScript(`window.${NEXT_FLAG} === true`, true).catch(() => false)
+        : false
+      if (clicked !== true) return
+
+      clearInterval(timer)
+      await video?.frame.executeJavaScript(`window.${NEXT_FLAG} = false; true`, true).catch(() => false)
+      // Le compte à rebours ordinaire n'a plus lieu d'être : on y va.
+      advancing = `${animeId}:${episode}`
+      await goNext(animeId, episode)
+    })()
+  }, FLAG_POLL_MS)
 }
 
 async function tick(): Promise<void> {
