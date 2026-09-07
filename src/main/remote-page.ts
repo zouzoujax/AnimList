@@ -595,16 +595,34 @@ const SCRIPT = `
     '</div>'
   }
 
+  /**
+   * La fiche d'une série, ouverte depuis une grille.
+   *
+   * Rendue par les deux onglets qui listent des séries : le geste — choisir
+   * une jaquette, puis agir — doit être le même à l'accueil et dans la liste.
+   * Faux quand la série n'est plus là, pour que l'appelant retombe sur sa
+   * grille au lieu d'afficher une page vide.
+   */
+  function renderSheet(rows, retour) {
+    var seule = rows.filter(function (r) { return r.id === sheet })[0]
+    if (!seule) { sheet = 0; return false }
+    countEl.textContent = STATUS[seule.status] || ''
+    appEl.innerHTML = '<button class="chip back" data-act="back">' + retour + '</button>' + card(seule)
+    return true
+  }
+
   function render(state) {
     renderPlayer(state.player)
     if (tab !== 'home') return
+    if (sheet && renderSheet(state.series, 'Tout ce qui est en cours')) return
+
     var n = state.series.length
     countEl.textContent = n ? n + (n > 1 ? ' séries en cours' : ' série en cours') : 'Rien en cours'
     if (!n) {
       appEl.innerHTML = '<div class="empty">Rien à reprendre.<br>Commence une série sur le PC, elle apparaîtra ici.</div>'
       return
     }
-    appEl.innerHTML = state.series.map(card).join('')
+    appEl.innerHTML = '<div class="grid">' + state.series.map(seriesTile).join('') + '</div>'
   }
 
   // ---------------------------------------------------------------- onglets
@@ -612,7 +630,7 @@ const SCRIPT = `
   var tab = 'home'
   var filter = 'all'
   /**
-   * La série ouverte dans « Ma liste ».
+   * La série ouverte, à l'accueil comme dans « Ma liste ».
    *
    * L'app montre une grille de jaquettes et n'ouvre les actions qu'une fois la
    * série choisie. La liste du téléphone empilait au contraire cinq boutons par
@@ -639,7 +657,7 @@ const SCRIPT = `
   }
 
   /** Une jaquette, son avancement, rien d'autre : on est en train de choisir. */
-  function libTile(s) {
+  function seriesTile(s) {
     var total = s.total || 0
     var done = total ? Math.round((s.seen / total) * 100) : 0
     return '<div class="tile" data-act="pick" data-id="' + s.id + '">' +
@@ -652,16 +670,7 @@ const SCRIPT = `
 
   function renderLibrary(rows) {
     // Une série choisie : sa fiche prend toute la place, avec ses actions.
-    if (sheet) {
-      var seule = rows.filter(function (r) { return r.id === sheet })[0]
-      if (seule) {
-        countEl.textContent = STATUS[seule.status] || 'Ma liste'
-        appEl.innerHTML = '<button class="chip back" data-act="back">Toutes les séries</button>' + card(seule)
-        return
-      }
-      // Retirée entre-temps : on ne laisse pas la fiche d'une série absente.
-      sheet = 0
-    }
+    if (sheet && renderSheet(rows, 'Toutes les séries')) return
 
     var counts = {}
     rows.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1 })
@@ -677,7 +686,7 @@ const SCRIPT = `
     countEl.textContent = rows.length + (rows.length > 1 ? ' séries suivies' : ' série suivie')
     appEl.innerHTML = '<div class="filters">' + chips + '</div>' +
       (shown.length
-        ? '<div class="grid">' + shown.map(libTile).join('') + '</div>'
+        ? '<div class="grid">' + shown.map(seriesTile).join('') + '</div>'
         : '<div class="empty">Rien dans cette liste.</div>')
   }
 
@@ -960,7 +969,9 @@ const SCRIPT = `
   // Le rafraîchissement de fond ne concerne que l'accueil : recharger le
   // catalogue sous les doigts, ou remettre les filtres à zéro pendant qu'on
   // lit, serait une nuisance.
-  setInterval(function () { if (tab === 'home') load() }, 20000)
+  // Ni pendant qu'on lit une fiche : la reconstruire sous les doigts ferait
+  // sauter le défilement et replierait la grille d'épisodes qu'on consultait.
+  setInterval(function () { if (tab === 'home' && !sheet) load() }, 20000)
   setInterval(async function () {
     if (dragging || !playerEl.innerHTML) return
     try { renderPlayer((await call('/api/player')).player) } catch (err) { /* rien à dire */ }
