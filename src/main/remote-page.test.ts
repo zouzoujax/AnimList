@@ -65,6 +65,29 @@ describe('les actions de la page', () => {
 
   // Toute la raison d'être de la délégation : un gestionnaire en ligne oblige
   // à imbriquer des guillemets dans un gabarit qui les mange.
+  /**
+   * Un onglet déclaré sans branche dans le chargeur retomberait silencieusement
+   * sur l'accueil : le bouton s'allume, le contenu ne change pas.
+   */
+  it('sait charger chacun de ses onglets', () => {
+    const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]
+    const ids = [...script.matchAll(/\{ id: '([a-z]+)', label:/g)].map((m) => m[1])
+
+    expect(ids).toEqual(['home', 'library', 'calendar', 'stats', 'discover'])
+    for (const id of ids) {
+      // L'accueil est le cas par défaut, il n'a pas de branche à lui.
+      if (id === 'home') continue
+      expect(script).toContain(`tab === '${id}'`)
+    }
+  })
+
+  it('demande au serveur des adresses qu’il connaît', () => {
+    const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]
+    for (const chemin of ['/api/state', '/api/library', '/api/calendar', '/api/stats', '/api/discover']) {
+      expect(script).toContain(chemin)
+    }
+  })
+
   it('n’utilise aucun gestionnaire en ligne', () => {
     expect(html).not.toContain('onclick=')
     expect(html).not.toContain('event.currentTarget')

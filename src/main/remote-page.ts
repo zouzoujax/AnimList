@@ -103,6 +103,15 @@ const STYLE = `
   input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 2px solid #14141f; border-radius: 50%; background: var(--accent); }
 
   /* ---- une série ---- */
+  /* ---- bilan ---- */
+  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+    padding: 14px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .kpi b { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .kpi span { color: var(--muted); font-size: .78rem; }
+
   .row { display: flex; gap: 12px; }
   .row img { width: 62px; height: 88px; border-radius: 11px; object-fit: cover; flex: none; background: var(--panel-2); }
   .row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -280,7 +289,9 @@ const SCRIPT = `
     books: 'M4 4h5v16H4zM11 4h4v16h-4zM17.5 5l3.2 15',
     compass: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM15.5 8.5l-2 5-5 2 2-5z',
     plus: 'M12 5v14M5 12h14',
-    search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3'
+    search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
+    calendar: 'M8 3v4M16 3v4M4 8h16M5 5h14v16H5z',
+    chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2'
   }
   function icon(name) {
     return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -562,7 +573,9 @@ const SCRIPT = `
 
   var TABS = [
     { id: 'home', label: 'Accueil', icon: 'home' },
-    { id: 'library', label: 'Bibliothèque', icon: 'books' },
+    { id: 'library', label: 'Ma liste', icon: 'books' },
+    { id: 'calendar', label: 'Calendrier', icon: 'calendar' },
+    { id: 'stats', label: 'Stats', icon: 'chart' },
     { id: 'discover', label: 'Découvrir', icon: 'compass' }
   ]
 
@@ -588,6 +601,77 @@ const SCRIPT = `
     countEl.textContent = rows.length + (rows.length > 1 ? ' séries suivies' : ' série suivie')
     appEl.innerHTML = '<div class="filters">' + chips + '</div>' +
       (shown.length ? shown.map(card).join('') : '<div class="empty">Rien dans cette liste.</div>')
+  }
+
+  /** « 3 h 04 », comme la barre latérale de l'app. */
+  function heures(minutes) {
+    var h = Math.floor(minutes / 60)
+    var m = minutes % 60
+    return h ? h + ' h ' + (m < 10 ? '0' : '') + m : m + ' min'
+  }
+
+  var JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
+
+  /**
+   * Le jour d'une diffusion, dit comme on le dirait.
+   *
+   * « Jeudi 18 h 15 » se comprend d'un coup d'œil ; une date complète demande
+   * de compter. Au-delà d'une semaine le nom du jour ne suffit plus à situer,
+   * et la date reprend sa place.
+   */
+  function quand(ms) {
+    var d = new Date(ms)
+    var jours = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000)
+    var heure = d.getHours() + ' h ' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes()
+    if (jours <= 0) return "aujourd'hui, " + heure
+    if (jours === 1) return 'demain, ' + heure
+    if (jours < 7) return JOURS[d.getDay()] + ', ' + heure
+    return d.getDate() + '/' + (d.getMonth() + 1) + ', ' + heure
+  }
+
+  function renderCalendar(airing) {
+    countEl.textContent = airing.length
+      ? airing.length + (airing.length > 1 ? ' épisodes annoncés' : ' épisode annoncé')
+      : 'Rien d’annoncé'
+    if (!airing.length) {
+      appEl.innerHTML = '<div class="empty">Aucun épisode annoncé dans les deux semaines qui viennent, ' +
+        'parmi les séries que tu suis.</div>'
+      return
+    }
+    appEl.innerHTML = airing.map(function (a) {
+      return '<div class="card"><div class="row">' +
+        '<img src="' + esc(a.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + a.animeId + '">' +
+        '<div class="info">' +
+          '<div class="title">' + esc(a.title) + '</div>' +
+          '<div class="meta"><b>Épisode ' + a.episode + '</b> · ' + esc(quand(a.airingAt)) + '</div>' +
+        '</div>' +
+      '</div></div>'
+    }).join('')
+  }
+
+  function renderStats(s) {
+    countEl.textContent = s.series + (s.series > 1 ? ' séries suivies' : ' série suivie')
+
+    var kpis = [
+      [s.episodes, 'épisodes vus'],
+      [heures(s.minutes), 'de visionnage'],
+      [s.finished, 'séries finies'],
+      [s.watching, 'en cours']
+    ].map(function (k) {
+      return '<div class="kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'
+    }).join('')
+
+    var genres = s.genres.length
+      ? '<div class="filters">' + s.genres.map(function (g) {
+          return '<span class="chip">' + esc(g.name) + ' <small>' + g.count + '</small></span>'
+        }).join('') + '</div>'
+      : ''
+
+    appEl.innerHTML = '<div class="kpis">' + kpis + '</div>' +
+      '<div class="card"><div class="sub">Ces 7 jours</div>' +
+      '<div class="title">' + s.week.episodes + ' épisode' + (s.week.episodes > 1 ? 's' : '') +
+      ' · ' + heures(s.week.minutes) + '</div></div>' +
+      genres
   }
 
   function tile(m) {
@@ -766,6 +850,8 @@ const SCRIPT = `
     renderNav()
     try {
       if (tab === 'library') return renderLibrary((await call('/api/library')).rows)
+      if (tab === 'calendar') return renderCalendar((await call('/api/calendar')).airing)
+      if (tab === 'stats') return renderStats(await call('/api/stats'))
       if (tab === 'discover') {
         appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
         var q = query ? '&q=' + encodeURIComponent(query) : ''

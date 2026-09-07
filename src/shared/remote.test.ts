@@ -86,6 +86,12 @@ describe('routeOf', () => {
     expect(routeOf('/api/state/../../secret')).toBe('unknown')
     expect(routeOf('/index.html')).toBe('unknown')
   })
+
+  it('connaît les statistiques et le calendrier', () => {
+    expect(routeOf('/api/stats')).toBe('stats')
+    expect(routeOf('/api/calendar')).toBe('calendar')
+    expect(routeOf('/api/stats/')).toBe('stats')
+  })
 })
 
 describe('needsToken', () => {

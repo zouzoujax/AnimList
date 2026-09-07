@@ -76,6 +76,8 @@ export type RemoteRoute =
   | 'discover'
   | 'add'
   | 'episodes'
+  | 'stats'
+  | 'calendar'
   | 'unknown'
 
 /**
@@ -106,6 +108,10 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'library'
     case '/api/discover':
       return 'discover'
+    case '/api/stats':
+      return 'stats'
+    case '/api/calendar':
+      return 'calendar'
     case '/api/add':
       return 'add'
     case '/api/episodes':

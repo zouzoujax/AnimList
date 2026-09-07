@@ -29,6 +29,7 @@ import { makeToken, needsToken, REMOTE_PORT, remoteUrl, routeOf, safeEqual, toke
 import { nextEpisode } from '@shared/resume'
 import { canTick, isUnaired } from '@shared/airing'
 import { searchTitles } from '@shared/titles'
+import { summarise, upcoming } from '@shared/summary'
 import { resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode } from './watch-window'
@@ -46,7 +47,6 @@ export interface RemoteStatus {
   port: number
   error: string | null
 }
-
 
 let server: Server | null = null
 let token = ''
@@ -231,6 +231,34 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       // cocher, et la grille le montre plutôt que de laisser essayer.
       lastAired: media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
     })
+  }
+
+  /**
+   * Le bilan et le calendrier, calculés ici.
+   *
+   * La page du téléphone n'a ni build ni dépendance : elle ne peut pas
+   * réutiliser les écrans de l'app, qui sont du React compilé. Elle reçoit donc
+   * des chiffres déjà faits, et n'a qu'à les mettre en forme.
+   */
+  if (route === 'stats' || route === 'calendar') {
+    const data = snapshot()
+    const media = new Map(
+      data.media.map((m) => [
+        m.id,
+        {
+          id: m.id,
+          title: m.title.english ?? m.title.romaji,
+          cover: m.cover.large,
+          episodes: m.episodes,
+          genres: m.genres,
+          nextAiring: m.nextAiring
+        }
+      ])
+    )
+    const entries = data.entries.map((e) => ({ animeId: e.animeId, status: e.status }))
+
+    if (route === 'stats') return json(res, 200, summarise(data.history, entries, media))
+    return json(res, 200, { airing: upcoming(entries, media) })
   }
 
   if (route === 'discover') {
