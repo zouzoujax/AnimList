@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.8 — 7 septembre 2026
+
+### Ajouts
+
+- Choisis la langue chez Anime-Sama : deux pastilles VO et VF sur la fiche, les mêmes que sur leur page, quand la saison existe dans les deux. Le choix est retenu pour cette série et vaut partout — la grille d'épisodes, la télécommande, l'enchaînement automatique. Jusqu'ici l'app s'arrêtait à la première langue trouvée, si bien que la VF était injoignable dès que la VO existait, c'est-à-dire presque toujours
+
 ## 0.5.7 — 7 septembre 2026
 
 ### Ajouts
