@@ -141,7 +141,14 @@ const STYLE = `
   /* Une case carrée d'au moins quarante-quatre pixels : c'est la taille en
      dessous de laquelle un pouce vise à côté. */
   .num {
-    min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
+    /*
+     * Même piège que pour les onglets : la largeur minimale d'un bouton
+     * ordinaire vaut quatre-vingt-quatre pixels, quand une case de cette
+     * grille en fait cinquante-deux. Les cases débordaient donc sur leurs
+     * voisines et se chevauchaient — deux épisodes vus côte à côte n'en
+     * formaient plus qu'un. La hauteur suffit à faire la cible.
+     */
+    min-width: 0; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
     background: var(--panel-2); color: var(--muted);
     font-size: .82rem; font-weight: 600; font-variant-numeric: tabular-nums;
     display: inline-flex; align-items: center; justify-content: center;
@@ -200,10 +207,20 @@ const STYLE = `
     border-top: 1px solid var(--line);
   }
   nav button {
-    flex: 1; min-height: 50px; border-radius: 14px; background: none; border: 0;
+    /*
+     * La largeur minimale des boutons ordinaires est défaite ici.
+     *
+     * Les quatre-vingt-quatre pixels d'un bouton d'action donnent au pouce une
+     * cible sûre ; appliqués aux onglets, ils les empêchaient de rétrécir, et
+     * la barre débordait de soixante-deux pixels dès qu'on est passé de trois
+     * onglets à cinq. Ici c'est la hauteur qui fait la cible, pas la largeur.
+     */
+    flex: 1; min-width: 0; min-height: 50px; border-radius: 14px; background: none; border: 0;
     color: var(--faint); font-size: .68rem; font-weight: 600; gap: 3px;
-    flex-direction: column; padding: 0;
+    flex-direction: column; padding: 0 2px;
   }
+  /* Un libellé trop long se coupe plutôt que de pousser ses voisins dehors. */
+  nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   nav button[aria-current='true'] { color: var(--accent); background: var(--accent-soft); }
   nav svg { width: 19px; height: 19px; }
 
@@ -594,7 +611,7 @@ const SCRIPT = `
   function renderNav() {
     document.getElementById('nav').innerHTML = TABS.map(function (t) {
       return '<button data-act="tab" data-tab="' + t.id + '" aria-current="' + (tab === t.id) + '">' +
-        icon(t.icon) + t.label + '</button>'
+        icon(t.icon) + '<span>' + t.label + '</span></button>'
     }).join('')
   }
 
