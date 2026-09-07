@@ -169,6 +169,21 @@ describe('buildTree', () => {
         () => [],
         () => rien
       )
-    ).toEqual({ trunk: [], seen: 0, total: 0, count: 0 })
+    ).toEqual({ trunk: [], seen: 0, total: 0, count: 0, tracked: 0 })
+  })
+
+  // Vingt titres hors bibliothèque ne pèsent rien dans la somme : sans les
+  // compter à part, l'en-tête proclamait « 100 % » d'une franchise à peine vue.
+  it('compte à part les séries suivies', () => {
+    const edges = new Map([[1, [arete('SIDE_STORY', 10, 'MOVIE'), arete('SIDE_STORY', 11, 'MOVIE')]]])
+    const progres = new Map([[1, vus(12, 12)]])
+    const tree = buildTree(
+      [saison(1, 1)],
+      (id) => edges.get(id) ?? [],
+      (id) => progres.get(id) ?? rien
+    )
+    expect(tree.count).toBe(3)
+    expect(tree.tracked).toBe(1)
+    expect(tree.total).toBe(12)
   })
 })

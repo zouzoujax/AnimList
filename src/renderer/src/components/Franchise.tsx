@@ -123,7 +123,7 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
   }
 
   const glow = toneAccent(null)
-  const pct = tree.total > 0 ? Math.round((tree.seen / tree.total) * 100) : 0
+  const dehors = tree.count - tree.tracked
 
   return (
     <div className="max-h-[68vh] overflow-y-auto p-5">
@@ -133,9 +133,13 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
         </span>
         <div>
           <p className="text-[0.95rem] font-semibold">Arbre de la franchise</p>
+          {/* Pas de pourcentage : il ne porterait que sur les séries suivies,
+              dont le total est connu, et annoncerait « 100 % » d'une franchise
+              dont vingt titres n'ont jamais été ouverts. Le compte de ce qui
+              manque dit la vraie histoire. */}
           <p className="text-[0.78rem] text-faint">
-            {tree.count} séries · {tree.seen} épisodes vus sur {tree.total}
-            {tree.total > 0 ? ` · ${pct} %` : ''}
+            {tree.count} séries · {tree.seen} épisode{tree.seen > 1 ? 's' : ''} vu{tree.seen > 1 ? 's' : ''}
+            {dehors > 0 ? ` · ${dehors} hors de ta bibliothèque` : ''}
           </p>
         </div>
       </div>

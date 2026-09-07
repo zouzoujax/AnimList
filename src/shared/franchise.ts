@@ -83,6 +83,15 @@ export interface Tree {
   total: number
   /** Combien de séries l'arbre porte, tronc compris. */
   count: number
+  /**
+   * Combien de ces séries sont dans la bibliothèque.
+   *
+   * Sans ce chiffre, l'en-tête annonçait « 24 séries · 1013 sur 1013 · 100 % »
+   * pour une franchise dont vingt titres ne sont pas suivis : leur total est
+   * inconnu, il ne pèse donc rien dans la somme, et le pourcentage proclamait
+   * une complétude qui n'existe pas.
+   */
+  tracked: number
 }
 
 const byFormat = (format: string | null): Branch =>
@@ -158,13 +167,15 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
   let seen = 0
   let total = 0
   let count = 0
+  let tracked = 0
   for (const season of trunk) {
     for (const node of [season as Node, ...season.branches.flatMap((b) => b.nodes)]) {
       seen += node.seen
       total += node.total ?? 0
       count += 1
+      if (node.tracked) tracked += 1
     }
   }
 
-  return { trunk, seen, total, count }
+  return { trunk, seen, total, count, tracked }
 }
