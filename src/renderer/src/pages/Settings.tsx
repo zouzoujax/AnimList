@@ -499,6 +499,20 @@ export default function SettingsPage(): React.JSX.Element {
         >
           <Toggle on={prefs.autoNext} onChange={(autoNext) => setPrefs({ autoNext })} />
         </Row>
+
+        <Row
+          label="Proposer de passer les génériques"
+          hint="Un bouton dans le coin du lecteur pendant l’opening et le générique de fin, quand un minutage existe. Les minutages viennent d’AniSkip, une base tenue par des bénévoles : environ neuf séries sur dix en ont un, et rien ne s’affiche pour les autres."
+        >
+          <Toggle on={prefs.skipHint} onChange={(skipHint) => setPrefs({ skipHint })} />
+        </Row>
+
+        <Row
+          label="Les passer sans rien demander"
+          hint="Éteint volontairement. Le minutage est relevé par des inconnus, sur une copie qui n’est pas forcément celle que tu regardes : un bouton ignoré ne coûte rien, un saut de travers coupe une scène. L’app refuse déjà de proposer quand la durée de référence s’écarte trop de la tienne."
+        >
+          <Toggle on={prefs.autoSkip} onChange={(autoSkip) => setPrefs({ autoSkip })} />
+        </Row>
       </Card>
 
       <Card title="Suites" icon={<Layers size={17} />}>

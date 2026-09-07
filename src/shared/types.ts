@@ -278,6 +278,20 @@ export interface Prefs {
    * Coche l'épisode tout seul quand la lecture en atteint les neuf dixièmes,
    * chez Anime-Sama. Le reste est le générique de fin.
    */
+  /**
+   * Proposer de passer les génériques, quand un minutage existe.
+   *
+   * Allumé : un bouton dans le coin du lecteur, qu'on ignore sans conséquence.
+   */
+  skipHint: boolean
+  /**
+   * Les passer sans rien demander.
+   *
+   * Éteint par défaut, et ce n'est pas de la prudence de façade : le minutage
+   * vient d'inconnus, sur une copie qui n'est pas forcément la nôtre. Un
+   * bouton ignoré ne coûte rien ; un saut de travers coupe une scène.
+   */
+  autoSkip: boolean
   autoTick: boolean
   /**
    * Enchaîne sur l'épisode suivant à la fin du précédent, après un compte à
@@ -728,6 +742,8 @@ export const DEFAULT_PREFS: Prefs = {
   weekStart: 1,
   lastAiringCheck: 0,
   autoUpdate: true,
+  skipHint: true,
+  autoSkip: false,
   autoTick: true,
   autoNext: true,
   autoSequels: true,

@@ -13,7 +13,7 @@
 
 import { Script } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { countdownScript, noticeScript } from './binge'
+import { countdownScript, noticeScript, skipScript } from './binge'
 
 const parses = (code: string): boolean => {
   new Script(code)
@@ -64,5 +64,30 @@ describe('noticeScript', () => {
   // Rien à décider : il annonce, il ne demande pas.
   it('n’offre aucun bouton', () => {
     expect(noticeScript('Soirée terminée')).not.toContain('Annuler')
+  })
+})
+
+describe('skipScript', () => {
+  it('produit du JavaScript analysable', () => {
+    expect(parses(skipScript(102, 'Passer l’opening', 90))).toBe(true)
+  })
+
+  it('porte la seconde où sauter et le libellé', () => {
+    const code = skipScript(102.5, 'Passer l’opening', 90)
+    expect(code).toContain('v.currentTime = 102.5')
+    expect(code).toContain('"Passer l’opening"')
+  })
+
+  // Il se retire seul : sinon il proposerait un saut vers une seconde franchie.
+  it('se pose une échéance', () => {
+    expect(skipScript(102, 'x', 90)).toContain('setTimeout(partir, 90 * 1000)')
+  })
+
+  it('ne demande jamais moins d’une seconde', () => {
+    expect(skipScript(102, 'x', 0.2)).toContain('setTimeout(partir, 1 * 1000)')
+  })
+
+  it('échappe un libellé hostile', () => {
+    expect(parses(skipScript(10, 'L\'"opening" \\ ici', 30))).toBe(true)
   })
 })

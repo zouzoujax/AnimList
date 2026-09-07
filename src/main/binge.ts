@@ -22,11 +22,13 @@
 
 import { shouldAdvance, shouldTick, watchedRatio, type Playing } from '@shared/binge'
 import { canTick } from '@shared/airing'
+import { activeSkip, SKIP_LABELS } from '@shared/skip'
 import { searchTitles } from '@shared/titles'
 import { isCinema, leaveCinema, videoFrame } from './video-frame'
 import { resolve as resolveAnimeSama } from './animesama'
 import { getLaunched, rememberLaunch, sendProgress } from './now'
 import { getMedia, getPrefs, isWatched, setWatched } from './store'
+import { skipRangesFor } from './skip'
 import { soireeNext, stopSoiree } from './soiree-queue'
 import { openAnimeSamaEpisode, playNext, watchWindow } from './watch-window'
 
@@ -53,6 +55,9 @@ let advancing: string | null = null
 
 /** Ceux dont on a refusé la suite : on ne repropose pas dix secondes après. */
 const refused = new Set<string>()
+
+/** Les génériques déjà proposés ou passés : on ne revient pas dessus. */
+const offered = new Set<string>()
 
 const keyOf = (animeId: number, episode: number): string => `${animeId}:${episode}`
 
@@ -125,6 +130,61 @@ export function countdownScript(seconds: number, label: string): string {
     }
   })()`
 }
+
+/**
+ * Le bouton « passer le générique », posé dans le cadre du lecteur.
+ *
+ * Il agit sur place plutôt que de poser un drapeau qu'on relirait cinq secondes
+ * plus tard : un générique dure une minute et demie, et une réponse différée
+ * d'un tour d'horloge ferait sauter au mauvais endroit. Il se retire tout seul
+ * quand le générique est passé, sans quoi il resterait à proposer un saut vers
+ * une seconde déjà franchie.
+ *
+ * Plus haut que le carton de l'épisode suivant, qui occupe le même coin : sur
+ * un générique de fin, les deux peuvent s'afficher ensemble.
+ */
+export function skipScript(to: number, label: string, seconds: number): string {
+  return `(function () {
+    try {
+      var old = document.getElementById('animelist-skip')
+      if (old && old.parentNode) old.parentNode.removeChild(old)
+
+      var host = document.fullscreenElement || document.body
+      if (!host) return false
+
+      var b = document.createElement('button')
+      b.id = 'animelist-skip'
+      b.textContent = ${JSON.stringify(label)}
+      b.style.cssText = [
+        'position:fixed', 'right:22px', 'bottom:86px', 'z-index:2147483647',
+        'padding:10px 16px', 'border:0', 'border-radius:12px', 'cursor:pointer',
+        'background:rgba(12,14,24,.92)', 'color:#e8ecf8',
+        'font:500 14px/1.3 "Segoe UI",system-ui,sans-serif',
+        'box-shadow:0 10px 30px rgba(0,0,0,.5)'
+      ].join(';')
+
+      var partir = function () { if (b.parentNode) b.parentNode.removeChild(b) }
+      b.onclick = function () {
+        var v = document.querySelector('video')
+        if (v) v.currentTime = ${to}
+        partir()
+      }
+      setTimeout(partir, ${Math.max(1, Math.round(seconds))} * 1000)
+
+      host.appendChild(b)
+      return true
+    } catch (e) {
+      return false
+    }
+  })()`
+}
+
+/** Retire le bouton, quand le générique est passé sans qu'on y touche. */
+const REMOVE_SKIP = `(function () {
+  var b = document.getElementById('animelist-skip')
+  if (b && b.parentNode) b.parentNode.removeChild(b)
+  return true
+})()`
 
 /** Ce que le lecteur raconte, ou rien quand il n'y a pas de vidéo à lire. */
 async function playing(): Promise<Playing | null> {
@@ -274,6 +334,47 @@ async function advanceUnlessRefused(animeId: number, episode: number, key: strin
   else if (step.inSession) stopSoiree()
 }
 
+/**
+ * Propose de passer le générique, ou le passe.
+ *
+ * Une seule fois par générique et par épisode : ignorer le bouton est une
+ * réponse, et le faire réapparaître à chaque tour d'horloge en ferait un
+ * harcèlement.
+ */
+async function offerSkip(animeId: number, episode: number, now: Playing, auto: boolean): Promise<void> {
+  const win = watchWindow()
+  if (!win) return
+
+  const ranges = await skipRangesFor(getMedia(animeId)?.idMal ?? null, episode)
+  if (!ranges.length) return
+
+  const active = activeSkip(ranges, now.position, now.duration)
+  const video = await videoFrame(win)
+  if (!video) return
+
+  if (!active) {
+    await video.frame.executeJavaScript(REMOVE_SKIP, true).catch(() => false)
+    return
+  }
+
+  const key = `${animeId}:${episode}:${active.kind}`
+  if (offered.has(key)) return
+  offered.add(key)
+
+  if (auto) {
+    await video.frame
+      .executeJavaScript(
+        `(function(){var v=document.querySelector('video');if(v)v.currentTime=${active.end};return true})()`,
+        true
+      )
+      .catch(() => false)
+    return
+  }
+
+  const reste = active.end - now.position
+  await video.frame.executeJavaScript(skipScript(active.end, SKIP_LABELS[active.kind], reste), true).catch(() => false)
+}
+
 async function tick(): Promise<void> {
   const prefs = getPrefs()
 
@@ -283,6 +384,7 @@ async function tick(): Promise<void> {
     ticked = null
     advancing = null
     refused.clear()
+    offered.clear()
     sendProgress(null)
     return
   }
@@ -297,6 +399,13 @@ async function tick(): Promise<void> {
   // Avant les réglages, et non après : le remplissage des cases n'est pas la
   // coche automatique, et couper celle-ci ne doit pas aveugler celui-là.
   sendProgress({ animeId: launched.animeId, episode: launched.episode, ratio: watchedRatio(now) })
+
+  // Avant les réglages de la coche, pour la même raison : passer un générique
+  // n'a rien à voir avec cocher un épisode.
+  if (prefs.skipHint || prefs.autoSkip) {
+    await offerSkip(launched.animeId, launched.episode, now, prefs.autoSkip)
+  }
+
   if (!prefs.autoTick && !prefs.autoNext) return
 
   const key = keyOf(launched.animeId, launched.episode)
