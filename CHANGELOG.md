@@ -9,6 +9,23 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.9 — 8 septembre 2026
+
+### Ajouts
+
+- Deux écrans de plus sur le téléphone. « Calendrier » dit ce qui sort pour toi dans les deux semaines, parmi les séries que tu suis. « Stats » résume la bibliothèque : épisodes vus, temps passé, séries finies, ces sept jours, et tes genres les plus regardés
+
+### Modifications
+
+- L'accueil et « Ma liste » du téléphone montrent une grille de jaquettes, comme la bibliothèque de l'app, et les actions s'ouvrent au toucher d'une série. Chaque série était jusqu'ici un pavé de cinq boutons : sur cent séries, un mur où plus rien ne se distinguait
+
+### Corrections
+
+- La page du téléphone tient dans une colonne au lieu de s'étirer sur toute la largeur d'un écran de bureau, où chaque bouton prenait un tiers de l'écran
+- La barre d'onglets ne déborde plus depuis qu'elle en compte cinq, et les cases de la grille d'épisodes ne se chevauchent plus : toutes héritaient d'une largeur minimale prévue pour des boutons d'action
+- Les genres, sur l'écran des statistiques, passent à la ligne au lieu d'être coupés par le bord de l'écran
+- Le message de panne du catalogue ne se répète plus (« AniList : Le catalogue AniList est indisponible »)
+
 ## 0.5.8 — 7 septembre 2026
 
 ### Ajouts
