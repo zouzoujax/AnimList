@@ -32,8 +32,15 @@ import { skipRangesFor } from './skip'
 import { soireeNext, stopSoiree } from './soiree-queue'
 import { openAnimeSamaEpisode, playNext, watchWindow } from './watch-window'
 
-/** Assez souvent pour ne pas manquer une fin, assez rare pour ne rien coûter. */
-const POLL_MS = 5000
+/**
+ * Assez souvent pour ne pas manquer une fin, assez rare pour ne rien coûter.
+ *
+ * Trois secondes plutôt que cinq : ce tour d'horloge ne sert plus seulement à
+ * cocher. Il remplit la case de l'épisode en cours et fait apparaître le bouton
+ * d'un générique, deux choses qu'on regarde pendant qu'elles se produisent —
+ * cinq secondes de retard s'y voyaient.
+ */
+const POLL_MS = 3000
 
 /** Le temps laissé pour dire non avant que le suivant ne parte. */
 const COUNTDOWN_S = 8
@@ -436,8 +443,8 @@ const FLAG_POLL_MS = 100
  *
  * Dix fois par seconde, et seulement tant que le bouton est affiché : c'est le
  * prix d'un clic qui répond tout de suite. Le surveillant ordinaire tourne
- * toutes les cinq secondes, ce qui ferait attendre autant qu'un compte à
- * rebours — précisément ce qu'on cherchait à supprimer.
+ * toutes les trois secondes, ce qui ferait attendre presque autant qu'un
+ * compte à rebours — précisément ce qu'on cherchait à supprimer.
  */
 function watchNextFlag(animeId: number, episode: number, seconds: number): void {
   const jusqua = Date.now() + Math.max(2, seconds) * 1000

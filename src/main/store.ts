@@ -399,7 +399,7 @@ export function setPosition(path: string, at: number, duration: number): void {
 
   if (Object.keys(db.positions).length > MAX_POSITIONS) db.positions = prunePositions(db.positions)
 
-  // Pas de `changed()` : la position bouge toutes les cinq secondes pendant
+  // Pas de `changed()` : la position bouge sans arrêt pendant
   // qu'on regarde, et prévenir la fenêtre à chaque fois lui ferait recalculer
   // toute la bibliothèque pour rien.
   coreDirty = true
@@ -607,7 +607,10 @@ export function setWatchedUpTo(animeId: number, episode: number): void {
 /** Wipes a series' progress — every pass, not just the current one. */
 export function clearWatched(animeId: number): void {
   touchJournal()
-  rememberUndone(db.history.filter((h) => h.animeId === animeId), Date.now())
+  rememberUndone(
+    db.history.filter((h) => h.animeId === animeId),
+    Date.now()
+  )
   db.history = db.history.filter((h) => h.animeId !== animeId)
   const entry = db.entries[String(animeId)]
   if (entry) entry.rewatches = 0

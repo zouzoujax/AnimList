@@ -76,7 +76,7 @@ let progress: WatchProgress | null = null
 
 export function sendProgress(next: WatchProgress | null): void {
   // Égalité stricte, sans seuil de tolérance : un seuil réglé sur un épisode
-  // de vingt-quatre minutes ne se franchit jamais en cinq secondes sur un film
+  // de vingt-quatre minutes ne se franchit jamais en trois secondes sur un film
   // de deux heures, et le remplissage s'y figerait. La position ne bouge pas
   // pendant une pause, ce qui suffit à ne rien envoyer pour rien.
   const pareil =
