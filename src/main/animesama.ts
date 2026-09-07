@@ -1,4 +1,6 @@
 import { app } from 'electron'
+import { LANGS, langUrl, pickLang, type Lang } from '@shared/langs'
+import { getWatchLang } from './store'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
@@ -26,6 +28,15 @@ export interface WatchTarget {
    * série. Seules ces pages-là ont un menu à positionner.
    */
   episodes?: boolean
+  /**
+   * Les langues trouvées sur cette saison, dans l'ordre du site.
+   *
+   * Vide ou à un seul élément, il n'y a rien à choisir. À deux, la fiche
+   * propose les pastilles VO et VF que leur page affiche.
+   */
+  languages?: Lang[]
+  /** Celle que `url` ouvre : le choix retenu, ou la première proposée. */
+  language?: Lang
 }
 
 interface Row extends WatchTarget {
@@ -40,7 +51,9 @@ interface Row extends WatchTarget {
   v?: number
 }
 
-const RULE_VERSION = 3
+// 4 : les langues d'une saison sont désormais toutes relevées, pas seulement
+// la première trouvée. Les entrées d'avant n'en portent aucune.
+const RULE_VERSION = 4
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -111,6 +124,23 @@ function bestSlug(slugs: string[], variants: string[]): string | null {
   return best && best.score >= MIN_SIMILARITY ? best.slug : null
 }
 
+/**
+ * Applique la langue retenue pour cette série.
+ *
+ * Fait au retour et non dans le cache : le cache décrit ce que le site propose,
+ * la bibliothèque ce qu'on a choisi. Mêler les deux ferait dépendre une donnée
+ * partagée d'une préférence personnelle, et changer d'avis obligerait à
+ * resonder le site.
+ */
+function withChoice(animeId: number, target: WatchTarget): WatchTarget {
+  const available = target.languages ?? []
+  if (available.length === 0) return target
+
+  const language = pickLang(available, getWatchLang(animeId))
+  if (!language) return target
+  return { ...target, language, url: langUrl(target.url, language) }
+}
+
 export async function resolve(animeId: number, titles: string[]): Promise<WatchTarget> {
   // A hand-checked answer always wins, and costs no request.
   const override = overrideFor(animeId)
@@ -120,7 +150,7 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
 
   const hit = cache.get(animeId)
   if (hit && hit.v === RULE_VERSION && Date.now() - hit.at < TTL) {
-    return { url: hit.url, direct: hit.direct, episodes: hit.episodes }
+    return withChoice(animeId, { url: hit.url, direct: hit.direct, episodes: hit.episodes, languages: hit.languages })
   }
 
   const primary = titles[0] ?? ''
@@ -166,26 +196,39 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
    * de numéro exploitable (« Final Season ») : on tente la première saison,
    * qui est le cas de très loin le plus courant.
    */
-  const seasons = season > 0 ? [season, 1] : [1]
-  const paths: string[] = []
-  for (const n of seasons) {
-    for (const lang of ['vostfr', 'vf']) {
-      const path = `/catalogue/${slug}/saison${n}/${lang}/`
-      if (!paths.includes(path)) paths.push(path)
-    }
-  }
+  const seasons = season > 0 ? [...new Set([season, 1])] : [1]
 
-  for (const path of paths) {
-    try {
-      const probe = await text(`${ORIGIN}${path}episodes.js`)
-      if (probe.status !== 200 || !listsEpisodes(probe.body)) continue
-    } catch {
-      break
+  /**
+   * Toutes les langues d'une saison, et non la première qui répond.
+   *
+   * S'arrêter au premier succès coûtait une requête de moins et rendait la VF
+   * introuvable dès que la VO existait — c'est-à-dire presque toujours. Le
+   * surcoût est d'une requête par saison retenue, une seule fois : le résultat
+   * est mis en cache avec le reste.
+   */
+  for (const n of seasons) {
+    const found: Lang[] = []
+    for (const lang of LANGS) {
+      try {
+        const probe = await text(`${ORIGIN}/catalogue/${slug}/saison${n}/${lang}/episodes.js`)
+        if (probe.status === 200 && listsEpisodes(probe.body)) found.push(lang)
+      } catch {
+        // Réseau muet : inutile d'insister sur les langues suivantes.
+        break
+      }
     }
-    const target: WatchTarget = { url: ORIGIN + path, direct: true, episodes: true }
+    if (found.length === 0) continue
+
+    const target: WatchTarget = {
+      url: `${ORIGIN}/catalogue/${slug}/saison${n}/${found[0]}/`,
+      direct: true,
+      episodes: true,
+      languages: found,
+      language: found[0]
+    }
     cache.set(animeId, { ...target, at: Date.now(), v: RULE_VERSION })
     persist()
-    return target
+    return withChoice(animeId, target)
   }
 
   // Aucune page d'épisodes trouvée : la fiche de la série reste utile, mais

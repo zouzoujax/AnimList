@@ -32,6 +32,7 @@ import { canTranslate, purgeTranslations, translate } from './translate'
 import { remoteStatus, startRemote, stopRemote } from './remote'
 import { startSoiree } from './soiree-queue'
 import { franchiseTree } from './franchise'
+import { isLang } from '@shared/langs'
 import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
 import { getProgress, rememberLaunch, setLocalWatching, type LocalWatching } from './now'
@@ -60,6 +61,7 @@ import {
   startRewatch,
   store,
   updateEvent,
+  setWatchLang,
   updateList
 } from './store'
 
@@ -181,6 +183,11 @@ export function registerIpc(): void {
   ipcMain.handle('anime:films', (_e, title: string) => anilist.franchiseFilms(title, getPrefs().showAdult))
   ipcMain.handle('anime:studio', (_e, name: string, page: number) => anilist.studioWorks(name, page))
   ipcMain.handle('watch:anime-sama', (_e, animeId: number, titles: string[]) => resolveAnimeSama(animeId, titles))
+  // La langue choisie chez Anime-Sama. Écrite dans la bibliothèque : la fiche
+  // n'a donc rien à redemander au site au chargement suivant.
+  ipcMain.handle('watch:set-language', (_e, animeId: number, lang: string | null) => {
+    setWatchLang(animeId, isLang(lang) ? lang : null)
+  })
   ipcMain.handle('anime:filler', (_e, malId: number | null) => fillerFor(malId))
   ipcMain.handle('anime:sweep-sequels', (e) => sweepSequels(ownerOf(e)))
   ipcMain.handle('anime:seasons', (_e, id: number) => anilist.seasonChain(id))

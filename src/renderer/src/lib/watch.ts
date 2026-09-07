@@ -1,3 +1,4 @@
+import type { Lang } from '@shared/langs'
 import type { Media, MediaDetail } from '@shared/types'
 import { baseAndSeason, compact, searchTitles as sharedSearchTitles, searchVariants, siteSlug } from '@shared/titles'
 import { overrideFor } from '@shared/watch-overrides'
@@ -37,6 +38,10 @@ export interface AnimeSamaTarget {
   absent?: boolean
   /** L'adresse porte un menu d'épisodes : seule celle-là peut être positionnée. */
   episodes?: boolean
+  /** Les langues qu'Anime-Sama propose pour cette saison, dans l'ordre du site. */
+  languages?: Lang[]
+  /** Celle que `url` ouvre. */
+  language?: Lang
 }
 
 export const WATCH_BADGE: Record<WatchKind, { label: string; color: string }> = {

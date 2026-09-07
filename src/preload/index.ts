@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
+import type { Lang } from '@shared/langs'
 
 import type {
   AiringEntry,
@@ -129,8 +130,18 @@ const api = {
     animeSama: (
       animeId: number,
       titles: string[]
-    ): Promise<{ url: string; direct: boolean; absent?: boolean; episodes?: boolean }> =>
+    ): Promise<{
+      url: string
+      direct: boolean
+      absent?: boolean
+      episodes?: boolean
+      languages?: Lang[]
+      language?: Lang
+    }> =>
       ipcRenderer.invoke('watch:anime-sama', animeId, titles),
+    /** Retient la langue choisie pour cette série, une fois pour toutes. */
+    setLanguage: (animeId: number, lang: string | null): Promise<void> =>
+      ipcRenderer.invoke('watch:set-language', animeId, lang),
     /**
      * Ouvre un épisode d'Anime-Sama dans une fenêtre de l'app, positionnée sur
      * le bon épisode — leur site n'ayant pas d'adresse par épisode. Faux si

@@ -39,6 +39,7 @@ import LocalFiles from '@/components/LocalFiles'
 import { MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, Spinner } from '@/components/ui'
 import { Franchise } from '@/components/Franchise'
+import { LANG_LABELS, langUrl, type Lang } from '@shared/langs'
 import { originTitle } from '@shared/origin'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonLabel, titleOf } from '@/lib/format'
@@ -595,6 +596,14 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   // besoin que d'un identifiant, alors que la grille n'est pas même montée
   // quand la fiche AniList manque à l'appel.
   const [tree, setTree] = useState(false)
+  /**
+   * La langue choisie, tant que la fiche est ouverte.
+   *
+   * Elle est aussi écrite dans la bibliothèque, mais on ne redemande pas au
+   * processus principal de recalculer l'adresse : le basculement doit être
+   * instantané, et la même fonction sert des deux côtés.
+   */
+  const [spoken, setSpoken] = useState<Lang | null>(null)
   const [picking, setPicking] = useState(false)
 
   /**
@@ -637,6 +646,9 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
 
   const glow = useMemo(() => toneAccent(media?.cover.color), [media?.cover.color])
   const animeSama = useAnimeSama(media ?? null)
+  const langs = animeSama?.languages ?? []
+  const current = spoken ?? animeSama?.language ?? null
+  const watchUrl = animeSama?.episodes ? (current ? langUrl(animeSama.url, current) : animeSama.url) : null
   const franchiseFilms = useFranchiseFilms(media ?? null)
 
   // Franchise-wide sweep first, then any film this entry links to that the
@@ -945,6 +957,30 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             </section>
           )}
 
+          {/* Deux langues chez Anime-Sama, deux pastilles — les mêmes que sur
+              leur page. Rien quand il n'y a rien à choisir : un bouton unique
+              n'est pas un choix, c'est du bruit. */}
+          {langs.length > 1 && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="label mr-0.5">Langue</span>
+              {langs.map((code) => (
+                <button
+                  key={code}
+                  className="chip"
+                  data-on={code === current}
+                  aria-pressed={code === current}
+                  title={code === 'vostfr' ? 'Version originale sous-titrée' : 'Version française'}
+                  onClick={() => {
+                    setSpoken(code)
+                    void window.api.watch.setLanguage(id, code)
+                  }}
+                >
+                  {LANG_LABELS[code]}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* ESSAI — arbre des franchises. Supprimer ce bloc, l'état `tree` et
               l'import suffit à le retirer. */}
           <button className="btn mb-4 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
@@ -967,7 +1003,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             {loading && !detail ? (
               <Skeleton className="h-28 w-full" />
             ) : detail ? (
-              <EpisodeGrid detail={detail} glow={glow} watchUrl={animeSama?.episodes ? animeSama.url : null} />
+              <EpisodeGrid detail={detail} glow={glow} watchUrl={watchUrl} />
             ) : (
               // Sans cette ligne, la section n'affichait rien : un titre, un
               // décompte, puis un trou. On croit l'app cassée alors qu'elle a

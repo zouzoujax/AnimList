@@ -42,6 +42,14 @@ interface Db {
   /** Personnes et studios suivis. Additif lui aussi, pour la même raison. */
   follows: Follow[]
   /**
+   * La langue choisie chez Anime-Sama, par série.
+   *
+   * Additif comme les précédents : un fichier écrit avant n'en a pas. Rangé
+   * dans la bibliothèque et non dans le cache du site, parce que c'est un choix
+   * et non une observation — le cache dit ce qui existe, ceci dit ce qu'on veut.
+   */
+  watchLangs: Record<string, string>
+  /**
    * Les lignes d'historique retirées par un décochage, gardées de côté.
    *
    * Additif comme les deux précédents : un fichier plus ancien n'en a pas, et
@@ -60,7 +68,8 @@ const emptyDb = (): Db => ({
   folders: {},
   positions: {},
   follows: [],
-  undone: {}
+  undone: {},
+  watchLangs: {}
 })
 
 export const store = new EventEmitter()
@@ -114,7 +123,8 @@ function sanitize(raw: unknown): Db {
     folders: input.folders && typeof input.folders === 'object' ? input.folders : {},
     positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {},
     follows: Array.isArray(input.follows) ? input.follows.filter((f) => f && typeof f.key === 'string') : [],
-    undone: input.undone && typeof input.undone === 'object' ? pruneUndone(input.undone) : {}
+    undone: input.undone && typeof input.undone === 'object' ? pruneUndone(input.undone) : {},
+    watchLangs: input.watchLangs && typeof input.watchLangs === 'object' ? input.watchLangs : {}
   }
 }
 
@@ -368,6 +378,17 @@ export function setFolder(animeId: number, folder: string | null): void {
   changed()
 }
 
+/** La langue retenue chez Anime-Sama pour cette série, si on en a choisi une. */
+export function getWatchLang(animeId: number): string | null {
+  return db.watchLangs[String(animeId)] ?? null
+}
+
+export function setWatchLang(animeId: number, lang: string | null): void {
+  if (lang) db.watchLangs[String(animeId)] = lang
+  else delete db.watchLangs[String(animeId)]
+  changed()
+}
+
 /** Les dossiers autorisés : le protocole media ne sert rien en dehors d'eux. */
 export function allFolders(): string[] {
   return Object.values(db.folders)
@@ -520,6 +541,7 @@ export function removeEntry(animeId: number): void {
     list.updatedAt = Date.now()
   }
   delete db.folders[String(animeId)]
+  delete db.watchLangs[String(animeId)]
   // Plus de série, plus de décochage à rendre.
   for (const k of Object.keys(db.undone)) {
     if (db.undone[k].event.animeId === animeId) delete db.undone[k]
