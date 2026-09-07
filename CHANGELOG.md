@@ -9,6 +9,17 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.5 — 7 septembre 2026
+
+### Ajouts
+
+- L'arbre d'une franchise, depuis la fiche d'une série : les saisons en tronc, et accrochés à chacune les films, OVA, spin-off, versions alternatives et résumés, avec ton avancement sur chaque branche. Sur Naruto, il révèle dix-sept films et OVA que la bande des saisons ne montrait pas. Il ne demande rien de plus à AniList — tout sort de ce que la fiche ramène déjà — et reste consultable quand leur catalogue ne répond pas
+
+### Corrections
+
+- La section Épisodes n'affiche plus un titre, un décompte, puis un trou quand le catalogue est injoignable : elle dit ce qui s'est passé et rappelle que la progression n'est pas concernée
+- Le message d'indisponibilité du catalogue tient désormais dans la colonne étroite d'une fiche au lieu de s'y dérouler sur dix lignes
+
 ## 0.5.4 — 6 septembre 2026
 
 ### Corrections
