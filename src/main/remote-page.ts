@@ -233,6 +233,15 @@ const STYLE = `
     font-size: .78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
   }
   .chip[aria-pressed='true'] { background: var(--accent-soft); border-color: rgba(124,92,255,.4); color: var(--accent); }
+  /*
+   * Des étiquettes, pas des filtres.
+   *
+   * Les genres reprenaient le conteneur des filtres de la bibliothèque, qui
+   * défile horizontalement — geste juste pour une liste qu'on parcourt du
+   * pouce, faux pour des chiffres qu'on lit : le quatrième genre était coupé
+   * par le bord de l'écran, sans que rien ne dise qu'il y avait une suite.
+   */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .chip small { opacity: .65; font-size: .92em; }
 
   /* ---- catalogue ---- */
@@ -691,7 +700,7 @@ const SCRIPT = `
     }).join('')
 
     var genres = s.genres.length
-      ? '<div class="filters">' + s.genres.map(function (g) {
+      ? '<div class="tags">' + s.genres.map(function (g) {
           return '<span class="chip">' + esc(g.name) + ' <small>' + g.count + '</small></span>'
         }).join('') + '</div>'
       : ''
