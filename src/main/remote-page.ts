@@ -37,11 +37,21 @@ const STYLE = `
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0;
+    margin: 0 auto;
     background: var(--bg);
     color: var(--text);
     font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     padding: 0 14px calc(90px + env(safe-area-inset-bottom));
+    /*
+     * Une colonne de téléphone, même sur un écran large.
+     *
+     * La page est dessinée pour un pouce : cibles hautes, boutons qui prennent
+     * toute la largeur, grille d'épisodes en cases carrées. Sans borne, ouverte
+     * dans un navigateur de bureau, chaque bouton s'étirait sur un tiers de
+     * l'écran et la grille se déroulait sur trente colonnes — la même page,
+     * illisible. La borne vaut aussi pour une tablette tenue en paysage.
+     */
+    max-width: 560px;
   }
 
   /* Un halo discret en haut, comme la une de l'app. */
@@ -182,7 +192,9 @@ const STYLE = `
   /* ---- onglets ---- */
   /* En bas : c'est là que le pouce arrive sans changer la prise en main. */
   nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    /* Le fond barre l'écran entier, le contenu suit la colonne. */
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 20;
+    width: 100%; max-width: 560px; box-sizing: border-box;
     display: flex; gap: 4px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
     background: rgba(10,11,20,.92); backdrop-filter: blur(14px);
     border-top: 1px solid var(--line);
