@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.6 — 7 septembre 2026
+
+### Ajouts
+
+- La case de l'épisode en cours de lecture se remplit à mesure que tu avances dedans, et bascule en case cochée aux neuf dixièmes. Le remplissage et la coche partagent la même mesure, si bien qu'ils ne peuvent pas se contredire, et le remplissage continue de fonctionner quand la coche automatique est éteinte — ce sont deux choses différentes
+
 ## 0.5.5 — 7 septembre 2026
 
 ### Ajouts
