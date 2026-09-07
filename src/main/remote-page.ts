@@ -252,6 +252,11 @@ const STYLE = `
   .tile button { width: 100%; margin-top: 6px; min-height: 36px; font-size: .74rem; }
   .owned { color: var(--accent); font-size: .7rem; font-weight: 600; margin-top: 6px; display: block; text-align: center; min-height: 36px; line-height: 36px; }
 
+  /* Le retour à la grille : posé seul, il ne se confond avec aucun filtre. */
+  .chip.back { margin-bottom: 12px; }
+  .chip.back::before { content: '←'; font-size: .95rem; line-height: 1; }
+  .tile .bar { margin-top: 6px; }
+
   .search { display: flex; gap: 8px; margin-bottom: 14px; }
 
   .skel { height: 138px; border-radius: 18px; background: var(--panel); margin-bottom: 12px; animation: pulse 1.4s ease-in-out infinite; }
@@ -606,6 +611,15 @@ const SCRIPT = `
 
   var tab = 'home'
   var filter = 'all'
+  /**
+   * La série ouverte dans « Ma liste ».
+   *
+   * L'app montre une grille de jaquettes et n'ouvre les actions qu'une fois la
+   * série choisie. La liste du téléphone empilait au contraire cinq boutons par
+   * série : sur cent cinq séries, un mur de boutons où plus rien ne se
+   * distingue. La grille sert à choisir, la fiche à agir.
+   */
+  var sheet = 0
   var query = ''
   var discoverTab = 'trending'
 
@@ -624,7 +638,31 @@ const SCRIPT = `
     }).join('')
   }
 
+  /** Une jaquette, son avancement, rien d'autre : on est en train de choisir. */
+  function libTile(s) {
+    var total = s.total || 0
+    var done = total ? Math.round((s.seen / total) * 100) : 0
+    return '<div class="tile" data-act="pick" data-id="' + s.id + '">' +
+      '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
+      '<div class="title">' + esc(s.title) + '</div>' +
+      '<div class="meta">' + (total ? s.seen + ' / ' + total : STATUS[s.status]) + '</div>' +
+      (total ? '<div class="bar"><i style="width:' + done + '%"></i></div>' : '') +
+    '</div>'
+  }
+
   function renderLibrary(rows) {
+    // Une série choisie : sa fiche prend toute la place, avec ses actions.
+    if (sheet) {
+      var seule = rows.filter(function (r) { return r.id === sheet })[0]
+      if (seule) {
+        countEl.textContent = STATUS[seule.status] || 'Ma liste'
+        appEl.innerHTML = '<button class="chip back" data-act="back">Toutes les séries</button>' + card(seule)
+        return
+      }
+      // Retirée entre-temps : on ne laisse pas la fiche d'une série absente.
+      sheet = 0
+    }
+
     var counts = {}
     rows.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1 })
 
@@ -638,7 +676,9 @@ const SCRIPT = `
     var shown = filter === 'all' ? rows : rows.filter(function (r) { return r.status === filter })
     countEl.textContent = rows.length + (rows.length > 1 ? ' séries suivies' : ' série suivie')
     appEl.innerHTML = '<div class="filters">' + chips + '</div>' +
-      (shown.length ? shown.map(card).join('') : '<div class="empty">Rien dans cette liste.</div>')
+      (shown.length
+        ? '<div class="grid">' + shown.map(libTile).join('') + '</div>'
+        : '<div class="empty">Rien dans cette liste.</div>')
   }
 
   /** « 3 h 04 », comme la barre latérale de l'app. */
@@ -783,12 +823,21 @@ const SCRIPT = `
     var ep = Number(el.getAttribute('data-ep'))
 
     // Changer de vue ne demande rien au PC tant qu'on n'a pas les données.
+    // Ouvrir une série de la liste, et en revenir.
+    if (action === 'pick') {
+      sheet = Number(el.getAttribute('data-id'))
+      eps = { id: 0, data: null, mode: eps.mode }
+      return load()
+    }
+    if (action === 'back') { sheet = 0; return load() }
+
     if (action === 'tab') {
       tab = el.getAttribute('data-tab')
+      sheet = 0
       appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
       return load()
     }
-    if (action === 'filter') { filter = el.getAttribute('data-filter'); return load() }
+    if (action === 'filter') { filter = el.getAttribute('data-filter'); sheet = 0; return load() }
 
     // Déplier, ou replier si c'était déjà celle-là.
     if (action === 'eps') {
