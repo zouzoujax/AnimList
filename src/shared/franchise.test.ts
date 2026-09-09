@@ -169,7 +169,7 @@ describe('buildTree', () => {
         () => [],
         () => rien
       )
-    ).toEqual({ trunk: [], seen: 0, total: 0, count: 0, tracked: 0 })
+    ).toEqual({ trunk: [], seen: 0, total: 0, count: 0, tracked: 0, partial: false })
   })
 
   // Vingt titres hors bibliothèque ne pèsent rien dans la somme : sans les

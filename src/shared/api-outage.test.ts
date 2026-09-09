@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { failureOf, HICCUP_MS, humanMessage, OUTAGE_MS } from './api-outage'
+import { failureOf, HICCUP_MS, humanMessage, isOutage, OUTAGE_MS } from './api-outage'
 
 const DISABLED = 'The AniList API has been temporarily disabled due to severe stability issues.'
 
@@ -76,5 +76,21 @@ describe('humanMessage', () => {
   it('ne rend pas une chaîne vide', () => {
     const nu = "Error invoking remote method 'x': Error: "
     expect(humanMessage(nu)).toBe(nu)
+  })
+})
+
+describe('isOutage', () => {
+  it('reconnaît son propre message', () => {
+    expect(isOutage(failureOf(403, DISABLED).message)).toBe(true)
+  })
+
+  // Les autres pannes ne doivent pas être prises pour une coupure du catalogue :
+  // un écran leur répondrait « reviens quand ils auront rallumé », à tort.
+  it('ne confond pas avec les autres pannes', () => {
+    expect(isOutage(failureOf(403, 'Forbidden').message)).toBe(false)
+    expect(isOutage(failureOf(500, null).message)).toBe(false)
+    expect(isOutage(failureOf(400, 'Bad query').message)).toBe(false)
+    expect(isOutage('Réponse AniList vide')).toBe(false)
+    expect(isOutage('')).toBe(false)
   })
 })

@@ -144,6 +144,18 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
         </div>
       </div>
 
+      {/* Prévenir avant le clic, pas après : sans le catalogue, une série
+          absente de la bibliothèque n'a aucune fiche à ouvrir. */}
+      {tree.partial && (
+        <p
+          className="mb-4 rounded-2xl px-3.5 py-2.5 text-[0.78rem] text-muted"
+          style={{ background: 'rgba(255,255,255,.04)', border: '1px solid var(--line)' }}
+        >
+          L’arbre est incomplet : le catalogue n’a pas répondu, et il manque peut-être des branches. Les séries hors de
+          ta bibliothèque ne pourront pas s’ouvrir tant qu’il ne répond pas.
+        </p>
+      )}
+
       <ol className="flex flex-col">
         {tree.trunk.map((season, i) => (
           <li key={season.id} className="relative flex gap-3">

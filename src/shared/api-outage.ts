@@ -42,15 +42,26 @@ export interface Failure {
  */
 const DISABLED = /disabled/i
 
+/**
+ * Le début du message d'une coupure, isolé pour être reconnaissable.
+ *
+ * Un écran qui reçoit cette phrase à travers le pont n'a plus qu'une chaîne :
+ * le type de la panne est perdu en route. Faire commencer le message par une
+ * constante permet de le reconnaître sans le recopier — reformuler la suite ne
+ * peut donc pas désaccorder les deux côtés.
+ */
+const OUTAGE_LEAD = 'Le catalogue AniList est indisponible'
+
+/** Ce message annonce-t-il un catalogue coupé, plutôt qu'une autre panne ? */
+export const isOutage = (message: string): boolean => message.startsWith(OUTAGE_LEAD)
+
 export function failureOf(status: number, apiMessage: string | null): Failure {
   if (status === 403 && apiMessage && DISABLED.test(apiMessage)) {
     return {
       // Court, parce qu'il s'affiche aussi dans une colonne étroite : la
       // version longue s'y déroulait sur dix lignes. Il dit quand même les deux
       // choses qui comptent — ce qui est cassé, et ce qui ne l'est pas.
-      message:
-        'Le catalogue AniList est indisponible : ils ont coupé leur API. ' +
-        'Ta bibliothèque et tes statistiques n’en dépendent pas.',
+      message: `${OUTAGE_LEAD} : ils ont coupé leur API. Ta bibliothèque et tes statistiques n’en dépendent pas.`,
       pauseMs: OUTAGE_MS
     }
   }

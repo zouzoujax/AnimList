@@ -92,6 +92,17 @@ export interface Tree {
    * une complétude qui n'existe pas.
    */
   tracked: number
+  /**
+   * Vrai quand une partie de l'arbre n'a pas pu être lue.
+   *
+   * Sans ce drapeau, un catalogue muet rendait un tronc à un seul nœud et
+   * aucune branche — ce qui se lit comme « cette franchise n'a rien d'autre »
+   * au lieu de « je n'ai pas pu savoir ». C'est aussi ce qui permet de
+   * prévenir qu'une série hors bibliothèque ne s'ouvrira pas, avant le clic.
+   *
+   * Faux par construction ici : seul l'appelant sait si une lecture a échoué.
+   */
+  partial: boolean
 }
 
 const byFormat = (format: string | null): Branch =>
@@ -177,5 +188,5 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
     }
   }
 
-  return { trunk, seen, total, count, tracked }
+  return { trunk, seen, total, count, tracked, partial: false }
 }

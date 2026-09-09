@@ -1,4 +1,4 @@
-import { humanMessage } from '@shared/api-outage'
+import { humanMessage, isOutage } from '@shared/api-outage'
 import {
   ArrowLeft,
   Bell,
@@ -707,7 +707,24 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
           Retour
         </button>
         {error ? (
-          <ErrorBox message={error} onRetry={retry} />
+          /**
+           * Le message général ne convient pas ici.
+           *
+           * « Ta bibliothèque n'en dépend pas » est vrai, mais on arrive sur
+           * cet écran depuis l'arbre d'une franchise, en cliquant sur un film
+           * qu'on n'a justement pas — et cette fiche-là, elle, en dépend
+           * entièrement. Lui répondre par une phrase rassurante sur autre
+           * chose se lit comme une erreur mal rattrapée.
+           */
+          <ErrorBox
+            message={
+              isOutage(error)
+                ? 'Cette série n’est pas dans ta bibliothèque, et le catalogue est indisponible : ' +
+                  'il n’y a rien à afficher pour l’instant. Sa fiche s’ouvrira dès qu’AniList aura rallumé.'
+                : error
+            }
+            onRetry={retry}
+          />
         ) : (
           <Skeleton className="h-[380px] w-full rounded-[26px]" />
         )}
