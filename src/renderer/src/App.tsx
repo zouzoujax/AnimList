@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useCallback, useEffect, useRef } from 'react'
+import { Intro } from '@/components/Intro'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
@@ -129,6 +130,10 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className="flex h-full flex-col">
+      {/* Par-dessus tout, et démonté ensuite : l'app se charge derrière, si
+          bien que l'ouverture couvre un travail qui avait lieu de toute façon
+          plutôt que de s'y ajouter. */}
+      <Intro />
       <Aurora />
       <TitleBar />
 
