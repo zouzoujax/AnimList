@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.10 — 9 septembre 2026
+
+### Ajouts
+
+- Une ouverture au lancement : la marque se trace, son nom monte, un halo respire une fois et de la poussière flotte autour, puis l'écran s'écarte. Elle suit l'accent choisi dans les réglages, donc elle change de couleur avec le reste de l'app. Un clic ou une touche l'abrège, elle ne joue qu'une fois par lancement, et elle ne retarde rien — l'app se charge derrière. « Réduire le mouvement » la remplace par une présentation immobile, trois fois plus courte
+
 ## 0.5.9 — 8 septembre 2026
 
 ### Ajouts
