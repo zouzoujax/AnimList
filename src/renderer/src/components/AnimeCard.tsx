@@ -196,7 +196,7 @@ export function ContinueCard({
   const markNext = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     if (!next) return
-    await toggleEpisode(media.id, next)
+    await toggleEpisode(media.id, next, media)
     toast(`Épisode ${next} coché · ${titleOf(media, lang)}`)
   }
 

@@ -76,8 +76,14 @@ interface AppState {
 
   saveEntry: (animeId: number, patch: EntryPatch, media?: Media) => Promise<void>
   removeEntry: (animeId: number) => Promise<void>
-  toggleEpisode: (animeId: number, episode: number) => Promise<void>
-  markUpTo: (animeId: number, episode: number) => Promise<void>
+  /**
+   * `media` : la fiche de la série, à transmettre quand on coche depuis un
+   * écran qui l'a sous la main. Sans elle, une série absente de la
+   * bibliothèque y entre sans son nombre d'épisodes — et ne peut alors jamais
+   * passer « Terminé », ni savoir qu'il n'y a pas d'épisode suivant.
+   */
+  toggleEpisode: (animeId: number, episode: number, media?: Media) => Promise<void>
+  markUpTo: (animeId: number, episode: number, media?: Media) => Promise<void>
   clearProgress: (animeId: number) => Promise<void>
   startRewatch: (animeId: number) => Promise<void>
   cancelRewatch: (animeId: number) => Promise<void>
@@ -228,7 +234,7 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   // Optimistic: ticking an episode must feel instant, the echo reconciles it.
-  toggleEpisode: async (animeId, episode) => {
+  toggleEpisode: async (animeId, episode, media) => {
     const watched = new Map(get().watched)
     const set0 = new Set(watched.get(animeId) ?? [])
     const next = !set0.has(episode)
@@ -246,10 +252,13 @@ export const useApp = create<AppState>((set, get) => ({
         }
       }
     })
+    // Avant la coche, pas après : c'est au moment de l'écrire que la
+    // bibliothèque décide du statut, et il lui faut le total pour ça.
+    if (next && media && !get().media.has(animeId)) await window.api.library.setEntry(animeId, {}, media)
     await window.api.library.setWatched(animeId, episode, next)
   },
 
-  markUpTo: async (animeId, episode) => {
+  markUpTo: async (animeId, episode, media) => {
     const watched = new Map(get().watched)
     const set0 = new Set(watched.get(animeId) ?? [])
     // Ceux qui n'y étaient pas : ce sont les seuls à retirer si on annule.
@@ -271,6 +280,7 @@ export const useApp = create<AppState>((set, get) => ({
           }
         : null
     })
+    if (media && !get().media.has(animeId)) await window.api.library.setEntry(animeId, {}, media)
     await window.api.library.setWatchedUpTo(animeId, episode)
   },
 

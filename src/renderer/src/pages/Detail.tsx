@@ -221,7 +221,7 @@ function EpisodeGrid({
             would invent a viewing. */}
         <button
           className="btn !h-8"
-          onClick={() => markUpTo(detail.id, Math.min(episodes.length, lastAired))}
+          onClick={() => markUpTo(detail.id, Math.min(episodes.length, lastAired), detail)}
           disabled={count >= Math.min(episodes.length, lastAired)}
           title={lastAired < episodes.length ? `Jusqu'à l'épisode ${lastAired}, le dernier diffusé` : undefined}
         >
@@ -353,7 +353,9 @@ function EpisodeGrid({
               onMouseEnter={() => setHovered(ep.number)}
               onMouseLeave={() => setHovered(null)}
               onClick={(e) =>
-                e.shiftKey && !notOut ? markUpTo(detail.id, ep.number) : toggleEpisode(detail.id, ep.number)
+                e.shiftKey && !notOut
+                  ? markUpTo(detail.id, ep.number, detail)
+                  : toggleEpisode(detail.id, ep.number, detail)
               }
               onContextMenu={(e) => {
                 e.preventDefault()
@@ -572,7 +574,15 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const lang = useApp((s) => s.prefs.titleLang)
   const seenCount = useApp((s) => s.watched.get(id)?.size ?? 0)
   const defaultRuntime = useApp((s) => s.prefs.defaultRuntime)
-  const next = useApp((s) => nextEpisodeOf(s, id, s.media.get(id)?.episodes ?? null))
+  /**
+   * Le même total que celui que la fiche affiche.
+   *
+   * Il était lu dans la bibliothèque seule : pour une série qui n'y est pas —
+   * un film ouvert depuis l'arbre d'une franchise —, le total était inconnu,
+   * la recherche de l'épisode suivant ne s'arrêtait jamais, et un film d'un
+   * seul épisode proposait « Marquer l'épisode 2 » une fois le premier coché.
+   */
+  const next = useApp((s) => nextEpisodeOf(s, id, (data ?? s.media.get(id))?.episodes ?? null))
   const saveEntry = useApp((s) => s.saveEntry)
   const removeEntry = useApp((s) => s.removeEntry)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
@@ -846,7 +856,7 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                 <button
                   className="btn btn-primary"
                   onClick={async () => {
-                    await toggleEpisode(id, next)
+                    await toggleEpisode(id, next, media)
                     toast(`Épisode ${next} coché`)
                   }}
                 >

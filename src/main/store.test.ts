@@ -358,3 +358,18 @@ describe('prefs', () => {
     setPrefs({ theme: 'nebula', layout: 'classic' })
   })
 })
+
+describe('une série cochée avant d’être dans la bibliothèque', () => {
+  // Le cas qui a mordu : un film d'un épisode, ouvert depuis l'arbre d'une
+  // franchise. Coché sans sa fiche, il restait « en cours » pour toujours.
+  it('se termine quand sa fiche accompagne la coche', () => {
+    setEntry(1, {}, media(1, 1))
+    setWatched(1, 1, true)
+    expect(entryOf(1)?.status).toBe('completed')
+  })
+
+  it('reste en cours sans fiche, faute de connaître son total', () => {
+    setWatched(1, 1, true)
+    expect(entryOf(1)?.status).toBe('watching')
+  })
+})
