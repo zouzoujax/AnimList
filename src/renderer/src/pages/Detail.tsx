@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Star,
   Trash2,
+  TriangleAlert,
   Users
 } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -1282,44 +1283,62 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
             )}
             <div className="flex flex-col gap-1.5">
               {watchLinks(media, detail, animeSama, knownMedia, watchAt).map((link) => (
-                <button
-                  key={link.id}
-                  onClick={() => {
-                    if (!link.url) return
-                    // Anime-Sama n'a pas d'adresse par épisode : une fenêtre de
-                    // l'app peut poser le numéro avant que leur page ne le
-                    // lise, ce que le navigateur système ne permet pas. Si
-                    // l'ouverture est refusée, on retombe sur le navigateur.
-                    if (link.id === 'anime-sama' && link.pick) {
-                      void window.api.watch.openEpisode(link.url, watchAt, id).then((ok) => {
-                        if (!ok && link.url) void window.api.app.openExternal(link.url)
-                      })
-                      return
-                    }
-                    void window.api.app.openExternal(link.url)
-                  }}
-                  disabled={isWatchDisabled(link.kind)}
-                  title={link.url ? `${link.hint}\n${link.url}` : link.hint}
-                  className="group flex items-center gap-2.5 rounded-[12px] border border-white/8 bg-white/5 px-3 py-2.5 text-left transition enabled:hover:border-white/20 enabled:hover:bg-white/10 disabled:cursor-default disabled:opacity-45"
-                >
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-full"
-                    style={{ background: link.color, boxShadow: `0 0 10px ${link.color}` }}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[0.82rem] font-semibold">{link.label}</span>
-                    {link.pick && <span className="block truncate text-[0.66rem] text-faint">{link.pick}</span>}
-                  </span>
-                  <span
-                    className="shrink-0 text-[0.62rem] font-bold uppercase tracking-wider"
-                    style={{ color: WATCH_BADGE[link.kind].color }}
+                <div key={link.id} className="flex flex-col gap-1.5">
+                  <button
+                    onClick={() => {
+                      if (!link.url) return
+                      // Anime-Sama n'a pas d'adresse par épisode : une fenêtre de
+                      // l'app peut poser le numéro avant que leur page ne le
+                      // lise, ce que le navigateur système ne permet pas. Si
+                      // l'ouverture est refusée, on retombe sur le navigateur.
+                      if (link.id === 'anime-sama' && link.pick) {
+                        void window.api.watch.openEpisode(link.url, watchAt, id).then((ok) => {
+                          if (!ok && link.url) void window.api.app.openExternal(link.url)
+                        })
+                        return
+                      }
+                      void window.api.app.openExternal(link.url)
+                    }}
+                    disabled={isWatchDisabled(link.kind)}
+                    title={link.url ? `${link.hint}\n${link.url}` : link.hint}
+                    className="group flex items-center gap-2.5 rounded-[12px] border border-white/8 bg-white/5 px-3 py-2.5 text-left transition enabled:hover:border-white/20 enabled:hover:bg-white/10 disabled:cursor-default disabled:opacity-45"
                   >
-                    {WATCH_BADGE[link.kind].label}
-                  </span>
-                  {!isWatchDisabled(link.kind) && (
-                    <ExternalLink size={12} className="shrink-0 text-faint transition group-hover:text-white" />
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full"
+                      style={{ background: link.color, boxShadow: `0 0 10px ${link.color}` }}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[0.82rem] font-semibold">{link.label}</span>
+                      {link.pick && <span className="block truncate text-[0.66rem] text-faint">{link.pick}</span>}
+                    </span>
+                    <span
+                      className="shrink-0 text-[0.62rem] font-bold uppercase tracking-wider"
+                      style={{ color: WATCH_BADGE[link.kind].color }}
+                    >
+                      {WATCH_BADGE[link.kind].label}
+                    </span>
+                    {!isWatchDisabled(link.kind) && (
+                      <ExternalLink size={12} className="shrink-0 text-faint transition group-hover:text-white" />
+                    )}
+                  </button>
+                  {/* Leur site n'a pas d'adresse par épisode : l'app retrouve la
+                    saison, le film ou l'OAV, puis l'épisode, d'après leurs
+                    pages — qui changent sans prévenir. Mieux vaut le dire
+                    avant le clic que laisser croire à une adresse exacte. */}
+                  {link.id === 'anime-sama' && !isWatchDisabled(link.kind) && (
+                    <p
+                      role="note"
+                      className="flex items-start gap-2 rounded-[12px] px-3 py-2 text-[0.7rem] leading-snug text-amber-100/85"
+                      style={{ background: 'rgba(252, 211, 77, 0.07)', border: '1px solid rgba(252, 211, 77, 0.45)' }}
+                    >
+                      <TriangleAlert size={13} className="mt-[1px] shrink-0 text-amber-300" />
+                      <span>
+                        <b className="font-semibold text-amber-300">Attention</b> — le lecteur Anime-Sama peut ouvrir un
+                        mauvais épisode, film ou saison : vérifie ce qui se lance.
+                      </span>
+                    </p>
                   )}
-                </button>
+                </div>
               ))}
             </div>
 
