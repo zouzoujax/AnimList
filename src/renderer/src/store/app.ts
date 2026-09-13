@@ -47,6 +47,15 @@ interface AppState {
    * une autre fenêtre. `null` quand rien ne joue.
    */
   progress: WatchProgress | null
+  /**
+   * La série qu'on vient de terminer, le temps de proposer la suite.
+   *
+   * Repérée ici, au retour de chaque écriture, plutôt que dans chaque bouton :
+   * une série se termine depuis la fiche, la grille, une carte, la coche
+   * automatique d'Anime-Sama ou la télécommande, et un seul endroit voit
+   * passer tous ces chemins.
+   */
+  finished: number | null
   events: WatchEvent[]
   lists: CustomList[]
   toasts: Toast[]
@@ -62,6 +71,7 @@ interface AppState {
   setHelp: (open: boolean) => void
   toast: (message: string, kind?: Toast['kind']) => void
   dismissToast: (id: number) => void
+  dismissFinished: () => void
 
   /**
    * La dernière action sur la progression, et de quoi la défaire.
@@ -144,6 +154,7 @@ export const useApp = create<AppState>((set, get) => ({
   media: new Map(),
   watched: new Map(),
   progress: null,
+  finished: null,
   events: [],
   lists: [],
   toasts: [],
@@ -161,7 +172,16 @@ export const useApp = create<AppState>((set, get) => ({
       if (refreshTimer) clearTimeout(refreshTimer)
       refreshTimer = setTimeout(async () => {
         refreshTimer = null
-        set(indexSnapshot(await window.api.library.snapshot()))
+        const before = get().entries
+        const fresh = indexSnapshot(await window.api.library.snapshot())
+        // Passée « terminée » dans cette écriture — y compris un film jamais
+        // ajouté, terminé d'une seule coche. Une seule à la fois : un import ou
+        // un « tout marquer » groupé en termine vingt, et vingt modales
+        // n'aideraient personne.
+        const done = [...fresh.entries.values()].filter(
+          (e) => e.status === 'completed' && before.get(e.animeId)?.status !== 'completed'
+        )
+        set(done.length === 1 ? { ...fresh, finished: done[0].animeId } : fresh)
       }, 120)
     })
 
@@ -217,6 +237,8 @@ export const useApp = create<AppState>((set, get) => ({
   saveEntry: async (animeId, patch, media) => {
     await window.api.library.setEntry(animeId, patch, media)
   },
+
+  dismissFinished: () => set({ finished: null }),
 
   removeEntry: async (animeId) => {
     await window.api.library.removeEntry(animeId)

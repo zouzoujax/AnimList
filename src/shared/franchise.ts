@@ -53,6 +53,8 @@ export interface Spine {
   episodes: number | null
   year: number | null
   cover: string | null
+  /** FINISHED, RELEASING, NOT_YET_RELEASED… — optionnel, la chaîne ne le donne pas toujours. */
+  status?: string | null
 }
 
 /** Ce que la bibliothèque sait d'une série. */
@@ -73,6 +75,7 @@ export interface Season extends Node {
   number: number
   part: number | null
   year: number | null
+  status?: string | null
   branches: { kind: Branch; nodes: Node[] }[]
 }
 
@@ -167,6 +170,7 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
       number: season.number,
       part: season.part,
       year: season.year,
+      status: season.status ?? null,
       ...progressOf(season.id),
       branches: BRANCHES.filter((k) => groups.has(k)).map((kind) => ({
         kind,

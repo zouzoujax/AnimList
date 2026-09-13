@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { Suspense, lazy, useCallback, useEffect, useRef } from 'react'
 import { Intro } from '@/components/Intro'
+import { NextUp } from '@/components/NextUp'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
@@ -134,6 +135,8 @@ export default function App(): React.JSX.Element {
           bien que l'ouverture couvre un travail qui avait lieu de toute façon
           plutôt que de s'y ajouter. */}
       <Intro />
+      {/* Au-dessus des pages : une série se termine depuis n'importe quel écran. */}
+      <NextUp />
       <Aurora />
       <TitleBar />
 

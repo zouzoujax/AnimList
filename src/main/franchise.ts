@@ -32,7 +32,8 @@ function alone(id: number): Spine[] {
       format: media.format,
       episodes: media.episodes,
       year: media.seasonYear,
-      cover: media.cover.large
+      cover: media.cover.large,
+      status: media.status
     }
   ]
 }
