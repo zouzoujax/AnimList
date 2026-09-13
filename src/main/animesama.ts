@@ -11,12 +11,12 @@ import {
   type Entry,
   type Rank
 } from '@shared/as-sections'
-import { cachedParentOf, relationsOf } from './anilist'
+import { cachedMedia, cachedParentOf, relationsOf } from './anilist'
 import { getMedia, getWatchLang } from './store'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { baseAndSeason, compact, searchVariants, similarity } from '@shared/titles'
+import { baseAndSeason, compact, searchTitles, searchVariants, similarity } from '@shared/titles'
 import { overrideFor } from '@shared/watch-overrides'
 
 /**
@@ -177,24 +177,59 @@ export function entryFor(animeId: number, url: string): Entry | null {
   return bare(hit.url) === bare(url) ? hit.entry : null
 }
 
+/** Le format, de la bibliothèque d'abord, de la fiche gardée sinon. */
+const formatOf = (animeId: number): string | null => getMedia(animeId)?.format ?? cachedMedia(animeId)?.format ?? null
+
+/** Le slug d'une adresse du catalogue : `naruto` dans `/catalogue/naruto/film/vostfr/`. */
+export function slugOf(url: string): string | null {
+  return url.match(/\/catalogue\/([a-z0-9-]+)\//i)?.[1] ?? null
+}
+
 /**
- * La place de ce film parmi ceux de la série qui le porte.
+ * La série qui porte un film ou un OAV.
  *
- * La série porteuse est celle vers laquelle pointe un lien PARENT — sinon une
- * préquelle ou une suite diffusée en saison. Ses liens donnent les films sœurs.
- * Passe par le cache des fiches : rien n'est demandé quand elles sont là, et
- * l'API AniList coupée ne fait que retirer ce repli.
+ * Celle vers laquelle pointe un lien PARENT — sinon une préquelle ou une suite
+ * diffusée en saison. Passe par le cache des fiches : rien n'est demandé quand
+ * elles sont là, et l'API AniList coupée ne fait que retirer ce repli.
  */
-async function releaseRank(animeId: number, format: string): Promise<Rank | null> {
+async function carrierOf(animeId: number): Promise<number | null> {
   const own = await relationsOf(animeId).catch(() => [])
   const seasonal = (f: string | null): boolean => f === 'TV' || f === 'TV_SHORT' || f === 'ONA'
-  const parent =
+  return (
     own.find((e) => e.relationType === 'PARENT' && seasonal(e.format))?.id ??
     own.find((e) => ['PREQUEL', 'SEQUEL', 'SIDE_STORY'].includes(e.relationType) && seasonal(e.format))?.id ??
     // Sans fiche à lui — l'API coupée ne la ramènera pas —, une saison gardée
     // qui le cite suffit : celle de Naruto cite ses trois films.
     cachedParentOf(animeId)
-  if (parent === undefined || parent === null) return null
+  )
+}
+
+/**
+ * Le slug d'un film ou d'un OAV, pris sur la série qui le porte.
+ *
+ * Leur recherche ne trouve rien pour « Naruto the Movie Legend of the Stone of
+ * Gelel » — le titre est trop long, et même trouvé, `naruto` ne lui ressemble
+ * pas assez. La série, elle, se résout sans peine, et ses films vivent sous le
+ * même slug.
+ */
+async function carrierSlug(animeId: number): Promise<string | null> {
+  const carrier = await carrierOf(animeId)
+  if (carrier === null) return null
+  const title = getMedia(carrier)?.title ?? cachedMedia(carrier)?.title
+  if (!title) return null
+  // La série porteuse est une saison : elle ne repasse jamais par ici.
+  const target = await resolve(carrier, searchTitles(title)).catch(() => null)
+  return target?.direct ? slugOf(target.url) : null
+}
+
+/**
+ * La place de ce film parmi ceux de la série qui le porte.
+ *
+ * Ses liens donnent les films sœurs.
+ */
+async function releaseRank(animeId: number, format: string): Promise<Rank | null> {
+  const parent = await carrierOf(animeId)
+  if (parent === null) return null
 
   const siblings = (await relationsOf(parent).catch(() => []))
     .filter((e) => e.relationType !== 'SUMMARY' && sameKind(format, e.format))
@@ -289,8 +324,9 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
     }
   }
 
-  let slug: string | null = null
-  for (const query of queries.slice(0, 3)) {
+  const format = formatOf(animeId)
+  let slug: string | null = isSideFormat(format) ? await carrierSlug(animeId) : null
+  for (const query of slug ? [] : queries.slice(0, 3)) {
     let page: { status: number; body: string }
     try {
       page = await text(searchUrl(query))
@@ -313,7 +349,6 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
    * saison 1 de la série. Sans section à lui, il retombe sur la page de la
    * série plutôt que sur une saison qui n'est pas la sienne.
    */
-  const format = getMedia(animeId)?.format
   if (isSideFormat(format)) {
     const side = await sideTarget(slug, format as string, titles, animeId)
     if (side) {

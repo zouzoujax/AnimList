@@ -919,6 +919,22 @@ export async function relationsOf(id: number): Promise<Edge[]> {
  * enregistrés la portent tous deux. `null` quand ni l'un ni l'autre n'est là.
  */
 /**
+ * Le format et les titres d'une série, lus dans sa fiche gardée en cache.
+ *
+ * Un film ouvert depuis l'arbre n'est pas dans la bibliothèque : sans cette
+ * lecture, Anime-Sama ignorait que c'était un film et le cherchait comme une
+ * saison. Ne demande rien au réseau.
+ */
+export function cachedMedia(
+  id: number
+): { format: string | null; title: { english: string | null; romaji: string } } | null {
+  const media = (cache.get(`${SHAPE}:detail:${id}`)?.data as { Media?: RawDetail } | undefined)?.Media
+  if (!media) return null
+  const romaji = media.title.romaji ?? media.title.english ?? `#${id}`
+  return { format: media.format, title: { english: media.title.english, romaji } }
+}
+
+/**
  * Une saison gardée en cache qui cite cette série parmi ses liens.
  *
  * Sert quand la série n'a pas de fiche à elle en cache : c'est le cas de

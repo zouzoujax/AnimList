@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { listsEpisodes, searchUrl } from './animesama'
+import { listsEpisodes, searchUrl, slugOf } from './animesama'
 
 // Relevés sur le site : la saison 1 de « Kaiju No. 8 » liste ses lecteurs, la
 // saison 8 — qui n'existe pas — répond 200 avec un commentaire vide pour tout
@@ -24,6 +24,18 @@ describe('listsEpisodes', () => {
 
   it('rejects a page that is not the script at all', () => {
     expect(listsEpisodes('<!DOCTYPE html><html><body>404</body></html>')).toBe(false)
+  })
+})
+
+describe('slugOf', () => {
+  it('lit le slug d’une saison, d’une section et de la page de la série', () => {
+    expect(slugOf('https://anime-sama.to/catalogue/naruto/saison1/vostfr/')).toBe('naruto')
+    expect(slugOf('https://anime-sama.to/catalogue/kaiju-n8/oav/vostfr/')).toBe('kaiju-n8')
+    expect(slugOf('https://anime-sama.to/catalogue/re-zero/')).toBe('re-zero')
+  })
+
+  it('ne lit rien dans une recherche', () => {
+    expect(slugOf('https://anime-sama.to/catalogue/?search=Naruto')).toBeNull()
   })
 })
 
