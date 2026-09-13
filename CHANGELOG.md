@@ -9,6 +9,23 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.5.11 — 13 septembre 2026
+
+### Ajouts
+
+- Quand tu finis une série, une fenêtre propose la suite en suivant l'arbre de la franchise : saison suivante, films, OVA et spin-off pas encore vus, jusqu'à huit, rangés par date de sortie. Chaque type a sa couleur — ambre pour les films, cyan pour les OVA, magenta pour les spin-off — et la saison suivante n'est jamais écartée faute de place. Les résumés ne sont pas proposés
+- Les films et les OAV s'ouvrent chez Anime-Sama dans leur propre section, directement sur le bon titre, même quand ils ne sont pas dans ta bibliothèque. Les films titrés en français chez eux (« La Légende de la pierre de Guelel ») sont retrouvés par leur ordre de sortie
+- Un encadré jaune sous le bouton Anime-Sama rappelle que leur lecteur peut ouvrir un mauvais épisode, film ou saison : leur site n'a pas d'adresse par épisode
+
+### Corrections
+
+- Un film ou un OAV ouvrait la saison 1 de sa série chez Anime-Sama
+- Un film absent d'Anime-Sama lançait un autre film dans le lecteur, et l'aurait coché comme vu. Il ouvre maintenant leur liste dans le navigateur, sans rien lancer ni cocher
+- Les films de Naruto Shippuden ouvraient tous le même film
+- Un film coché depuis l'arbre des franchises passe « terminé » au lieu de proposer « Marquer l'épisode 2 »
+- Une série retirée de la bibliothèque reprend sa couleur par défaut dans l'arbre des franchises
+- L'arbre des franchises prévient quand le catalogue n'a pas répondu, au lieu de mener à une page d'erreur
+
 ## 0.5.10 — 9 septembre 2026
 
 ### Ajouts
