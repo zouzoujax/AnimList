@@ -21,6 +21,7 @@
 
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
+import type { Entry } from '@shared/as-sections'
 import { ORIGIN } from './animesama'
 import {
   autostart,
@@ -49,11 +50,13 @@ let openedUrl = ''
  * que ça suppose. Rend faux si le sélecteur n'est pas là — page pas encore
  * chargée, ou mise en page changée — et l'appelant repart alors de zéro.
  */
-async function switchEpisode(target: BrowserWindow, episode: number): Promise<boolean> {
+async function switchEpisode(target: BrowserWindow, episode: number, entry: Entry | null = null): Promise<boolean> {
+  // Un film ou un OAV porte son nom dans le menu, pas « Episode N ».
+  const wanted = entry ? entry.name.toUpperCase() : `EPISODE ${episode}`
   const script = `(function () {
     var sel = document.getElementById('selectEpisodes')
     if (!sel || !sel.options || !sel.options.length) return false
-    var want = 'EPISODE ' + ${episode}
+    var want = ${JSON.stringify(wanted)}
     for (var i = 0; i < sel.options.length; i++) {
       if ((sel.options[i].textContent || '').trim().toUpperCase() === want) {
         sel.selectedIndex = i
@@ -68,7 +71,15 @@ async function switchEpisode(target: BrowserWindow, episode: number): Promise<bo
   return done === true
 }
 
-export async function openAnimeSamaEpisode(url: string, episode: number | null): Promise<boolean> {
+/**
+ * `entry` vise une entrée nommée — un film ou un OAV dans sa section — et
+ * l'emporte alors sur le numéro : leur menu ne numérote pas ces entrées.
+ */
+export async function openAnimeSamaEpisode(
+  url: string,
+  episode: number | null,
+  entry: Entry | null = null
+): Promise<boolean> {
   // Une seule origine acceptée : cette fenêtre n'est pas un navigateur à tout
   // faire, et une URL venue d'ailleurs n'a rien à y faire.
   if (!url.startsWith(`${ORIGIN}/`)) return false
@@ -76,14 +87,15 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
   // Même saison déjà à l'écran : on ne recharge pas le site pour changer de
   // numéro. C'est la différence entre un clic dans un menu et une visite
   // entière, publicités comprises.
-  if (win && !win.isDestroyed() && openedUrl === url && Number.isInteger(episode) && (episode as number) > 0) {
+  const aimed = entry !== null || (Number.isInteger(episode) && (episode as number) > 0)
+  if (win && !win.isDestroyed() && openedUrl === url && aimed) {
     // Relevée avant le changement : c'est elle qui permettra de ne pas
     // reprendre le lecteur de l'épisode qu'on quitte.
     const before = await videoFrame(win)
     const stale = before ? playerSignature(before) : null
     // Avant de remplacer leur cadre, pas après : voir `exitFullscreen`.
     if (before?.state.full === true) await exitFullscreen(win)
-    if (await switchEpisode(win, episode as number)) {
+    if (await switchEpisode(win, episode ?? 1, entry)) {
       win.focus()
       // Le lecteur se recharge derrière le changement : on relance dessus.
       void autostart(win, true, stale)
@@ -91,7 +103,11 @@ export async function openAnimeSamaEpisode(url: string, episode: number | null):
     }
   }
 
-  const args = Number.isInteger(episode) && (episode as number) > 0 ? [`--animelist-episode=${episode}`] : []
+  const args = entry
+    ? [`--animelist-entry=${entry.index}:${encodeURIComponent(entry.name)}`]
+    : Number.isInteger(episode) && (episode as number) > 0
+      ? [`--animelist-episode=${episode}`]
+      : []
 
   // Une fenêtre à la fois : rouvrir déplace celle qui est là plutôt que d'en
   // empiler une deuxième. Le préchargement ne s'appliquant qu'au chargement,

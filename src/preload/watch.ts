@@ -32,20 +32,45 @@ declare const window: {
 
 const FLAG = '--animelist-episode='
 
-const raw = process.argv.find((arg) => arg.startsWith(FLAG))
-const episode = raw ? Number(raw.slice(FLAG.length)) : NaN
+/**
+ * Une entrée nommée : `--animelist-entry=1:Hoshina's%20Day%20Off`.
+ *
+ * Films et OAV ne s'appellent pas « Episode N » dans leur menu mais par leur
+ * titre — `newSPF("Hoshina's Day Off")` —, et le nom fait foi.
+ */
+const ENTRY_FLAG = '--animelist-entry='
 
-if (Number.isInteger(episode) && episode > 0) {
+function wanted(): { name: string; index: number } | null {
+  const entry = process.argv.find((arg) => arg.startsWith(ENTRY_FLAG))
+  if (entry) {
+    const value = entry.slice(ENTRY_FLAG.length)
+    const cut = value.indexOf(':')
+    const index = Number(value.slice(0, cut))
+    try {
+      const name = decodeURIComponent(value.slice(cut + 1))
+      if (cut > 0 && Number.isInteger(index) && index > 0 && name) return { name, index }
+    } catch {
+      // Nom illisible : on retombe sur le numéro, s'il y en a un.
+    }
+  }
+
+  const raw = process.argv.find((arg) => arg.startsWith(FLAG))
+  const episode = raw ? Number(raw.slice(FLAG.length)) : NaN
+  // Exactement le texte que leur script fabrique : `"Episode " + i`, sans
+  // accent ni zéro de tête. Une variante ne serait jamais retrouvée.
+  return Number.isInteger(episode) && episode > 0 ? { name: `Episode ${episode}`, index: episode } : null
+}
+
+const target = wanted()
+
+if (target) {
   try {
-    // Exactement le texte que leur script fabrique : `"Episode " + i`, sans
-    // accent ni zéro de tête. Une variante ne serait jamais retrouvée.
-    const name = `Episode ${episode}`
     const key = window.location.pathname
-    window.localStorage.setItem(`savedEpName${key}`, JSON.stringify(name))
+    window.localStorage.setItem(`savedEpName${key}`, JSON.stringify(target.name))
     // L'index n'est qu'un point de départ : leur code le corrige à partir du
     // nom. Il compte quand même pour les séries à épisodes spéciaux, où la
     // numérotation du menu se décale.
-    window.localStorage.setItem(`savedEpNb${key}`, String(episode - 1))
+    window.localStorage.setItem(`savedEpNb${key}`, String(target.index - 1))
   } catch {
     // Stockage refusé : la page s'ouvrira au dernier épisode vu, comme avant.
   }

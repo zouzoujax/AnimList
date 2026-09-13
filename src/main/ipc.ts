@@ -10,7 +10,7 @@ import type {
   WatchEventRef
 } from '@shared/types'
 import * as anilist from './anilist'
-import { resolve as resolveAnimeSama } from './animesama'
+import { entryFor, resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
 import { exportData, importData, importMal, revealDataFolder } from './backup'
 import { cancelImport, importTvTime } from './tvtime/service'
@@ -220,7 +220,8 @@ export function registerIpc(): void {
     // Le titre de leur fenêtre est « Anime-Sama », rien de plus : sans cette
     // note, la télécommande et le statut Discord n'auraient rien à montrer.
     rememberLaunch(animeId, episode)
-    return openAnimeSamaEpisode(url, episode)
+    // Un film ou un OAV se vise par son nom dans le menu de sa section.
+    return openAnimeSamaEpisode(url, episode, typeof animeId === 'number' ? entryFor(animeId, url) : null)
   })
 
   // La liste d'une soirée, composée dans la fenêtre et suivie par le

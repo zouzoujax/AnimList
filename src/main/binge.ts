@@ -296,7 +296,7 @@ async function openOther(animeId: number, episode: number): Promise<boolean> {
   // Sans menu d'épisodes, viser un numéro n'a pas de sens : mieux vaut arrêter
   // la soirée que d'ouvrir une page au hasard pendant que personne ne regarde.
   if (!target?.url || !target.episodes) return false
-  return openAnimeSamaEpisode(target.url, episode)
+  return openAnimeSamaEpisode(target.url, episode, target.entry ?? null)
 }
 
 /**

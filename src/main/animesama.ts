@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { LANGS, langUrl, pickLang, type Lang } from '@shared/langs'
-import { getWatchLang } from './store'
+import { chooseSide, entriesIn, isSideFormat, sectionsFor, sectionsIn, type Entry } from '@shared/as-sections'
+import { getMedia, getWatchLang } from './store'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
@@ -37,6 +38,14 @@ export interface WatchTarget {
   languages?: Lang[]
   /** Celle que `url` ouvre : le choix retenu, ou la première proposée. */
   language?: Lang
+  /**
+   * L'entrée nommée à viser dans le menu, pour un film ou un OAV.
+   *
+   * Plusieurs spéciaux partagent une même page — la section OAV de Kaiju No. 8
+   * en porte trois —, et leur menu ne les numérote pas : c'est par le nom
+   * qu'on retrouve le bon. Voir `@shared/as-sections`.
+   */
+  entry?: Entry
 }
 
 interface Row extends WatchTarget {
@@ -53,7 +62,8 @@ interface Row extends WatchTarget {
 
 // 4 : les langues d'une saison sont désormais toutes relevées, pas seulement
 // la première trouvée. Les entrées d'avant n'en portent aucune.
-const RULE_VERSION = 4
+// 5 : films, OVA et spéciaux ont leur section — ils ouvraient la saison 1.
+const RULE_VERSION = 5
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -141,6 +151,72 @@ function withChoice(animeId: number, target: WatchTarget): WatchTarget {
   return { ...target, language, url: langUrl(target.url, language) }
 }
 
+/**
+ * L'entrée à viser pour cette série, si l'adresse ouverte est bien la sienne.
+ *
+ * Lue dans le cache plutôt que transportée par la fenêtre : la fiche, la
+ * soirée et la télécommande ouvrent toutes par l'adresse et le numéro, et
+ * aucune n'a à savoir qu'un spécial se vise par son nom.
+ */
+export function entryFor(animeId: number, url: string): Entry | null {
+  const hit = cache.get(animeId)
+  if (!hit?.entry || hit.v !== RULE_VERSION) return null
+  const bare = (u: string): string => u.replace(/\/(?:vostfr|vf)\/$/, '/')
+  return bare(hit.url) === bare(url) ? hit.entry : null
+}
+
+/**
+ * La section d'un film ou d'un OAV, ou `null` si la série n'en déclare pas.
+ *
+ * Coûte la page de la série, puis pour chaque section candidate ses langues
+ * et sa page — une seule fois, le résultat est mis en cache.
+ */
+async function sideTarget(slug: string, format: string, titles: string[]): Promise<WatchTarget | null> {
+  let hub: { status: number; body: string }
+  try {
+    hub = await text(`${ORIGIN}/catalogue/${slug}/`)
+  } catch {
+    return null
+  }
+  if (hub.status !== 200) return null
+
+  const found: { base: string; name: string; names: string[]; langs: Lang[] }[] = []
+  for (const section of sectionsFor(sectionsIn(hub.body), format).slice(0, 6)) {
+    const langs: Lang[] = []
+    for (const lang of LANGS) {
+      try {
+        const probe = await text(`${ORIGIN}/catalogue/${slug}/${section.base}/${lang}/episodes.js`)
+        if (probe.status === 200 && listsEpisodes(probe.body)) langs.push(lang)
+      } catch {
+        break
+      }
+    }
+    if (langs.length === 0) continue
+
+    let names: string[] = []
+    try {
+      const page = await text(`${ORIGIN}/catalogue/${slug}/${section.base}/${langs[0]}/`)
+      if (page.status === 200) names = entriesIn(page.body)
+    } catch {
+      // Sans la page, la section s'ouvre quand même — seulement sans entrée.
+    }
+    found.push({ ...section, names, langs })
+  }
+
+  const choice = chooseSide(found, titles)
+  const picked = choice && found.find((f) => f.base === choice.base)
+  if (!choice || !picked) return null
+
+  return {
+    url: `${ORIGIN}/catalogue/${slug}/${picked.base}/${picked.langs[0]}/`,
+    direct: true,
+    episodes: true,
+    languages: picked.langs,
+    language: picked.langs[0],
+    ...(choice.entry ? { entry: choice.entry } : {})
+  }
+}
+
 export async function resolve(animeId: number, titles: string[]): Promise<WatchTarget> {
   // A hand-checked answer always wins, and costs no request.
   const override = overrideFor(animeId)
@@ -150,7 +226,13 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
 
   const hit = cache.get(animeId)
   if (hit && hit.v === RULE_VERSION && Date.now() - hit.at < TTL) {
-    return withChoice(animeId, { url: hit.url, direct: hit.direct, episodes: hit.episodes, languages: hit.languages })
+    return withChoice(animeId, {
+      url: hit.url,
+      direct: hit.direct,
+      episodes: hit.episodes,
+      languages: hit.languages,
+      ...(hit.entry ? { entry: hit.entry } : {})
+    })
   }
 
   const primary = titles[0] ?? ''
@@ -184,6 +266,21 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
   }
 
   /**
+   * Un film ou un OAV n'est jamais sous `saison<N>/` : chercher là ouvrait la
+   * saison 1 de la série. Sans section à lui, il retombe sur la page de la
+   * série plutôt que sur une saison qui n'est pas la sienne.
+   */
+  const format = getMedia(animeId)?.format
+  if (isSideFormat(format)) {
+    const side = await sideTarget(slug, format as string, titles)
+    if (side) {
+      cache.set(animeId, { ...side, at: Date.now(), v: RULE_VERSION })
+      persist()
+      return withChoice(animeId, side)
+    }
+  }
+
+  /**
    * Les épisodes vivent sous `saison<N>/<langue>/`, jamais au-dessus : le hub
    * `/catalogue/<slug>/` et la saison nue répondent 200 tous les deux, sans
    * contenir un seul épisode. Un simple code 200 ne prouvait donc rien — d'où
@@ -196,7 +293,7 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
    * de numéro exploitable (« Final Season ») : on tente la première saison,
    * qui est le cas de très loin le plus courant.
    */
-  const seasons = season > 0 ? [...new Set([season, 1])] : [1]
+  const seasons = isSideFormat(format) ? [] : season > 0 ? [...new Set([season, 1])] : [1]
 
   /**
    * Toutes les langues d'une saison, et non la première qui répond.
