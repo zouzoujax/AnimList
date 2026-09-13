@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { chooseSide, entriesIn, isSideFormat, rankAmong, sameKind, sectionsFor, sectionsIn } from './as-sections'
+import {
+  alignEntry,
+  chooseSide,
+  entriesIn,
+  isSideFormat,
+  releaseOrder,
+  sameKind,
+  sectionsFor,
+  sectionsIn,
+  type Sibling
+} from './as-sections'
 
 // Relevés sur anime-sama.to : la page de « Kaiju No. 8 » et sa section OAV.
 const KAIJU_HUB = `
@@ -137,15 +147,18 @@ describe('chooseSide', () => {
     'NARUTO: Dai Gekitotsu! Maboroshi no Chitei Iseki Dattebayo'
   ]
 
+  // Les films de Naruto dans la fiche de la série : une seule date en cache.
+  const NARUTO_SIBLINGS: Sibling[] = [
+    { id: 2144, date: null, titles: ['NARUTO: Dai Koufun! Mikazukijima no Animal Panic Dattebayo!'] },
+    { id: 936, date: 20050806, titles: GELEL },
+    { id: 442, date: null, titles: ['NARUTO: Dai Katsugeki! Yuki Hime Ninpouchou Dattebayo!!'] }
+  ]
+
   it('retrouve un film titré en français par sa place de sortie', () => {
-    expect(chooseSide(NARUTO_FILMS, GELEL, { position: 2, of: 3 })).toEqual({
+    expect(chooseSide(NARUTO_FILMS, GELEL, NARUTO_SIBLINGS, 936)).toEqual({
       base: 'film',
       entry: { index: 2, name: 'La Légende de la pierre de Guelel' }
     })
-  })
-
-  it('ne se fie pas à la place quand les comptes diffèrent', () => {
-    expect(chooseSide(NARUTO_FILMS, GELEL, { position: 2, of: 11 })).toEqual({ base: 'film', entry: null })
   })
 
   it('suit la place à travers plusieurs sections', () => {
@@ -153,34 +166,77 @@ describe('chooseSide', () => {
       { name: 'Film', base: 'film1', names: ['Premier'] },
       { name: 'Film', base: 'film2', names: ['Second'] }
     ]
-    expect(chooseSide(options, ['Tout autre chose'], { position: 2, of: 2 })).toEqual({
-      base: 'film2',
-      entry: { index: 1, name: 'Second' }
-    })
+    const siblings = [
+      { id: 1, date: null, titles: ['Alpha'] },
+      { id: 2, date: null, titles: ['Beta'] }
+    ]
+    expect(chooseSide(options, ['Beta'], siblings, 2)).toEqual({ base: 'film2', entry: { index: 1, name: 'Second' } })
   })
 })
 
-describe('rankAmong', () => {
-  // Les films de Naruto dans la fiche de la série : une seule date en cache.
+// Relevé : les films de Naruto Shippuden des deux côtés. AniList en cite huit,
+// Anime-Sama en liste sept — le court « Honoo no Chuunin Shiken » leur manque.
+const SHIPPUDEN_NAMES = [
+  'Un Funeste Présage',
+  'Les Liens',
+  'La Flamme de la Volonté',
+  'La Tour Perdue',
+  'Blood Prison',
+  'Road to Ninja',
+  'The Last'
+]
+const SHIPPUDEN_FILMS: Sibling[] = [
+  { id: 2472, date: 20070804, titles: ['NARUTO: Shippuuden Movie'] },
+  { id: 4437, date: null, titles: ['NARUTO: Shippuuden - Kizuna'] },
+  { id: 6325, date: null, titles: ['NARUTO: Shippuuden - Hi no Ishi wo Tsugu Mono'] },
+  { id: 8246, date: null, titles: ['NARUTO: Shippuuden - The Lost Tower'] },
+  { id: 10589, date: null, titles: ['NARUTO: Blood Prison'] },
+  { id: 10686, date: null, titles: ['NARUTO: Honoo no Chuunin Shiken! Naruto vs Konohamaru!!'] },
+  { id: 13667, date: null, titles: ['ROAD TO NINJA: NARUTO THE MOVIE'] },
+  { id: 16870, date: null, titles: ['THE LAST: NARUTO THE MOVIE'] }
+]
+
+describe('alignEntry', () => {
+  it('aligne les films d’avant le premier repère quand les comptes s’accordent', () => {
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 2472)).toBe(1)
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 4437)).toBe(2)
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 6325)).toBe(3)
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 8246)).toBe(4)
+  })
+
+  it('reconnaît les repères par leur nom', () => {
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 10589)).toBe(5)
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 13667)).toBe(6)
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 16870)).toBe(7)
+  })
+
+  // Le film qui leur manque ne doit pas prendre la place d'un autre.
+  it('ne vise rien pour un film absent de leur liste', () => {
+    expect(alignEntry(SHIPPUDEN_NAMES, SHIPPUDEN_FILMS, 10686)).toBeNull()
+  })
+
+  it('ne vise rien quand les comptes diffèrent sans repère', () => {
+    const names = ['Un', 'Deux']
+    const films = [1, 2, 3].map((id) => ({ id, date: null, titles: [`#${id}`] }))
+    expect(alignEntry(names, films, 2)).toBeNull()
+  })
+
+  it('ne rend rien pour une série absente', () => {
+    expect(alignEntry(['Un'], [{ id: 1, date: null, titles: [] }], 2)).toBeNull()
+  })
+})
+
+describe('releaseOrder', () => {
   it('range par identifiant quand une date manque', () => {
-    const films = [
-      { id: 2144, date: null },
-      { id: 936, date: 20050806 },
-      { id: 442, date: null }
-    ]
-    expect(rankAmong(films, 936)).toEqual({ position: 2, of: 3 })
+    expect(releaseOrder(SHIPPUDEN_FILMS.slice().reverse()).map((s) => s.id)).toEqual(SHIPPUDEN_FILMS.map((s) => s.id))
   })
 
   it('range par date quand toutes sont connues', () => {
     const films = [
-      { id: 10, date: 20100101 },
-      { id: 5, date: 20120101 }
+      { id: 10, date: 20120101, titles: [] },
+      { id: 5, date: 20100101, titles: [] }
     ]
-    expect(rankAmong(films, 5)).toEqual({ position: 2, of: 2 })
-  })
-
-  it('ne rend rien pour une série absente', () => {
-    expect(rankAmong([{ id: 1, date: null }], 2)).toBeNull()
+    expect(releaseOrder(films).map((s) => s.id)).toEqual([5, 10])
   })
 })
 

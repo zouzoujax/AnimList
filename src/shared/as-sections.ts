@@ -116,24 +116,66 @@ function score(candidate: string, titles: string[]): number {
 export const sameKind = (a: string | null | undefined, b: string | null | undefined): boolean =>
   a === 'MOVIE' ? b === 'MOVIE' : isSideFormat(a) && isSideFormat(b) && b !== 'MOVIE'
 
-/** La place d'une série parmi ses sœurs (à partir de 1), et leur nombre. */
-export interface Rank {
-  position: number
-  of: number
+/** Un film (ou un OAV) de la même série, tel qu'AniList le connaît. */
+export interface Sibling {
+  id: number
+  date: number | null
+  titles: string[]
 }
 
 /**
- * La place d'un film parmi ceux de sa série, dans l'ordre de sortie.
+ * Les sœurs dans l'ordre de sortie.
  *
  * Par date quand toutes sont connues ; sinon par identifiant AniList, attribué
  * à l'ajout dans leur base et donc presque toujours dans l'ordre de sortie —
  * les fiches gardées hors ligne n'ont souvent pas de date.
  */
-export function rankAmong(siblings: { id: number; date: number | null }[], id: number): Rank | null {
+export function releaseOrder(siblings: Sibling[]): Sibling[] {
   const dated = siblings.every((s) => s.date !== null)
-  const order = [...siblings].sort((a, b) => (dated ? (a.date as number) - (b.date as number) : 0) || a.id - b.id)
+  return [...siblings].sort((a, b) => (dated ? (a.date as number) - (b.date as number) : 0) || a.id - b.id)
+}
+
+/**
+ * L'entrée d'un film dans leur menu (à partir de 1), par alignement des deux listes.
+ *
+ * Les deux côtés rangent les films dans l'ordre de sortie, mais ne comptent
+ * pas toujours les mêmes : AniList cite huit films pour Naruto Shippuden,
+ * Anime-Sama en liste sept — le court « Honoo no Chuunin Shiken » leur manque.
+ * Compter depuis le début décalait tout, et trois films ouvraient le même.
+ *
+ * Les films que leur nom suffit à reconnaître — « Blood Prison », « The Last »
+ * — servent de repères. Entre deux repères, les films se correspondent dans
+ * l'ordre si les deux côtés en ont autant ; sinon, aucun n'est visé : mieux
+ * vaut laisser choisir dans leur menu que d'ouvrir le mauvais.
+ */
+export function alignEntry(names: string[], siblings: Sibling[], id: number): number | null {
+  const order = releaseOrder(siblings)
   const at = order.findIndex((s) => s.id === id)
-  return at === -1 ? null : { position: at + 1, of: order.length }
+  if (at === -1) return null
+
+  // Repères [place chez AniList, place chez eux], croissants des deux côtés.
+  const anchors: [number, number][] = [[-1, -1]]
+  for (const [i, sibling] of order.entries()) {
+    let pick = -1
+    let best = 0
+    for (let j = anchors[anchors.length - 1][1] + 1; j < names.length; j += 1) {
+      const s = score(names[j], sibling.titles)
+      if (s >= MATCH && s > best) {
+        best = s
+        pick = j
+      }
+    }
+    if (pick !== -1) anchors.push([i, pick])
+  }
+  anchors.push([order.length, names.length])
+
+  for (let k = 1; k < anchors.length - 1; k += 1) if (anchors[k][0] === at) return anchors[k][1] + 1
+  for (let k = 0; k < anchors.length - 1; k += 1) {
+    const [ai, aj] = anchors[k]
+    const [bi, bj] = anchors[k + 1]
+    if (at > ai && at < bi) return bi - ai === bj - aj ? aj + (at - ai) + 1 : null
+  }
+  return null
 }
 
 export interface SideOption extends Section {
@@ -149,10 +191,8 @@ export interface SideOption extends Section {
  *
  * Rien qui ressemble — leurs titres sont souvent en français, ceux d'AniList
  * en anglais : « La Légende de la pierre de Guelel » contre « Legend of the
- * Stone of Gelel » — : la place de sortie prend le relais. Leur menu range les
- * films dans l'ordre de sortie, sections comprises (`film1`, puis `film2`) ;
- * on ne s'y fie que si le compte est le même des deux côtés, sans quoi la place
- * ne voudrait plus rien dire.
+ * Stone of Gelel » — : l'ordre de sortie prend le relais, sections comprises
+ * (`film1`, puis `film2`). Voir `alignEntry`.
  *
  * En dernier recours, la première section de la bonne nature, avec son entrée
  * si elle n'en a qu'une. Mieux vaut la page des OAV que la saison 1.
@@ -160,7 +200,8 @@ export interface SideOption extends Section {
 export function chooseSide(
   options: SideOption[],
   titles: string[],
-  rank: Rank | null = null
+  siblings: Sibling[] | null = null,
+  id: number | null = null
 ): { base: string; entry: Entry | null } | null {
   let best: { base: string; entry: Entry | null; score: number } | null = null
   const offer = (base: string, entry: Entry | null, s: number): void => {
@@ -177,7 +218,14 @@ export function chooseSide(
   if (found) return { base: found.base, entry: found.entry }
 
   const flat = options.flatMap((o) => o.names.map((name, i) => ({ base: o.base, entry: { index: i + 1, name } })))
-  if (rank && flat.length === rank.of) return flat[rank.position - 1]
+  if (siblings && id !== null) {
+    const at = alignEntry(
+      flat.map((f) => f.entry.name),
+      siblings,
+      id
+    )
+    if (at !== null) return flat[at - 1]
+  }
 
   const first = options[0]
   if (!first) return null

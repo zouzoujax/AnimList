@@ -4,12 +4,11 @@ import {
   chooseSide,
   entriesIn,
   isSideFormat,
-  rankAmong,
   sameKind,
   sectionsFor,
   sectionsIn,
   type Entry,
-  type Rank
+  type Sibling
 } from '@shared/as-sections'
 import { cachedMedia, cachedParentOf, relationsOf } from './anilist'
 import { getMedia, getWatchLang } from './store'
@@ -57,6 +56,8 @@ export interface WatchTarget {
    * qu'on retrouve le bon. Voir `@shared/as-sections`.
    */
   entry?: Entry
+  /** Un film ou un OAV, dans sa section : sans `entry`, rien n'y est visé. */
+  side?: boolean
 }
 
 interface Row extends WatchTarget {
@@ -75,7 +76,8 @@ interface Row extends WatchTarget {
 // la première trouvée. Les entrées d'avant n'en portent aucune.
 // 5 : films, OVA et spéciaux ont leur section — ils ouvraient la saison 1.
 // 6 : un film titré autrement chez eux se retrouve par sa place de sortie.
-const RULE_VERSION = 6
+// 7 : alignement autour des films reconnus par leur nom — Shippuden décalait.
+const RULE_VERSION = 7
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -171,10 +173,34 @@ function withChoice(animeId: number, target: WatchTarget): WatchTarget {
  * aucune n'a à savoir qu'un spécial se vise par son nom.
  */
 export function entryFor(animeId: number, url: string): Entry | null {
+  return rowFor(animeId, url)?.entry ?? null
+}
+
+/** La réponse gardée pour cette série, si elle concerne bien cette adresse. */
+function rowFor(animeId: number, url: string): Row | null {
   const hit = cache.get(animeId)
-  if (!hit?.entry || hit.v !== RULE_VERSION) return null
+  if (!hit || hit.v !== RULE_VERSION) return null
   const bare = (u: string): string => u.replace(/\/(?:vostfr|vf)\/$/, '/')
-  return bare(hit.url) === bare(url) ? hit.entry : null
+  return bare(hit.url) === bare(url) ? hit : null
+}
+
+/**
+ * Ce qu'il faut viser en ouvrant cette adresse : un numéro, une entrée, ou rien.
+ *
+ * Un film qu'on n'a pas su situer dans sa section ne doit pas recevoir le
+ * numéro 1 pour autant : leur page retomberait sur le premier film, et trois
+ * fiches ouvraient le même. Sans rien viser, leur page garde le dernier choix
+ * et laisse choisir dans son menu.
+ */
+export function aimFor(
+  animeId: number,
+  url: string,
+  episode: number | null
+): { episode: number | null; entry: Entry | null } {
+  const row = rowFor(animeId, url)
+  if (row?.entry) return { episode, entry: row.entry }
+  if (row?.side) return { episode: null, entry: null }
+  return { episode, entry: null }
 }
 
 /** Le format, de la bibliothèque d'abord, de la fiche gardée sinon. */
@@ -223,19 +249,23 @@ async function carrierSlug(animeId: number): Promise<string | null> {
 }
 
 /**
- * La place de ce film parmi ceux de la série qui le porte.
+ * Les films (ou OAV) de la série qui porte celui-ci, avec leurs titres.
  *
- * Ses liens donnent les films sœurs.
+ * Les titres servent de repères pour aligner les deux listes : le romaji des
+ * liens, et l'anglais quand la fiche de ce film est gardée.
  */
-async function releaseRank(animeId: number, format: string): Promise<Rank | null> {
+async function releaseSiblings(animeId: number, format: string): Promise<Sibling[] | null> {
   const parent = await carrierOf(animeId)
   if (parent === null) return null
 
   const siblings = (await relationsOf(parent).catch(() => []))
     .filter((e) => e.relationType !== 'SUMMARY' && sameKind(format, e.format))
-    .map((e) => ({ id: e.id, date: e.date ?? null }))
-  if (!siblings.some((s) => s.id === animeId)) return null
-  return rankAmong(siblings, animeId)
+    .map((e) => {
+      const known = cachedMedia(e.id)?.title
+      const titles = [e.title, known?.english, known?.romaji].filter((t): t is string => !!t)
+      return { id: e.id, date: e.date ?? null, titles: [...new Set(titles)] }
+    })
+  return siblings.some((s) => s.id === animeId) ? siblings : null
 }
 
 /**
@@ -281,7 +311,7 @@ async function sideTarget(
     found.push({ ...section, names, langs })
   }
 
-  const choice = chooseSide(found, titles, await releaseRank(animeId, format))
+  const choice = chooseSide(found, titles, await releaseSiblings(animeId, format), animeId)
   const picked = choice && found.find((f) => f.base === choice.base)
   if (!choice || !picked) return null
 
@@ -291,6 +321,7 @@ async function sideTarget(
     episodes: true,
     languages: picked.langs,
     language: picked.langs[0],
+    side: true,
     ...(choice.entry ? { entry: choice.entry } : {})
   }
 }
@@ -309,6 +340,7 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
       direct: hit.direct,
       episodes: hit.episodes,
       languages: hit.languages,
+      ...(hit.side ? { side: true } : {}),
       ...(hit.entry ? { entry: hit.entry } : {})
     })
   }

@@ -25,7 +25,7 @@ import { canTick } from '@shared/airing'
 import { activeSkip, endsTheEpisode, SKIP_LABELS } from '@shared/skip'
 import { searchTitles } from '@shared/titles'
 import { isCinema, leaveCinema, videoFrame } from './video-frame'
-import { resolve as resolveAnimeSama } from './animesama'
+import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { getLaunched, rememberLaunch, sendProgress } from './now'
 import { getMedia, getPrefs, isWatched, setWatched } from './store'
 import { skipRangesFor } from './skip'
@@ -296,7 +296,8 @@ async function openOther(animeId: number, episode: number): Promise<boolean> {
   // Sans menu d'épisodes, viser un numéro n'a pas de sens : mieux vaut arrêter
   // la soirée que d'ouvrir une page au hasard pendant que personne ne regarde.
   if (!target?.url || !target.episodes) return false
-  return openAnimeSamaEpisode(target.url, episode, target.entry ?? null)
+  const aim = aimFor(animeId, target.url, episode)
+  return openAnimeSamaEpisode(target.url, aim.episode, aim.entry)
 }
 
 /**

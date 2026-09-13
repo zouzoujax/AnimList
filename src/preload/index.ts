@@ -137,8 +137,9 @@ const api = {
       episodes?: boolean
       languages?: Lang[]
       language?: Lang
-    }> =>
-      ipcRenderer.invoke('watch:anime-sama', animeId, titles),
+      side?: boolean
+      entry?: { index: number; name: string }
+    }> => ipcRenderer.invoke('watch:anime-sama', animeId, titles),
     /** Retient la langue choisie pour cette série, une fois pour toutes. */
     setLanguage: (animeId: number, lang: string | null): Promise<void> =>
       ipcRenderer.invoke('watch:set-language', animeId, lang),

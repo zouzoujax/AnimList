@@ -42,6 +42,10 @@ export interface AnimeSamaTarget {
   languages?: Lang[]
   /** Celle que `url` ouvre. */
   language?: Lang
+  /** Un film ou un OAV, dans sa section chez eux. */
+  side?: boolean
+  /** L'entrée visée dans leur menu ; absente quand on n'a pas su laquelle. */
+  entry?: { index: number; name: string }
 }
 
 export const WATCH_BADGE: Record<WatchKind, { label: string; color: string }> = {
@@ -170,7 +174,15 @@ export function watchLinks(
           ? 'URL vérifiée dans le catalogue du site'
           : 'Titre introuvable dans le catalogue : recherche',
       color: '#8b5cf6',
-      pick: animeSama?.episodes ? pick : null
+      // Un film ou un OAV se nomme ; faute de savoir lequel, on le dit plutôt
+      // que d'annoncer un épisode que la page n'ouvrira pas.
+      pick: !animeSama?.episodes
+        ? null
+        : animeSama.side
+          ? animeSama.entry
+            ? `Ouvre « ${animeSama.entry.name} »`
+            : 'Choisis dans leur menu'
+          : pick
     },
     { id: 'franime', label: 'FrAnime', color: '#34d399', pick: null, ...franime },
     {
