@@ -308,7 +308,7 @@ export default function SettingsPage(): React.JSX.Element {
           <p className="mt-0.5 text-[0.74rem] text-faint">
             Change toute l'interface : couleurs, typographie, arrondis, effets de fond.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
             {THEMES.map((theme) => {
               const active = prefs.theme === theme.id
               return (

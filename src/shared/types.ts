@@ -7,7 +7,7 @@ export type SeasonName = 'WINTER' | 'SPRING' | 'SUMMER' | 'FALL'
 export type LibraryStatus = 'watching' | 'planned' | 'completed' | 'paused' | 'dropped'
 export type EmotionId = 'love' | 'hype' | 'cry' | 'laugh' | 'mind' | 'chill' | 'scared' | 'bored'
 export type TitleLang = 'romaji' | 'english' | 'native'
-export type ThemeId = 'nebula' | 'paper' | 'terminal' | 'synth' | 'atelier' | 'irise' | 'salle' | 'sousbois' | 'laque'
+export type ThemeId = 'nebula' | 'paper' | 'terminal' | 'synth'
 
 export interface ThemeDef {
   id: ThemeId
@@ -46,41 +46,6 @@ export const THEMES: ThemeDef[] = [
     hint: 'Saturé, arrondi, néon assumé',
     swatch: ['#1a0b2e', '#ff2e97'],
     titlebar: { color: '#210D3A', symbolColor: '#C9A4DC' }
-  },
-  {
-    id: 'atelier',
-    name: 'Atelier',
-    hint: 'Gris mastic, touches en relief, afficheurs',
-    swatch: ['#dcd8cf', '#3a3d43'],
-    titlebar: { color: '#D2CDC2', symbolColor: '#43464C' }
-  },
-  {
-    id: 'irise',
-    name: 'Irisé',
-    hint: 'Blanc nuage, liserés irisés, trait fin',
-    swatch: ['#f5f6f8', '#9be8cf'],
-    titlebar: { color: '#FBFBFC', symbolColor: '#4A5363' }
-  },
-  {
-    id: 'salle',
-    name: 'Salle obscure',
-    hint: 'Noir de cinéma, grain, les affiches seules',
-    swatch: ['#09090a', '#2a2a2d'],
-    titlebar: { color: '#0E0E10', symbolColor: '#A3A09A' }
-  },
-  {
-    id: 'sousbois',
-    name: 'Sous-bois',
-    hint: 'Vert profond, lumière entre les feuilles',
-    swatch: ['#0c140f', '#6f9a58'],
-    titlebar: { color: '#111B14', symbolColor: '#A7B6A2' }
-  },
-  {
-    id: 'laque',
-    name: 'Laque',
-    hint: 'Rouge laqué, reflets, filets d’or',
-    swatch: ['#110606', '#c9a15d'],
-    titlebar: { color: '#1A0A09', symbolColor: '#C4ACA2' }
   }
 ]
 
