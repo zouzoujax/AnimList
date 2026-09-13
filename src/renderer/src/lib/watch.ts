@@ -152,6 +152,8 @@ export function watchLinks(
   // Le site n'a pas d'adresse par épisode : c'est l'app qui pose le numéro dans
   // sa propre fenêtre avant que leur page ne le lise. Voir src/main/watch-window.ts.
   const pick = episode ? `Ouvre l'épisode ${episode}` : null
+  // Un film ou un OAV qu'on n'a pas su situer dans leur liste.
+  const unplaced = !!animeSama?.side && !animeSama.entry
 
   return [
     {
@@ -167,22 +169,25 @@ export function watchLinks(
       id: 'anime-sama',
       label: 'Anime-Sama',
       url: animeSama?.absent ? '' : (animeSama?.url ?? ANIME_SAMA_SEARCH + q),
-      kind: animeSama?.absent ? 'absent' : animeSama?.direct ? 'direct' : 'search',
+      kind: animeSama?.absent ? 'absent' : unplaced ? 'search' : animeSama?.direct ? 'direct' : 'search',
       hint: animeSama?.absent
         ? 'Absent du catalogue Anime-Sama'
-        : animeSama?.direct
-          ? 'URL vérifiée dans le catalogue du site'
-          : 'Titre introuvable dans le catalogue : recherche',
+        : unplaced
+          ? 'Introuvable dans leur liste : elle s’ouvre dans le navigateur, choisis dedans'
+          : animeSama?.direct
+            ? 'URL vérifiée dans le catalogue du site'
+            : 'Titre introuvable dans le catalogue : recherche',
       color: '#8b5cf6',
-      // Un film ou un OAV se nomme ; faute de savoir lequel, on le dit plutôt
-      // que d'annoncer un épisode que la page n'ouvrira pas.
-      pick: !animeSama?.episodes
-        ? null
-        : animeSama.side
-          ? animeSama.entry
-            ? `Ouvre « ${animeSama.entry.name} »`
-            : 'Choisis dans leur menu'
-          : pick
+      /**
+       * Un film ou un OAV se nomme.
+       *
+       * Faute de savoir lequel, aucune ouverture dans le lecteur de l'app : il
+       * démarrait en plein écran sur le premier film de leur liste — « Un
+       * Funeste Présage » pour un court de Shippuden qu'ils n'ont pas —, et la
+       * coche à 90 % aurait marqué vu ce qu'on ne regardait pas. Sans `pick`,
+       * le clic ouvre leur liste dans le navigateur.
+       */
+      pick: !animeSama?.episodes || unplaced ? null : animeSama.side ? `Ouvre « ${animeSama.entry?.name} »` : pick
     },
     { id: 'franime', label: 'FrAnime', color: '#34d399', pick: null, ...franime },
     {

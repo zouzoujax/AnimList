@@ -658,7 +658,10 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const animeSama = useAnimeSama(media ?? null)
   const langs = animeSama?.languages ?? []
   const current = spoken ?? animeSama?.language ?? null
-  const watchUrl = animeSama?.episodes ? (current ? langUrl(animeSama.url, current) : animeSama.url) : null
+  // Un film introuvable dans leur liste n'a pas de lecteur à ouvrir : le ▶
+  // lancerait le premier film venu, et la coche marquerait celui-ci vu.
+  const unplaced = !!animeSama?.side && !animeSama.entry
+  const watchUrl = animeSama?.episodes && !unplaced ? (current ? langUrl(animeSama.url, current) : animeSama.url) : null
   const franchiseFilms = useFranchiseFilms(media ?? null)
 
   // Franchise-wide sweep first, then any film this entry links to that the
