@@ -19,7 +19,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const ENDPOINT = 'https://graphql.anilist.co'
-const OUT_DIR = process.argv[2] ?? 'docs/screenshots'
+/*
+ *   npm run screenshots -- [dossier] [--theme=laque] [--only=accueil,fiche]
+ *
+ * Le thème et le sous-ensemble servent à juger un thème à l'écran : ces
+ * captures-là vont dans un dossier ignoré par git, pas dans docs/.
+ */
+const ARGS = process.argv.slice(2)
+const flag = (name) => ARGS.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
+const OUT_DIR = ARGS.find((a) => !a.startsWith('--')) ?? 'docs/screenshots'
+const THEME = flag('theme') ?? 'nebula'
+const ONLY = flag('only')
 
 /**
  * A fixed cast, so a re-run produces the same pages.
@@ -371,7 +381,7 @@ async function main() {
       entries: Object.fromEntries(entries.map((e) => [String(e.animeId), e])),
       history: [],
       lists,
-      prefs: { titleLang: 'romaji', theme: 'nebula', layout: 'classic', accent: '#7c5cff', mica: false }
+      prefs: { titleLang: 'romaji', theme: THEME, layout: 'classic', accent: '#7c5cff', mica: false }
     }),
     'utf8'
   )
@@ -390,7 +400,14 @@ async function main() {
   const electron = join('node_modules', 'electron', 'dist', 'electron.exe')
   const child = spawn(
     electron,
-    ['.', `--user-data-dir=${dir}`, `--screenshots=${OUT_DIR}`, `--shot-anime=${media[0].id}`, '--disable-gpu-vsync'],
+    [
+      '.',
+      `--user-data-dir=${dir}`,
+      `--screenshots=${OUT_DIR}`,
+      `--shot-anime=${media[0].id}`,
+      ...(ONLY ? [`--shot-only=${ONLY}`] : []),
+      '--disable-gpu-vsync'
+    ],
     { stdio: 'inherit' }
   )
 

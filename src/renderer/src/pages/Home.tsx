@@ -57,7 +57,7 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
       initial={{ opacity: 0, scale: 0.99 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 180, damping: 26 }}
-      className="spotlight span-all relative mb-9 overflow-hidden rounded-[26px]"
+      className="spotlight on-art span-all relative mb-9 overflow-hidden rounded-[26px]"
       style={{ border: `1px solid ${rgba(glow, 0.25)}`, boxShadow: `0 40px 90px -50px ${rgba(glow, 1)}` }}
     >
       <div className="sp-plane sp-back absolute inset-0">

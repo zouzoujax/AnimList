@@ -68,7 +68,13 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
     { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 }
   ]
 
-  return { outDir, plan }
+  // `--shot-only=accueil,fiche` : quelques pages seulement, pour juger un thème
+  // sans refaire les dix captures.
+  const only = process.argv
+    .find((a) => a.startsWith('--shot-only='))
+    ?.split('=')[1]
+    ?.split(',')
+  return { outDir, plan: only ? plan.filter((shot) => only.includes(shot.name)) : plan }
 }
 
 /**

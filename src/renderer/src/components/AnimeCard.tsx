@@ -205,7 +205,7 @@ export function ContinueCard({
       onClick={() => navigate({ name: 'anime', id: media.id })}
       onMouseEnter={() => onHover?.(media)}
       onMouseLeave={() => onHover?.(null)}
-      className="group relative h-[196px] w-[358px] shrink-0 overflow-hidden rounded-[20px] text-left"
+      className="on-art group relative h-[196px] w-[358px] shrink-0 overflow-hidden rounded-[20px] text-left"
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.05, 0.25), type: 'spring', stiffness: 240, damping: 26 }}

@@ -152,7 +152,7 @@ export function TitleBar(): React.JSX.Element {
         <button
           onClick={() => setPalette(true)}
           className="no-drag group flex h-7 w-full max-w-[420px] items-center gap-2 rounded-full border px-3 text-[0.78rem] transition"
-          style={{ borderColor: 'var(--line)', background: 'rgba(0,0,0,.28)' }}
+          style={{ borderColor: 'var(--line)', background: 'var(--search-bg, rgba(0,0,0,.28))' }}
         >
           <Search size={13} className="text-faint transition group-hover:text-[var(--accent-2)]" />
           <span className="text-faint">Rechercher un anime…</span>
