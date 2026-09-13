@@ -41,6 +41,19 @@ export interface Edge {
   title: string
   cover: string | null
   format: string | null
+  /** Date de sortie (voir `dateKey`), `null` quand personne ne la connaît. */
+  date?: number | null
+}
+
+/**
+ * Une date AniList réduite à un nombre qui se trie : 20250328.
+ *
+ * Mois et jour inconnus valent zéro — une sortie connue à l'année près se range
+ * en tête de son année, ce qui vaut mieux que de disparaître du tri.
+ */
+export function dateKey(d: { year: number | null; month?: number | null; day?: number | null } | null | undefined): number | null {
+  if (!d?.year) return null
+  return d.year * 10000 + (d.month ?? 0) * 100 + (d.day ?? 0)
 }
 
 /** Une saison du tronc, telle que la chaîne des saisons la connaît déjà. */
@@ -55,6 +68,7 @@ export interface Spine {
   cover: string | null
   /** FINISHED, RELEASING, NOT_YET_RELEASED… — optionnel, la chaîne ne le donne pas toujours. */
   status?: string | null
+  date?: number | null
 }
 
 /** Ce que la bibliothèque sait d'une série. */
@@ -69,6 +83,7 @@ export interface Node extends Progress {
   title: string
   cover: string | null
   format: string | null
+  date?: number | null
 }
 
 export interface Season extends Node {
@@ -158,7 +173,14 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
       placed.add(edge.id)
 
       const list = groups.get(kind) ?? []
-      list.push({ id: edge.id, title: edge.title, cover: edge.cover, format: edge.format, ...progressOf(edge.id) })
+      list.push({
+        id: edge.id,
+        title: edge.title,
+        cover: edge.cover,
+        format: edge.format,
+        date: edge.date ?? null,
+        ...progressOf(edge.id)
+      })
       groups.set(kind, list)
     }
 
@@ -171,6 +193,7 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
       part: season.part,
       year: season.year,
       status: season.status ?? null,
+      date: season.date ?? null,
       ...progressOf(season.id),
       branches: BRANCHES.filter((k) => groups.has(k)).map((kind) => ({
         kind,

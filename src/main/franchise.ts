@@ -12,8 +12,8 @@
  * relations de l'autre, l'avancement de la bibliothèque par-dessus.
  */
 
-import { buildTree, type Edge, type Progress, type Spine, type Tree } from '@shared/franchise'
-import { relationsOf, seasonChain } from './anilist'
+import { buildTree, dateKey, type Edge, type Progress, type Spine, type Tree } from '@shared/franchise'
+import { knownStart, relationsOf, seasonChain } from './anilist'
 import { getMedia, isTracked, watchedCount } from './store'
 
 /** Assez pour Naruto ou Gundam, assez peu pour ne pas figer la fenêtre. */
@@ -38,6 +38,15 @@ function alone(id: number): Spine[] {
   ]
 }
 
+/**
+ * La date de sortie, là où on la trouve sans rien demander.
+ *
+ * Les relations n'en portaient pas avant, et les fiches gardées d'alors non
+ * plus : la bibliothèque et le cache comblent ce qu'ils peuvent. La modale
+ * « Série terminée » range ses conseils avec.
+ */
+const dateOf = (id: number): number | null => dateKey(getMedia(id)?.startDate) ?? knownStart(id)
+
 function progressOf(id: number): Progress {
   const media = getMedia(id)
   // Suivie selon l'entrée, pas selon la fiche en cache : retirer une série
@@ -59,7 +68,7 @@ export async function franchiseTree(id: number): Promise<Tree> {
     partial = true
     return []
   })
-  const spine = (chain.length ? chain : alone(id)).slice(0, MAX_SEASONS)
+  const spine = (chain.length ? chain : alone(id)).slice(0, MAX_SEASONS).map((s) => ({ ...s, date: dateOf(s.id) }))
 
   // En série plutôt qu'en parallèle : la file d'AniList espace déjà les appels,
   // et vingt requêtes lancées d'un coup passeraient devant ce que quelqu'un
@@ -69,10 +78,12 @@ export async function franchiseTree(id: number): Promise<Tree> {
   for (const season of spine) {
     edges.set(
       season.id,
-      await relationsOf(season.id).catch(() => {
-        partial = true
-        return []
-      })
+      await relationsOf(season.id)
+        .then((list) => list.map((e) => ({ ...e, date: e.date ?? dateOf(e.id) })))
+        .catch(() => {
+          partial = true
+          return []
+        })
     )
   }
 

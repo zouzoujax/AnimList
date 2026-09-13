@@ -1,5 +1,5 @@
 import { failureOf } from '@shared/api-outage'
-import type { Edge } from '@shared/franchise'
+import { dateKey, type Edge } from '@shared/franchise'
 import { app } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
@@ -105,7 +105,10 @@ query Detail($id: Int) {
         relationType(version: 2)
         # Le pays sert à nommer l'œuvre d'origine : « Le manga » sous une série
         # tirée d'un manhwa coréen est faux, et se voit tout de suite.
-        node { id type format countryOfOrigin title { romaji english } coverImage { large } }
+        # La date range les conseils de la modale « Série terminée ». Ajoutée
+        # sans monter SHAPE : ça périmerait tout le cache, et leur API est
+        # coupée — les fiches gardées combleront avec ce qu'elles savent.
+        node { id type format countryOfOrigin title { romaji english } coverImage { large } startDate { year month day } }
       }
     }
     recommendations(sort: RATING_DESC, perPage: 12) {
@@ -670,6 +673,8 @@ interface RawDetail extends RawMedia {
         countryOfOrigin: string | null
         title: { romaji: string | null; english: string | null }
         coverImage: { large: string | null } | null
+        /** Absent des fiches gardées avant qu'on le demande. */
+        startDate?: { year: number | null; month: number | null; day: number | null } | null
       }
     }[]
   } | null
@@ -902,8 +907,21 @@ export async function relationsOf(id: number): Promise<Edge[]> {
       id: e.node.id,
       title: e.node.title.romaji ?? e.node.title.english ?? `#${e.node.id}`,
       cover: e.node.coverImage?.large ?? null,
-      format: e.node.format
+      format: e.node.format,
+      date: dateKey(e.node.startDate) ?? knownStart(e.node.id)
     }))
+}
+
+/**
+ * La date de sortie d'une série, lue dans ce que le cache garde déjà.
+ *
+ * Ne demande rien au réseau : une fiche détaillée ou un maillon de chaîne
+ * enregistrés la portent tous deux. `null` quand ni l'un ni l'autre n'est là.
+ */
+export function knownStart(id: number): number | null {
+  const detail = cache.get(`${SHAPE}:detail:${id}`)?.data as { Media?: RawDetail } | undefined
+  const link = cache.get(`${SHAPE}:chain-node:${id}`)?.data as { Media?: RawChainNode | null } | undefined
+  return dateKey(detail?.Media?.startDate) ?? dateKey(link?.Media?.startDate)
 }
 
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {
