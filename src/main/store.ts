@@ -592,6 +592,17 @@ export function isWatched(animeId: number, episode: number): boolean {
   return watchedIndex.has(key(animeId, episode))
 }
 
+/**
+ * La série est-elle dans la bibliothèque ?
+ *
+ * Répondu par l'entrée, jamais par la fiche : une fiche reste en cache après
+ * le retrait d'une série — seule une migration les nettoie. Se fier à elle
+ * faisait croire qu'une série retirée était toujours suivie.
+ */
+export function isTracked(animeId: number): boolean {
+  return db.entries[String(animeId)] !== undefined
+}
+
 /** Marks or unmarks a single episode, keeping the entry status in sync. */
 export function setWatched(animeId: number, episode: number, watched: boolean): void {
   const k = key(animeId, episode)

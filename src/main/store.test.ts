@@ -15,7 +15,8 @@ import {
   setWatchedUpTo,
   snapshot,
   startRewatch,
-  updateEvent
+  updateEvent,
+  isTracked
 } from './store'
 
 function media(id: number, episodes: number | null, duration: number | null = 24): Media {
@@ -371,5 +372,22 @@ describe('une série cochée avant d’être dans la bibliothèque', () => {
   it('reste en cours sans fiche, faute de connaître son total', () => {
     setWatched(1, 1, true)
     expect(entryOf(1)?.status).toBe('watching')
+  })
+})
+
+describe('isTracked', () => {
+  // Le cas qui a mordu dans l'arbre des franchises : un spin-off ajouté puis
+  // retiré restait coloré, parce que sa fiche, elle, reste en cache.
+  it('ne compte plus une série retirée, même si sa fiche reste en cache', () => {
+    setEntry(1, { status: 'planned' }, media(1, 12))
+    expect(isTracked(1)).toBe(true)
+
+    removeEntry(1)
+    expect(isTracked(1)).toBe(false)
+  })
+
+  it('ne compte pas une fiche jamais ajoutée', () => {
+    cacheMedia([media(2, 12)])
+    expect(isTracked(2)).toBe(false)
   })
 })

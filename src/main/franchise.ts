@@ -14,7 +14,7 @@
 
 import { buildTree, type Edge, type Progress, type Spine, type Tree } from '@shared/franchise'
 import { relationsOf, seasonChain } from './anilist'
-import { getMedia, watchedCount } from './store'
+import { getMedia, isTracked, watchedCount } from './store'
 
 /** Assez pour Naruto ou Gundam, assez peu pour ne pas figer la fenêtre. */
 const MAX_SEASONS = 24
@@ -39,11 +39,25 @@ function alone(id: number): Spine[] {
 
 function progressOf(id: number): Progress {
   const media = getMedia(id)
-  return { seen: watchedCount(id), total: media?.episodes ?? null, tracked: media !== undefined }
+  // Suivie selon l'entrée, pas selon la fiche en cache : retirer une série
+  // de la liste garde sa fiche, et l'arbre continuait de la colorer.
+  return { seen: watchedCount(id), total: media?.episodes ?? null, tracked: isTracked(id) }
 }
 
 export async function franchiseTree(id: number): Promise<Tree> {
-  const chain = await seasonChain(id).catch(() => [])
+  /**
+   * Ce qu'on n'a pas pu lire, retenu au lieu d'être avalé.
+   *
+   * Les `catch` d'ici rendaient une liste vide, indistinguable d'une franchise
+   * qui n'a réellement ni suite ni film : l'arbre annonçait une absence qu'il
+   * ne connaissait pas, et son bandeau d'avertissement ne s'affichait jamais.
+   */
+  let partial = false
+
+  const chain = await seasonChain(id).catch(() => {
+    partial = true
+    return []
+  })
   const spine = (chain.length ? chain : alone(id)).slice(0, MAX_SEASONS)
 
   // En série plutôt qu'en parallèle : la file d'AniList espace déjà les appels,
@@ -52,8 +66,14 @@ export async function franchiseTree(id: number): Promise<Tree> {
   // branches, pas sa place.
   const edges = new Map<number, Edge[]>()
   for (const season of spine) {
-    edges.set(season.id, await relationsOf(season.id).catch(() => []))
+    edges.set(
+      season.id,
+      await relationsOf(season.id).catch(() => {
+        partial = true
+        return []
+      })
+    )
   }
 
-  return buildTree(spine, (of) => edges.get(of) ?? [], progressOf)
+  return { ...buildTree(spine, (of) => edges.get(of) ?? [], progressOf), partial }
 }
