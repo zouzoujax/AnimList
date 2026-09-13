@@ -25,7 +25,12 @@ const isDev = !app.isPackaged
 
 // Avant le verrou d'instance : il se déduit du dossier de données, que ceci
 // déplace. Voir profile.ts — les deux versions partageaient tout.
-if (isDev) useDevProfile()
+//
+// Sauf si on a désigné un dossier explicitement. `npm run screenshots` passe
+// par là avec une bibliothèque de démonstration : écraser ce choix lui faisait
+// photographier la vraie, destinée à un dépôt public.
+const explicitDataDir = process.argv.some((a) => a.startsWith('--user-data-dir'))
+if (isDev && !explicitDataDir) useDevProfile()
 
 if (!app.requestSingleInstanceLock()) {
   app.quit()
