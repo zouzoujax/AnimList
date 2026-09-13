@@ -14,11 +14,25 @@
 
 import { ArrowRight, PartyPopper } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { nextUp, type Suggestion } from '@shared/next-up'
+import { nextUp, type NextKind, type Suggestion } from '@shared/next-up'
 import { Modal, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { titleOf } from '@/lib/format'
 import { useApp } from '@/store/app'
+
+/**
+ * Une couleur par nature de suite, prise dans la palette des accents.
+ *
+ * Tous les libellés prenaient la teinte de l'affiche : film, OVA et saison se
+ * confondaient d'un coup d'œil. La saison garde la teinte de la série — c'est
+ * la suite directe ; le reste se distingue sans avoir à lire.
+ */
+const KIND_COLORS: Record<Exclude<NextKind, 'season'>, string> = {
+  film: '#ffb038',
+  ova: '#22d3ee',
+  spinoff: '#ff4d8d',
+  alternative: '#34e5a5'
+}
 
 export function NextUp(): React.JSX.Element | null {
   const finished = useApp((s) => s.finished)
@@ -78,28 +92,34 @@ export function NextUp(): React.JSX.Element | null {
           {/* Jusqu'à huit conseils : la liste défile plutôt que de pousser
               « Plus tard » hors de l'écran. */}
           <ul className="-mr-2 flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-2">
-            {list.map((s) => (
-              <li key={s.id}>
-                <button
-                  onClick={() => go(s.id)}
-                  className="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors hover:bg-white/6"
-                  style={{ border: '1px solid var(--line)' }}
-                >
-                  {s.cover ? (
-                    <Poster src={s.cover} alt="" className="h-[58px] w-[40px] shrink-0" rounded="rounded-lg" />
-                  ) : (
-                    <span className="h-[58px] w-[40px] shrink-0 rounded-lg" style={{ background: 'var(--line)' }} />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[0.7rem] font-semibold tracking-wide uppercase" style={{ color: glow }}>
-                      {s.label}
+            {list.map((s) => {
+              const tint = s.kind === 'season' ? glow : KIND_COLORS[s.kind]
+              return (
+                <li key={s.id}>
+                  <button
+                    onClick={() => go(s.id)}
+                    className="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2 text-left transition-colors hover:bg-white/6"
+                    style={{ border: '1px solid var(--line)' }}
+                  >
+                    {s.cover ? (
+                      <Poster src={s.cover} alt="" className="h-[58px] w-[40px] shrink-0" rounded="rounded-lg" />
+                    ) : (
+                      <span className="h-[58px] w-[40px] shrink-0 rounded-lg" style={{ background: 'var(--line)' }} />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className="mb-1 inline-block rounded-full px-2 py-[1px] text-[0.66rem] font-semibold tracking-wide uppercase"
+                        style={{ color: tint, background: rgba(tint, 0.14) }}
+                      >
+                        {s.label}
+                      </span>
+                      <span className="block truncate text-[0.88rem] font-medium">{s.title}</span>
                     </span>
-                    <span className="block truncate text-[0.88rem] font-medium">{s.title}</span>
-                  </span>
-                  <ArrowRight size={16} className="shrink-0 text-faint" />
-                </button>
-              </li>
-            ))}
+                    <ArrowRight size={16} className="shrink-0 text-faint" />
+                  </button>
+                </li>
+              )
+            })}
           </ul>
 
           <div className="mt-5 flex justify-end">
