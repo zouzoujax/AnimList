@@ -16,7 +16,7 @@
  *
  * **La saison suivante ne disparaît jamais.** La modale ne montre qu'une
  * poignée de conseils. Placée en dernier sans précaution, la suite de
- * l'histoire aurait été coupée dès trois films — c'est le cas de Naruto. Ce
+ * l'histoire aurait été coupée par une série de films ou d'OVA. Ce
  * sont les sorties annexes qui cèdent leur place, jamais elle.
  *
  * **Jamais ce qui n'est pas sorti.** Une saison annoncée mais pas diffusée
@@ -48,8 +48,8 @@ export interface Suggestion {
 const byRelease = (a: Suggestion, b: Suggestion): number =>
   a.date === null ? (b.date === null ? 0 : 1) : b.date === null ? -1 : a.date - b.date
 
-/** Assez pour choisir, assez peu pour que la modale reste une question. */
-export const NEXT_MAX = 3
+/** Assez pour voir toute une franchise chargée ; la liste défile au-delà de l'écran. */
+export const NEXT_MAX = 8
 
 /** Dans l'ordre où l'on conseille, du plus proche de l'histoire au plus lointain. */
 const BRANCH_ORDER: Exclude<Branch, 'resume'>[] = ['film', 'ova', 'spinoff', 'alternative']

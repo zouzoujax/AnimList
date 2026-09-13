@@ -75,7 +75,9 @@ export function NextUp(): React.JSX.Element | null {
 
           <p className="mb-3 text-[0.84rem] text-muted">Pour continuer, dans l’ordre de la franchise :</p>
 
-          <ul className="flex flex-col gap-2">
+          {/* Jusqu'à huit conseils : la liste défile plutôt que de pousser
+              « Plus tard » hors de l'écran. */}
+          <ul className="-mr-2 flex max-h-[52vh] flex-col gap-2 overflow-y-auto pr-2">
             {list.map((s) => (
               <li key={s.id}>
                 <button

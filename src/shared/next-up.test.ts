@@ -87,7 +87,7 @@ describe('nextUp', () => {
   it('écarte les sorties les plus tardives quand la place manque', () => {
     const films = [20240101, 20230101, 20220101, 20210101].map((d, i) => node(100 + i, { date: d }))
     const t = tree([season(1, 1, { seen: 12 }, [{ kind: 'film', nodes: films }]), season(2, 2, { date: 20250101 })])
-    expect(ids(nextUp(t, 1))).toEqual([103, 102, 2])
+    expect(ids(nextUp(t, 1, 3))).toEqual([103, 102, 2])
   })
 
   // Sans aucune date, l'ordre de l'arbre : ce qui se rattache à la saison finie, puis la suivante.
@@ -134,7 +134,7 @@ describe('nextUp', () => {
   })
 
   it('ne dépasse pas la limite', () => {
-    const films = [...Array(8)].map((_, i) => node(100 + i))
+    const films = [...Array(NEXT_MAX + 4)].map((_, i) => node(100 + i))
     const t = tree([season(1, 1, { seen: 12 }, [{ kind: 'film', nodes: films }])])
     expect(nextUp(t, 1)).toHaveLength(NEXT_MAX)
   })
@@ -142,7 +142,7 @@ describe('nextUp', () => {
   // Le piège de la saison en dernier : avec trois films ou plus, la suite de
   // l'histoire aurait été coupée. Ce sont les films qui cèdent la place.
   it('garde toujours la saison suivante, même quand les films débordent', () => {
-    const films = [...Array(8)].map((_, i) => node(100 + i))
+    const films = [...Array(NEXT_MAX + 4)].map((_, i) => node(100 + i))
     const t = tree([season(1, 1, { seen: 12 }, [{ kind: 'film', nodes: films }]), season(2, 2)])
     const out = nextUp(t, 1)
     expect(out).toHaveLength(NEXT_MAX)
