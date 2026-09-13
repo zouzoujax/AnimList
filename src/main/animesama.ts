@@ -1,6 +1,17 @@
 import { app } from 'electron'
 import { LANGS, langUrl, pickLang, type Lang } from '@shared/langs'
-import { chooseSide, entriesIn, isSideFormat, sectionsFor, sectionsIn, type Entry } from '@shared/as-sections'
+import {
+  chooseSide,
+  entriesIn,
+  isSideFormat,
+  rankAmong,
+  sameKind,
+  sectionsFor,
+  sectionsIn,
+  type Entry,
+  type Rank
+} from '@shared/as-sections'
+import { cachedParentOf, relationsOf } from './anilist'
 import { getMedia, getWatchLang } from './store'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
@@ -63,7 +74,8 @@ interface Row extends WatchTarget {
 // 4 : les langues d'une saison sont désormais toutes relevées, pas seulement
 // la première trouvée. Les entrées d'avant n'en portent aucune.
 // 5 : films, OVA et spéciaux ont leur section — ils ouvraient la saison 1.
-const RULE_VERSION = 5
+// 6 : un film titré autrement chez eux se retrouve par sa place de sortie.
+const RULE_VERSION = 6
 
 let cache = new Map<number, Row>()
 let file = ''
@@ -166,12 +178,43 @@ export function entryFor(animeId: number, url: string): Entry | null {
 }
 
 /**
+ * La place de ce film parmi ceux de la série qui le porte.
+ *
+ * La série porteuse est celle vers laquelle pointe un lien PARENT — sinon une
+ * préquelle ou une suite diffusée en saison. Ses liens donnent les films sœurs.
+ * Passe par le cache des fiches : rien n'est demandé quand elles sont là, et
+ * l'API AniList coupée ne fait que retirer ce repli.
+ */
+async function releaseRank(animeId: number, format: string): Promise<Rank | null> {
+  const own = await relationsOf(animeId).catch(() => [])
+  const seasonal = (f: string | null): boolean => f === 'TV' || f === 'TV_SHORT' || f === 'ONA'
+  const parent =
+    own.find((e) => e.relationType === 'PARENT' && seasonal(e.format))?.id ??
+    own.find((e) => ['PREQUEL', 'SEQUEL', 'SIDE_STORY'].includes(e.relationType) && seasonal(e.format))?.id ??
+    // Sans fiche à lui — l'API coupée ne la ramènera pas —, une saison gardée
+    // qui le cite suffit : celle de Naruto cite ses trois films.
+    cachedParentOf(animeId)
+  if (parent === undefined || parent === null) return null
+
+  const siblings = (await relationsOf(parent).catch(() => []))
+    .filter((e) => e.relationType !== 'SUMMARY' && sameKind(format, e.format))
+    .map((e) => ({ id: e.id, date: e.date ?? null }))
+  if (!siblings.some((s) => s.id === animeId)) return null
+  return rankAmong(siblings, animeId)
+}
+
+/**
  * La section d'un film ou d'un OAV, ou `null` si la série n'en déclare pas.
  *
  * Coûte la page de la série, puis pour chaque section candidate ses langues
  * et sa page — une seule fois, le résultat est mis en cache.
  */
-async function sideTarget(slug: string, format: string, titles: string[]): Promise<WatchTarget | null> {
+async function sideTarget(
+  slug: string,
+  format: string,
+  titles: string[],
+  animeId: number
+): Promise<WatchTarget | null> {
   let hub: { status: number; body: string }
   try {
     hub = await text(`${ORIGIN}/catalogue/${slug}/`)
@@ -203,7 +246,7 @@ async function sideTarget(slug: string, format: string, titles: string[]): Promi
     found.push({ ...section, names, langs })
   }
 
-  const choice = chooseSide(found, titles)
+  const choice = chooseSide(found, titles, await releaseRank(animeId, format))
   const picked = choice && found.find((f) => f.base === choice.base)
   if (!choice || !picked) return null
 
@@ -272,7 +315,7 @@ export async function resolve(animeId: number, titles: string[]): Promise<WatchT
    */
   const format = getMedia(animeId)?.format
   if (isSideFormat(format)) {
-    const side = await sideTarget(slug, format as string, titles)
+    const side = await sideTarget(slug, format as string, titles, animeId)
     if (side) {
       cache.set(animeId, { ...side, at: Date.now(), v: RULE_VERSION })
       persist()

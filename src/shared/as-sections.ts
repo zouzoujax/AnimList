@@ -112,6 +112,30 @@ function score(candidate: string, titles: string[]): number {
   return best
 }
 
+/** Même nature qu'une section : film avec film, OVA et spécial ensemble. */
+export const sameKind = (a: string | null | undefined, b: string | null | undefined): boolean =>
+  a === 'MOVIE' ? b === 'MOVIE' : isSideFormat(a) && isSideFormat(b) && b !== 'MOVIE'
+
+/** La place d'une série parmi ses sœurs (à partir de 1), et leur nombre. */
+export interface Rank {
+  position: number
+  of: number
+}
+
+/**
+ * La place d'un film parmi ceux de sa série, dans l'ordre de sortie.
+ *
+ * Par date quand toutes sont connues ; sinon par identifiant AniList, attribué
+ * à l'ajout dans leur base et donc presque toujours dans l'ordre de sortie —
+ * les fiches gardées hors ligne n'ont souvent pas de date.
+ */
+export function rankAmong(siblings: { id: number; date: number | null }[], id: number): Rank | null {
+  const dated = siblings.every((s) => s.date !== null)
+  const order = [...siblings].sort((a, b) => (dated ? (a.date as number) - (b.date as number) : 0) || a.id - b.id)
+  const at = order.findIndex((s) => s.id === id)
+  return at === -1 ? null : { position: at + 1, of: order.length }
+}
+
 export interface SideOption extends Section {
   /** Les noms du menu de la section (voir `entriesIn`). */
   names: string[]
@@ -121,11 +145,23 @@ export interface SideOption extends Section {
  * La section et l'entrée d'un film ou d'un OAV.
  *
  * Un nom d'entrée qui ressemble au titre l'emporte ; à défaut, un nom de
- * section. Rien qui ressemble — leurs titres sont souvent en français, ceux
- * d'AniList en anglais — : la première section de la bonne nature, avec son
- * entrée si elle n'en a qu'une. Mieux vaut la page des OAV que la saison 1.
+ * section.
+ *
+ * Rien qui ressemble — leurs titres sont souvent en français, ceux d'AniList
+ * en anglais : « La Légende de la pierre de Guelel » contre « Legend of the
+ * Stone of Gelel » — : la place de sortie prend le relais. Leur menu range les
+ * films dans l'ordre de sortie, sections comprises (`film1`, puis `film2`) ;
+ * on ne s'y fie que si le compte est le même des deux côtés, sans quoi la place
+ * ne voudrait plus rien dire.
+ *
+ * En dernier recours, la première section de la bonne nature, avec son entrée
+ * si elle n'en a qu'une. Mieux vaut la page des OAV que la saison 1.
  */
-export function chooseSide(options: SideOption[], titles: string[]): { base: string; entry: Entry | null } | null {
+export function chooseSide(
+  options: SideOption[],
+  titles: string[],
+  rank: Rank | null = null
+): { base: string; entry: Entry | null } | null {
   let best: { base: string; entry: Entry | null; score: number } | null = null
   const offer = (base: string, entry: Entry | null, s: number): void => {
     if (s >= MATCH && (best === null || s > best.score)) best = { base, entry, score: s }
@@ -139,6 +175,10 @@ export function chooseSide(options: SideOption[], titles: string[]): { base: str
 
   const found = best as { base: string; entry: Entry | null } | null
   if (found) return { base: found.base, entry: found.entry }
+
+  const flat = options.flatMap((o) => o.names.map((name, i) => ({ base: o.base, entry: { index: i + 1, name } })))
+  if (rank && flat.length === rank.of) return flat[rank.position - 1]
+
   const first = options[0]
   if (!first) return null
   return { base: first.base, entry: first.names.length === 1 ? { index: 1, name: first.names[0] } : null }

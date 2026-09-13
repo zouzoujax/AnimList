@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chooseSide, entriesIn, isSideFormat, sectionsFor, sectionsIn } from './as-sections'
+import { chooseSide, entriesIn, isSideFormat, rankAmong, sameKind, sectionsFor, sectionsIn } from './as-sections'
 
 // Relevés sur anime-sama.to : la page de « Kaiju No. 8 » et sa section OAV.
 const KAIJU_HUB = `
@@ -118,5 +118,77 @@ describe('chooseSide', () => {
 
   it('ne rend rien sans section', () => {
     expect(chooseSide([], ['Kaiju No. 8'])).toBeNull()
+  })
+
+  // Relevé : les films de Naruto chez Anime-Sama, titrés en français.
+  const NARUTO_FILMS = [
+    {
+      name: 'Film',
+      base: 'film',
+      names: [
+        'Naruto et la Princesse des neiges',
+        'La Légende de la pierre de Guelel',
+        'Mission spéciale au pays de la Lune'
+      ]
+    }
+  ]
+  const GELEL = [
+    'Naruto the Movie: Legend of the Stone of Gelel',
+    'NARUTO: Dai Gekitotsu! Maboroshi no Chitei Iseki Dattebayo'
+  ]
+
+  it('retrouve un film titré en français par sa place de sortie', () => {
+    expect(chooseSide(NARUTO_FILMS, GELEL, { position: 2, of: 3 })).toEqual({
+      base: 'film',
+      entry: { index: 2, name: 'La Légende de la pierre de Guelel' }
+    })
+  })
+
+  it('ne se fie pas à la place quand les comptes diffèrent', () => {
+    expect(chooseSide(NARUTO_FILMS, GELEL, { position: 2, of: 11 })).toEqual({ base: 'film', entry: null })
+  })
+
+  it('suit la place à travers plusieurs sections', () => {
+    const options = [
+      { name: 'Film', base: 'film1', names: ['Premier'] },
+      { name: 'Film', base: 'film2', names: ['Second'] }
+    ]
+    expect(chooseSide(options, ['Tout autre chose'], { position: 2, of: 2 })).toEqual({
+      base: 'film2',
+      entry: { index: 1, name: 'Second' }
+    })
+  })
+})
+
+describe('rankAmong', () => {
+  // Les films de Naruto dans la fiche de la série : une seule date en cache.
+  it('range par identifiant quand une date manque', () => {
+    const films = [
+      { id: 2144, date: null },
+      { id: 936, date: 20050806 },
+      { id: 442, date: null }
+    ]
+    expect(rankAmong(films, 936)).toEqual({ position: 2, of: 3 })
+  })
+
+  it('range par date quand toutes sont connues', () => {
+    const films = [
+      { id: 10, date: 20100101 },
+      { id: 5, date: 20120101 }
+    ]
+    expect(rankAmong(films, 5)).toEqual({ position: 2, of: 2 })
+  })
+
+  it('ne rend rien pour une série absente', () => {
+    expect(rankAmong([{ id: 1, date: null }], 2)).toBeNull()
+  })
+})
+
+describe('sameKind', () => {
+  it('met les films à part, OVA et spéciaux ensemble', () => {
+    expect(sameKind('MOVIE', 'MOVIE')).toBe(true)
+    expect(sameKind('MOVIE', 'SPECIAL')).toBe(false)
+    expect(sameKind('SPECIAL', 'OVA')).toBe(true)
+    expect(sameKind('OVA', 'MOVIE')).toBe(false)
   })
 })

@@ -918,6 +918,27 @@ export async function relationsOf(id: number): Promise<Edge[]> {
  * Ne demande rien au réseau : une fiche détaillée ou un maillon de chaîne
  * enregistrés la portent tous deux. `null` quand ni l'un ni l'autre n'est là.
  */
+/**
+ * Une saison gardée en cache qui cite cette série parmi ses liens.
+ *
+ * Sert quand la série n'a pas de fiche à elle en cache : c'est le cas de
+ * films jamais ouverts, que la fiche de leur série cite pourtant. Ne demande
+ * rien au réseau.
+ */
+export function cachedParentOf(id: number): number | null {
+  const prefix = `${SHAPE}:detail:`
+  for (const [key, row] of cache) {
+    if (!key.startsWith(prefix)) continue
+    const media = (row.data as { Media?: RawDetail } | undefined)?.Media
+    if (!media || !['TV', 'TV_SHORT', 'ONA'].includes(media.format ?? '')) continue
+    const cites = (media.relations?.edges ?? []).some(
+      (e) => e.node.id === id && ['SIDE_STORY', 'SEQUEL', 'PREQUEL', 'SPIN_OFF'].includes(e.relationType)
+    )
+    if (cites) return media.id
+  }
+  return null
+}
+
 export function knownStart(id: number): number | null {
   const detail = cache.get(`${SHAPE}:detail:${id}`)?.data as { Media?: RawDetail } | undefined
   const link = cache.get(`${SHAPE}:chain-node:${id}`)?.data as { Media?: RawChainNode | null } | undefined
