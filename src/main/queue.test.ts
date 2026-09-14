@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createQueue } from './queue'
+import { createQueue, gapForLimit } from './queue'
 
 /** No real waiting: the fake clock advances only when the queue asks it to. */
 function testQueue(minGapMs = 700) {
@@ -17,6 +17,30 @@ function testQueue(minGapMs = 700) {
 
 /** Resolves after `task` has had a chance to be picked up and settled. */
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve))
+
+describe('écart réglé sur la limite', () => {
+  it('tient sous 30 par minute, avec de la marge', () => {
+    expect(gapForLimit(30, 700)).toBe(2200)
+  })
+
+  it('ne descend jamais sous le plancher', () => {
+    expect(gapForLimit(90, 700)).toBe(734)
+    expect(gapForLimit(1000, 700)).toBe(700)
+  })
+
+  it('garde le plancher quand la limite est illisible', () => {
+    expect(gapForLimit(Number.NaN, 700)).toBe(700)
+    expect(gapForLimit(0, 700)).toBe(700)
+  })
+
+  it('applique le nouvel écart aux jobs suivants', async () => {
+    const { queue, gaps } = testQueue(700)
+    await queue.run('interactive', null, () => Promise.resolve(1))
+    queue.setGap(2200)
+    await queue.run('interactive', null, () => Promise.resolve(2))
+    expect(gaps()).toBe(2200)
+  })
+})
 
 describe('lanes', () => {
   it('drains interactive before background', async () => {

@@ -8,7 +8,7 @@ import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
 import { applyBudget } from '@shared/cache-budget'
 import { originOf } from '@shared/origin'
 import { matchStreamEpisodes } from '@shared/stream-episodes'
-import { createQueue, type Lane } from './queue'
+import { createQueue, gapForLimit, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
   AiringEntry,
@@ -301,6 +301,9 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ query, variables })
     })
+    // AniList annonce sa limite du moment à chaque réponse, 429 compris.
+    const limit = res.headers.get('x-ratelimit-limit')
+    if (limit) gate.setGap(gapForLimit(Number(limit), MIN_GAP_MS))
 
     if (res.status === 429) {
       const wait = Number(res.headers.get('retry-after') ?? 5) * 1000
@@ -900,7 +903,11 @@ export async function relationsOf(id: number): Promise<Edge[]> {
   const { data } = await cached(`detail:${id}`, TTL.detail, () =>
     request<{ Media: RawDetail }>(DETAIL_QUERY, { id }, 'background', `detail:${id}`)
   )
-  return (data.Media.relations?.edges ?? [])
+  return toEdges(data.Media.relations)
+}
+
+function toEdges(relations: RawDetail['relations']): Edge[] {
+  return (relations?.edges ?? [])
     .filter((e) => e.node.type === 'ANIME')
     .map((e) => ({
       relationType: e.relationType,
@@ -910,6 +917,84 @@ export async function relationsOf(id: number): Promise<Edge[]> {
       format: e.node.format,
       date: dateKey(e.node.startDate) ?? knownStart(e.node.id)
     }))
+}
+
+const RELATIONS_QUERY = `
+query Relations($ids: [Int], $page: Int) {
+  Page(page: $page, perPage: 50) {
+    media(id_in: $ids, type: ANIME) {
+      id
+      relations {
+        edges {
+          relationType(version: 2)
+          node { id type format countryOfOrigin title { romaji english } coverImage { large } startDate { year month day } }
+        }
+      }
+    }
+  }
+}`
+
+/** Ce que le cache sait des liens d'une série : `undefined` s'il n'en sait rien. */
+function keptRelations(id: number, acceptStale: boolean): RawDetail['relations'] | undefined {
+  const usable = (row: CacheRow | undefined): row is CacheRow =>
+    row !== undefined && (acceptStale || Date.now() - row.at < TTL.detail)
+
+  const detailRow = cache.get(`${SHAPE}:detail:${id}`)
+  const media = usable(detailRow) ? (detailRow.data as { Media?: RawDetail }).Media : undefined
+  if (media) return media.relations ?? null
+
+  const own = cache.get(`${SHAPE}:relations:${id}`)
+  if (usable(own)) return (own.data as { relations: RawDetail['relations'] }).relations
+  return undefined
+}
+
+/**
+ * Les liens de plusieurs séries, en une seule requête pour toutes.
+ *
+ * `relationsOf` demande la fiche entière de chaque saison : pour un arbre de
+ * huit saisons, huit grosses requêtes à la file. Sous la limite de 30 par
+ * minute d'AniList, l'arbre de My Hero Academia mettait 107 s à paraître.
+ * Ici, une fiche déjà gardée sert toujours ; le reste part d'un bloc, et
+ * n'est rangé que sous sa propre clé, sans se faire passer pour une fiche.
+ *
+ * Une série absente de la réponse est une série qu'on n'a pas pu lire :
+ * l'appelant le voit à son absence, et prévient que l'arbre est incomplet.
+ */
+export async function relationsOfMany(ids: number[]): Promise<Map<number, Edge[]>> {
+  const found = new Map<number, Edge[]>()
+  const missing: number[] = []
+  for (const id of new Set(ids)) {
+    const kept = keptRelations(id, false)
+    if (kept === undefined) missing.push(id)
+    else found.set(id, toEdges(kept))
+  }
+  if (!missing.length) return found
+
+  try {
+    for (let i = 0; i < missing.length; i += 50) {
+      const chunk = missing.slice(i, i + 50)
+      const data = await request<{ Page: { media: { id: number; relations: RawDetail['relations'] }[] } }>(
+        RELATIONS_QUERY,
+        { ids: chunk, page: 1 },
+        'background',
+        `relations:${chunk.join(',')}`
+      )
+      const at = Date.now()
+      for (const media of data.Page.media) {
+        cache.set(`${SHAPE}:relations:${media.id}`, { at, ttl: TTL.detail, data: { relations: media.relations } })
+        found.set(media.id, toEdges(media.relations))
+      }
+    }
+    persistCache()
+  } catch {
+    // Hors ligne, une vieille réponse vaut mieux qu'une branche manquante.
+    for (const id of missing) {
+      if (found.has(id)) continue
+      const kept = keptRelations(id, true)
+      if (kept !== undefined) found.set(id, toEdges(kept))
+    }
+  }
+  return found
 }
 
 /**

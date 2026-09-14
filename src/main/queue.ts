@@ -33,6 +33,21 @@ export interface RequestQueue {
    */
   run: <T>(lane: Lane, key: string | null, task: () => Promise<T>) => Promise<T>
   stats: () => { interactive: number; background: number; active: number }
+  /** Change l'écart entre deux départs, pour les jobs pas encore lancés. */
+  setGap: (ms: number) => void
+}
+
+/**
+ * L'écart qui tient sous une limite par minute, avec une marge.
+ *
+ * AniList abaisse sa limite quand il va mal : 30 par minute au retour de la
+ * panne de septembre 2026, contre 90 d'ordinaire. À 700 ms d'écart, une rafale
+ * d'une dizaine d'appels déclenchait des 429 et une minute d'attente pour toute
+ * l'app. Jamais sous `floor`, pour ne pas foncer quand la limite remonte.
+ */
+export function gapForLimit(perMinute: number, floor: number): number {
+  if (!Number.isFinite(perMinute) || perMinute <= 0) return floor
+  return Math.max(floor, Math.ceil((60_000 / perMinute) * 1.1))
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -46,6 +61,7 @@ export function createQueue({ minGapMs, now = Date.now, wait = sleep }: QueueOpt
 
   let draining = false
   let lastStart = Number.NEGATIVE_INFINITY
+  let gapMs = minGapMs
 
   async function drain(): Promise<void> {
     if (draining) return
@@ -57,7 +73,7 @@ export function createQueue({ minGapMs, now = Date.now, wait = sleep }: QueueOpt
         if (job.key) pending.delete(job.key)
 
         const gap = now() - lastStart
-        if (gap < minGapMs) await wait(minGapMs - gap)
+        if (gap < gapMs) await wait(gapMs - gap)
         lastStart = now()
 
         const running = job.task()
@@ -112,6 +128,10 @@ export function createQueue({ minGapMs, now = Date.now, wait = sleep }: QueueOpt
       interactive: lanes.interactive.length,
       background: lanes.background.length,
       active: active.size
-    })
+    }),
+
+    setGap(ms: number): void {
+      gapMs = ms
+    }
   }
 }

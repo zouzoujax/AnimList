@@ -1,11 +1,10 @@
 /**
  * Rassemble de quoi dessiner l'arbre d'une franchise.
  *
- * Rien de neuf n'est demandé à AniList : le tronc est la chaîne des saisons que
- * la bande d'une fiche affiche déjà, et les branches sortent des relations que
- * la fiche détaillée ramène de toute façon. Ouvrir l'arbre après avoir ouvert
- * la fiche ne coûte donc aucune requête, et l'arbre reste consultable quand
- * leur API est coupée.
+ * Le tronc est la chaîne des saisons que la bande d'une fiche affiche déjà. Les
+ * branches sortent des relations : celles des fiches gardées en cache servent
+ * telles quelles, les autres arrivent toutes ensemble en une seule requête.
+ * L'arbre reste consultable quand leur API est coupée, avec ce que le cache sait.
  *
  * La règle qui range les branches vit dans `@shared/franchise`, à part et
  * testée. Ce fichier ne fait que la nourrir : la chaîne d'un côté, les
@@ -13,7 +12,7 @@
  */
 
 import { buildTree, dateKey, type Edge, type Progress, type Spine, type Tree } from '@shared/franchise'
-import { knownStart, relationsOf, seasonChain } from './anilist'
+import { knownStart, relationsOfMany, seasonChain } from './anilist'
 import { getMedia, isTracked, watchedCount } from './store'
 
 /** Assez pour Naruto ou Gundam, assez peu pour ne pas figer la fenêtre. */
@@ -70,20 +69,20 @@ export async function franchiseTree(id: number): Promise<Tree> {
   })
   const spine = (chain.length ? chain : alone(id)).slice(0, MAX_SEASONS).map((s) => ({ ...s, date: dateOf(s.id) }))
 
-  // En série plutôt qu'en parallèle : la file d'AniList espace déjà les appels,
-  // et vingt requêtes lancées d'un coup passeraient devant ce que quelqu'un
-  // regarde à l'écran. Une saison dont les relations manquent perd ses
-  // branches, pas sa place.
+  // Une requête pour toutes les saisons, pas une par saison : sous la limite
+  // d'AniList, huit fiches à la file faisaient attendre l'arbre deux minutes.
+  // Une saison dont les relations manquent perd ses branches, pas sa place.
+  const relations = await relationsOfMany(spine.map((s) => s.id))
   const edges = new Map<number, Edge[]>()
   for (const season of spine) {
+    const list = relations.get(season.id)
+    if (!list) {
+      partial = true
+      continue
+    }
     edges.set(
       season.id,
-      await relationsOf(season.id)
-        .then((list) => list.map((e) => ({ ...e, date: e.date ?? dateOf(e.id) })))
-        .catch(() => {
-          partial = true
-          return []
-        })
+      list.map((e) => ({ ...e, date: e.date ?? dateOf(e.id) }))
     )
   }
 
