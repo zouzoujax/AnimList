@@ -75,8 +75,9 @@ in-app updates from GitHub Releases.
 - Schema migrations are versioned and one-way; a file written by a newer build makes the store
   read-only rather than being rewritten.
 - The packaged renderer runs on `file://` with a strict CSP, `contextIsolation` on and
-  `nodeIntegration` off. No Referer is sent, which is why embedded YouTube refuses to play and
-  trailers open in the system browser instead.
+  `nodeIntegration` off. No Referer is sent, so embedded YouTube refuses to play (error 153) when
+  framed directly. Trailers are therefore wrapped in a page served on `127.0.0.1` and framed from
+  there: they play inline on the series page, with an optional detached window.
 
 **Deliberately undecided.** Whether the app is ever distributed to anyone else. It is currently
 unsigned, so Windows SmartScreen warns on install and on update.
@@ -105,7 +106,7 @@ unsigned, so Windows SmartScreen warns on install and on update.
   address at all — measured, not assumed: path forms answer 404 and query forms return the season
   page byte for byte.
 - 764 unit tests across 47 files, ESLint with no errors and no warnings, both TypeScript projects clean.
-- Nine screenshots in `docs/screenshots/`, produced by `npm run screenshots`. They are built
+- Ten screenshots in `docs/screenshots/`, produced by `npm run screenshots`. They are built
   from a fixed demonstration library of public AniList entries seeded into a throwaway
   user-data folder — never the real library, because the repository is public and the history
   is personal. The cast is fixed rather than "trending" so a re-run produces a diffable set.
