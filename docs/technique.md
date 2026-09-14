@@ -73,7 +73,7 @@ aucune décision visuelle.
 ## Qualité et tests
 
 ```bash
-npm test           # 531 tests unitaires (Vitest)
+npm test           # 764 tests unitaires (Vitest), 47 fichiers
 npm run lint       # ESLint 10, typé, 0 erreur
 npm run typecheck  # tsc sur les deux projets
 npm run format     # Prettier

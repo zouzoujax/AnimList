@@ -9,7 +9,7 @@ toute ta bibliothèque vit dans un fichier sur ton PC.
 ![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-531%20passing-3FB950)
+![Tests](https://img.shields.io/badge/tests-764%20passing-3FB950)
 
 Auteur : **Zaidal**
 

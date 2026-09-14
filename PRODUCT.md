@@ -64,7 +64,7 @@ TV Time / OpenTV import; JSON export and restore; four themes crossed with four 
 in-app updates from GitHub Releases.
 
 **Technical constraints.**
-- One runtime dependency, `electron-updater`. Everything else is bundled; no native modules, so
+- Two runtime dependencies, `electron-updater` and `qrcode-generator`. Everything else is bundled; no native modules, so
   no C++ toolchain and no ABI trouble at packaging time.
 - The main process owns the data. The renderer mutates through IPC and resynchronises on a
   `store:change` echo. Episode ticks are optimistic so they stay instant.
@@ -104,7 +104,7 @@ unsigned, so Windows SmartScreen warns on install and on update.
   Crunchyroll episode id (`/watch/G9DUEDM08/…`) cannot be derived. Anime-Sama has no per-episode
   address at all — measured, not assumed: path forms answer 404 and query forms return the season
   page byte for byte.
-- 378 unit tests, ESLint with no errors and no warnings, both TypeScript projects clean.
+- 764 unit tests across 47 files, ESLint with no errors and no warnings, both TypeScript projects clean.
 - Nine screenshots in `docs/screenshots/`, produced by `npm run screenshots`. They are built
   from a fixed demonstration library of public AniList entries seeded into a throwaway
   user-data folder — never the real library, because the repository is public and the history

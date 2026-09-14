@@ -1,7 +1,8 @@
 /**
  * Application updates, from GitHub Releases.
  *
- * `electron-updater` is the app's only runtime dependency, and it is here on
+ * `electron-updater` is one of the app's two runtime dependencies (the other
+ * draws the remote's QR code), and it is here on
  * purpose: doing this by hand means downloading a binary, verifying its
  * signature and handing it to the NSIS installer, and getting any of that wrong
  * is a way to ship malware to yourself.
