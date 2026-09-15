@@ -40,7 +40,8 @@
   align-items: center;
   justify-content: center;
   width: 58px;
-  min-height: 92px;
+  /* Neuf onglets doivent tenir dans la hauteur de la fenêtre. */
+  min-height: 80px;
   padding: 0.6rem 0;
   border-radius: 10px 0 0 10px;
   color: #fff8ec;
@@ -55,9 +56,9 @@
 .xk-tab-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .xk-page {

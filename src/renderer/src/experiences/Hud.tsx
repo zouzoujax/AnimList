@@ -8,6 +8,7 @@ import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { HudCalendar, HudDetailHero, HudDiscover, HudManga } from './hud-pages'
+import { HudBadges } from './badges-pages'
 import type { Experience } from '.'
 
 /*
@@ -23,7 +24,8 @@ const NAV: { route: Route; code: string; label: string }[] = [
   { route: { name: 'calendar' }, code: '04', label: 'Orbites' },
   { route: { name: 'manga' }, code: '05', label: 'Archives' },
   { route: { name: 'stats' }, code: '06', label: 'Télémétrie' },
-  { route: { name: 'settings' }, code: '07', label: 'Système' }
+  { route: { name: 'badges' }, code: '07', label: 'Décorations' },
+  { route: { name: 'settings' }, code: '08', label: 'Système' }
 ]
 
 function Nav(): React.JSX.Element {
@@ -480,6 +482,7 @@ export const hud: Experience = {
   Calendar: HudCalendar,
   Manga: HudManga,
   DetailHero: HudDetailHero,
+  Badges: HudBadges,
   motion: {
     initial: { opacity: 0, clipPath: 'inset(0 0 100% 0)' },
     animate: { opacity: 1, clipPath: 'inset(0 0 0% 0)' },

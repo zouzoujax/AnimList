@@ -117,6 +117,11 @@ manga, fiche en article. Cockpit : scanner à invite, carte des orbites horaires
 registre, dossier de cible. Carnet : trouvailles épinglées, agenda en double page, étagère de
 tranches de mangas, carte de collection annotée.
 
+Le mur des **badges**, qui vit au bas des Statistiques dans les thèmes classiques, a sa propre
+page dans chaque expérience (onglet « Badges », « Trophées », « Palmarès » ou « Décorations »).
+Le calcul est sorti dans `lib/badges.ts` (`useBadgeWall`) : la page Statistiques classique et les
+cinq expériences montrent ainsi les mêmes badges et les mêmes progressions.
+
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle
 tenue partout est donc que l'accent teinte les fonds et les contours, et que le texte reste de

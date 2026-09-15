@@ -171,6 +171,7 @@ export default function App(): React.JSX.Element {
                     {route.name === 'manga' && (xp?.Manga ? <xp.Manga /> : <MangaPage />)}
                     {route.name === 'calendar' && (xp?.Calendar ? <xp.Calendar /> : <CalendarPage />)}
                     {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : <StatsPage />)}
+                    {route.name === 'badges' && (xp?.Badges ? <xp.Badges /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>

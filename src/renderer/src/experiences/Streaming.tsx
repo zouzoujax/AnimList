@@ -8,6 +8,7 @@ import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { StreamingCalendar, StreamingDetailHero, StreamingDiscover, StreamingManga } from './streaming-pages'
+import { StreamingBadges } from './badges-pages'
 import type { Experience } from '.'
 
 /*
@@ -23,6 +24,7 @@ const NAV: { route: Route; label: string }[] = [
   { route: { name: 'calendar' }, label: 'Calendrier' },
   { route: { name: 'manga' }, label: 'Manga' },
   { route: { name: 'stats' }, label: 'Statistiques' },
+  { route: { name: 'badges' }, label: 'Badges' },
   { route: { name: 'settings' }, label: 'Réglages' }
 ]
 
@@ -464,6 +466,7 @@ export const streaming: Experience = {
   Calendar: StreamingCalendar,
   Manga: StreamingManga,
   DetailHero: StreamingDetailHero,
+  Badges: StreamingBadges,
   motion: {
     initial: { opacity: 0, scale: 1.015 },
     animate: { opacity: 1, scale: 1 },

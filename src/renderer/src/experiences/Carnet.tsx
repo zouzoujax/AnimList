@@ -7,6 +7,7 @@ import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { CarnetCalendar, CarnetDetailHero, CarnetDiscover, CarnetManga } from './carnet-pages'
+import { CarnetBadges } from './badges-pages'
 import type { Experience } from '.'
 
 /*
@@ -23,6 +24,7 @@ const TABS: { route: Route; label: string; color: string }[] = [
   { route: { name: 'calendar' }, label: 'Agenda', color: '#8f5d9a' },
   { route: { name: 'manga' }, label: 'Manga', color: '#6b8f4e' },
   { route: { name: 'stats' }, label: 'Bilan', color: '#3f6c9e' },
+  { route: { name: 'badges' }, label: 'Badges', color: '#b5838d' },
   { route: { name: 'settings' }, label: 'Réglages', color: '#7a6a58' }
 ]
 
@@ -381,6 +383,7 @@ export const carnet: Experience = {
   Calendar: CarnetCalendar,
   Manga: CarnetManga,
   DetailHero: CarnetDetailHero,
+  Badges: CarnetBadges,
   motion: {
     initial: { opacity: 0, y: 36, rotate: -1.2 },
     animate: { opacity: 1, y: 0, rotate: 0 },

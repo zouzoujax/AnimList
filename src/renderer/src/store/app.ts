@@ -22,6 +22,7 @@ export type Route =
   | { name: 'manga' }
   | { name: 'calendar' }
   | { name: 'stats' }
+  | { name: 'badges' }
   | { name: 'settings' }
   | { name: 'anime'; id: number }
   | { name: 'studio'; studio: string }

@@ -65,6 +65,9 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     { name: 'decouvrir', route: { name: 'discover' }, settleMs: 7000 },
     { name: 'calendrier', route: { name: 'calendar' }, settleMs: 2200 },
     { name: 'manga', route: { name: 'manga' }, settleMs: 2000 },
+    // Les expériences ont leur propre page de badges ; ailleurs, la route
+    // retombe sur les Statistiques.
+    { name: 'mur-badges', route: { name: 'badges' }, settleMs: 1600 },
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
     // The badge wall sits under every chart, so its offset moves with the data.
     { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },

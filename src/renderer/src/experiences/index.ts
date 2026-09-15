@@ -22,6 +22,8 @@ export interface Experience {
   Home: () => React.JSX.Element
   Library: () => React.JSX.Element
   Stats?: () => React.JSX.Element
+  /** Le mur des badges : dans les thèmes classiques, il vit au bas des Statistiques. */
+  Badges?: () => React.JSX.Element
   Discover?: (props: { initialSearch?: string }) => React.JSX.Element
   Calendar?: () => React.JSX.Element
   Manga?: () => React.JSX.Element

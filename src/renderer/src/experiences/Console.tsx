@@ -19,6 +19,7 @@ import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { ConsoleCalendar, ConsoleDetailHero, ConsoleDiscover, ConsoleManga } from './console-pages'
+import { ConsoleBadges } from './badges-pages'
 import type { Experience } from '.'
 
 /*
@@ -33,7 +34,8 @@ const NAV: { route: Route; label: string; icon: typeof House }[] = [
   { route: { name: 'discover' }, label: 'Store', icon: Compass },
   { route: { name: 'calendar' }, label: 'Agenda', icon: CalendarDays },
   { route: { name: 'manga' }, label: 'Manga', icon: BookOpen },
-  { route: { name: 'stats' }, label: 'Trophées', icon: ChartColumn },
+  { route: { name: 'stats' }, label: 'Statistiques', icon: ChartColumn },
+  { route: { name: 'badges' }, label: 'Trophées', icon: Gamepad2 },
   { route: { name: 'settings' }, label: 'Paramètres', icon: Settings }
 ]
 
@@ -428,6 +430,7 @@ export const gameConsole: Experience = {
   Calendar: ConsoleCalendar,
   Manga: ConsoleManga,
   DetailHero: ConsoleDetailHero,
+  Badges: ConsoleBadges,
   motion: {
     initial: { opacity: 0, x: 48, filter: 'blur(6px)' },
     animate: { opacity: 1, x: 0, filter: 'blur(0px)' },

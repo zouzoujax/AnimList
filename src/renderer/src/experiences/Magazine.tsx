@@ -7,6 +7,7 @@ import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { MagazineCalendar, MagazineDetailHero, MagazineDiscover, MagazineManga } from './magazine-pages'
+import { MagazineBadges } from './badges-pages'
 import type { Experience } from '.'
 
 /*
@@ -22,6 +23,7 @@ const NAV: { route: Route; label: string }[] = [
   { route: { name: 'calendar' }, label: 'Programme' },
   { route: { name: 'manga' }, label: 'Manga' },
   { route: { name: 'stats' }, label: 'Chiffres' },
+  { route: { name: 'badges' }, label: 'Palmarès' },
   { route: { name: 'settings' }, label: 'Rédaction' }
 ]
 
@@ -357,6 +359,7 @@ export const magazine: Experience = {
   Calendar: MagazineCalendar,
   Manga: MagazineManga,
   DetailHero: MagazineDetailHero,
+  Badges: MagazineBadges,
   motion: {
     initial: { opacity: 0, rotateY: -8, x: 30, transformPerspective: 1400, originX: 0 },
     animate: { opacity: 1, rotateY: 0, x: 0 },
