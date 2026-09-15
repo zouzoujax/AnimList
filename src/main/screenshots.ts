@@ -15,6 +15,8 @@
 import { BrowserWindow, app } from 'electron'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { THEMES, type ThemeId } from '@shared/types'
+import { setPrefs } from './store'
 
 export interface ShotPlan {
   /** File name without extension. */
@@ -37,7 +39,7 @@ export interface ShotPlan {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
-export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
+export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: ThemeId[] } | null {
   const flag = process.argv.find((a) => a.startsWith('--screenshots'))
   if (!flag) return null
 
@@ -74,16 +76,18 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[] } | null {
     .find((a) => a.startsWith('--shot-only='))
     ?.split('=')[1]
     ?.split(',')
-  return { outDir, plan: only ? plan.filter((shot) => only.includes(shot.name)) : plan }
+
+  // `--shot-themes=ui-ux-pro-max,ds-lin` : des familles entières ou des thèmes
+  // précis, tous photographiés dans le même lancement.
+  const wanted = process.argv
+    .find((a) => a.startsWith('--shot-themes='))
+    ?.split('=')[1]
+    ?.split(',')
+  const themes = wanted ? THEMES.filter((t) => wanted.includes(t.id) || wanted.includes(t.family)).map((t) => t.id) : []
+
+  return { outDir, plan: only ? plan.filter((shot) => only.includes(shot.name)) : plan, themes }
 }
 
-/**
- * Walks the plan, writing one PNG per entry, then quits.
- *
- * Waits are deliberate and generous: covers come off the network on a
- * rate-limited queue, and a chart that has not finished laying out photographs
- * as an empty box.
- */
 /**
  * Au-delà, on tire quand même : une page qui n'arrive jamais doit se voir.
  *
@@ -122,13 +126,15 @@ async function settled(win: BrowserWindow): Promise<void> {
   console.warn('  (toujours en chargement, capture quand même)')
 }
 
-export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotPlan[]): Promise<void> {
-  const dir = join(app.getAppPath(), outDir)
+/**
+ * Walks the plan, writing one JPEG per entry into `dir`.
+ *
+ * Waits are deliberate and generous: covers come off the network on a
+ * rate-limited queue, and a chart that has not finished laying out photographs
+ * as an empty box.
+ */
+async function walk(win: BrowserWindow, dir: string, plan: ShotPlan[]): Promise<void> {
   await fs.mkdir(dir, { recursive: true })
-
-  // The first paint is not the first useful paint: the library snapshot, the
-  // theme and the initial AniList rows all land after it.
-  await sleep(4000)
 
   for (const shot of plan) {
     win.webContents.send('nav:goto', shot.route)
@@ -162,6 +168,48 @@ export async function captureAll(win: BrowserWindow, outDir: string, plan: ShotP
     const file = join(dir, `${shot.name}.jpg`)
     await fs.writeFile(file, image.toJPEG(92))
     process.stdout.write(`${shot.name}.jpg\n`)
+  }
+}
+
+export async function captureAll(
+  win: BrowserWindow,
+  outDir: string,
+  plan: ShotPlan[],
+  themes: ThemeId[] = []
+): Promise<void> {
+  const dir = join(app.getAppPath(), outDir)
+
+  // The first paint is not the first useful paint: the library snapshot, the
+  // theme and the initial AniList rows all land after it.
+  await sleep(4000)
+
+  if (!themes.length) {
+    await walk(win, dir, plan)
+    app.exit(0)
+    return
+  }
+
+  /*
+   * Un seul lancement pour tous les thèmes : relancer l'app quinze fois referait
+   * quinze fois les requêtes AniList, et la limite est tombée à trente par
+   * minute. On change le réglage puis on recharge la page — le processus
+   * principal garde ses caches, seul l'habillage repart de zéro.
+   *
+   * Rangement : `<dossier>/<famille>/<rang>-<thème>/`, pour comparer les
+   * familles côte à côte dans l'explorateur.
+   */
+  for (const id of themes) {
+    const theme = THEMES.find((t) => t.id === id) ?? THEMES[0]
+    setPrefs({ theme: id })
+    win.setBackgroundColor(theme.titlebar.color)
+    const reloaded = new Promise<void>((resolve) => win.webContents.once('did-finish-load', () => resolve()))
+    win.webContents.reload()
+    await reloaded
+    await sleep(3500)
+
+    const rank = THEMES.filter((t) => t.family === theme.family).indexOf(theme) + 1
+    process.stdout.write(`\n${theme.family} · ${theme.name}\n`)
+    await walk(win, join(dir, theme.family, `${String(rank).padStart(2, '0')}-${theme.id}`), plan)
   }
 
   app.exit(0)

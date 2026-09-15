@@ -1,0 +1,256 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "$description": "Forêt — neutres vert-de-gris, primaire émeraude, rayons généreux. Sombre.",
+  "primitive": {
+    "color": {
+      "neutral": {
+        "100": {
+          "$value": "#E3F1E9",
+          "$type": "color"
+        },
+        "300": {
+          "$value": "#A9C7B7",
+          "$type": "color"
+        },
+        "400": {
+          "$value": "#86A898",
+          "$type": "color"
+        },
+        "700": {
+          "$value": "#1B3A2B",
+          "$type": "color"
+        },
+        "800": {
+          "$value": "#12291E",
+          "$type": "color"
+        },
+        "900": {
+          "$value": "#0B1C14",
+          "$type": "color"
+        },
+        "950": {
+          "$value": "#06120C",
+          "$type": "color"
+        }
+      },
+      "brand": {
+        "300": {
+          "$value": "#6EE7B7",
+          "$type": "color"
+        },
+        "400": {
+          "$value": "#34D399",
+          "$type": "color"
+        },
+        "500": {
+          "$value": "#10B981",
+          "$type": "color"
+        }
+      },
+      "alpha": {
+        "border": {
+          "$value": "rgb(169 199 183 / 0.14)",
+          "$type": "color"
+        },
+        "border-strong": {
+          "$value": "rgb(169 199 183 / 0.3)",
+          "$type": "color"
+        },
+        "scrim": {
+          "$value": "rgb(6 18 12 / 0.88)",
+          "$type": "color"
+        }
+      },
+      "white": {
+        "$value": "#FFFFFF",
+        "$type": "color"
+      }
+    },
+    "radius": {
+      "control": {
+        "$value": "12px",
+        "$type": "dimension"
+      },
+      "surface": {
+        "$value": "18px",
+        "$type": "dimension"
+      },
+      "chip": {
+        "$value": "999px",
+        "$type": "dimension"
+      }
+    },
+    "shadow": {
+      "surface": {
+        "$value": "0 12px 32px -24px rgb(0 0 0 / 0.9)",
+        "$type": "shadow"
+      },
+      "poster": {
+        "$value": "0 14px 30px -18px rgb(0 0 0 / 0.85)",
+        "$type": "shadow"
+      }
+    },
+    "font": {
+      "body": {
+        "$value": "'Work Sans Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      },
+      "display": {
+        "$value": "'Work Sans Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      }
+    },
+    "number": {
+      "ambient": {
+        "$value": "0.3",
+        "$type": "number"
+      },
+      "heading-weight": {
+        "$value": "650",
+        "$type": "number"
+      }
+    }
+  },
+  "semantic": {
+    "ds": {
+      "scheme": {
+        "$value": "dark"
+      },
+      "ambient": {
+        "$value": "{primitive.number.ambient}"
+      },
+      "scrim": {
+        "$value": "{primitive.color.alpha.scrim}"
+      },
+      "color": {
+        "background": {
+          "$value": "{primitive.color.neutral.950}"
+        },
+        "surface": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "surface-raised": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "border-strong": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        },
+        "foreground": {
+          "$value": "{primitive.color.neutral.100}"
+        },
+        "foreground-muted": {
+          "$value": "{primitive.color.neutral.300}"
+        },
+        "foreground-subtle": {
+          "$value": "{primitive.color.neutral.400}"
+        },
+        "primary": {
+          "$value": "{primitive.color.brand.400}"
+        },
+        "primary-hover": {
+          "$value": "{primitive.color.brand.300}"
+        },
+        "primary-foreground": {
+          "$value": "#06120C"
+        },
+        "ring": {
+          "$value": "{primitive.color.brand.300}"
+        }
+      },
+      "font": {
+        "body": {
+          "$value": "{primitive.font.body}"
+        },
+        "display": {
+          "$value": "{primitive.font.display}"
+        }
+      },
+      "heading": {
+        "weight": {
+          "$value": "{primitive.number.heading-weight}"
+        },
+        "tracking": {
+          "$value": "-0.03em"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "$value": "{primitive.shadow.surface}"
+        },
+        "poster": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  },
+  "component": {
+    "ds": {
+      "chrome": {
+        "bg": {
+          "$value": "{primitive.color.neutral.900}"
+        }
+      },
+      "card": {
+        "bg": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "bg-hover": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.surface}"
+        },
+        "shadow": {
+          "$value": "{primitive.shadow.surface}"
+        }
+      },
+      "button": {
+        "bg": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "fg": {
+          "$value": "{primitive.color.neutral.100}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.control}"
+        },
+        "primary-bg": {
+          "$value": "{primitive.color.brand.400}"
+        },
+        "primary-hover-bg": {
+          "$value": "{primitive.color.brand.300}"
+        },
+        "primary-fg": {
+          "$value": "#06120C"
+        }
+      },
+      "input": {
+        "bg": {
+          "$value": "{primitive.color.neutral.950}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        }
+      },
+      "chip": {
+        "radius": {
+          "$value": "{primitive.radius.chip}"
+        }
+      },
+      "poster": {
+        "shadow": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  }
+}

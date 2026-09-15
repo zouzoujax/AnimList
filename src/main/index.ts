@@ -170,7 +170,7 @@ void app.whenReady().then(() => {
   // the update check would only add noise and network traffic to it.
   const shots = screenshotRun()
   if (shots) {
-    void captureAll(mainWindow, shots.outDir, shots.plan).catch((err) => {
+    void captureAll(mainWindow, shots.outDir, shots.plan, shots.themes).catch((err) => {
       console.error('[screenshots]', err)
       app.exit(1)
     })

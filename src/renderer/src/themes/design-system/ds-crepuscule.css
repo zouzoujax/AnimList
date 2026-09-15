@@ -1,0 +1,75 @@
+/* Design Tokens - Auto-generated */
+/* Ne pas modifier : généré depuis tokens/ds-crepuscule.json par generate-tokens.cjs (skill design-system) */
+
+/* === PRIMITIVES === */
+:root[data-theme='ds-crepuscule'] {
+  --primitive-color-neutral-100: #f3eaf9;
+  --primitive-color-neutral-300: #cdb8dd;
+  --primitive-color-neutral-400: #a98fbe;
+  --primitive-color-neutral-700: #3b2750;
+  --primitive-color-neutral-800: #2a1a38;
+  --primitive-color-neutral-900: #1e1229;
+  --primitive-color-neutral-950: #140b1c;
+  --primitive-color-brand-300: #fcd34d;
+  --primitive-color-brand-400: #fbbf24;
+  --primitive-color-brand-500: #f59e0b;
+  --primitive-color-alpha-border: rgb(205 184 221 / 0.14);
+  --primitive-color-alpha-border-strong: rgb(205 184 221 / 0.3);
+  --primitive-color-alpha-scrim: rgb(20 11 28 / 0.86);
+  --primitive-color-white: #ffffff;
+  --primitive-radius-control: 999px;
+  --primitive-radius-surface: 20px;
+  --primitive-radius-chip: 999px;
+  --primitive-shadow-surface: 0 16px 40px -28px rgb(245 158 11 / 0.35);
+  --primitive-shadow-poster: 0 16px 34px -20px rgb(0 0 0 / 0.9);
+  --primitive-font-body: 'Montserrat Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-font-display: 'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-number-ambient: 0.4;
+  --primitive-number-heading-weight: 700;
+}
+
+/* === SEMANTIC === */
+:root[data-theme='ds-crepuscule'] {
+  --ds-scheme: dark;
+  --ds-ambient: 0.4;
+  --ds-scrim: rgb(20 11 28 / 0.86);
+  --ds-color-background: #140b1c;
+  --ds-color-surface: #1e1229;
+  --ds-color-surface-raised: #2a1a38;
+  --ds-color-border: rgb(205 184 221 / 0.14);
+  --ds-color-border-strong: rgb(205 184 221 / 0.3);
+  --ds-color-foreground: #f3eaf9;
+  --ds-color-foreground-muted: #cdb8dd;
+  --ds-color-foreground-subtle: #a98fbe;
+  --ds-color-primary: #fbbf24;
+  --ds-color-primary-hover: #fcd34d;
+  --ds-color-primary-foreground: #140b1c;
+  --ds-color-ring: #fcd34d;
+  --ds-font-body: 'Montserrat Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-font-display: 'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-heading-weight: 700;
+  --ds-heading-tracking: -0.035em;
+  --ds-elevation-surface: 0 16px 40px -28px rgb(245 158 11 / 0.35);
+  --ds-elevation-poster: 0 16px 34px -20px rgb(0 0 0 / 0.9);
+}
+
+/* === COMPONENTS === */
+:root[data-theme='ds-crepuscule'] {
+  --ds-chrome-bg: #1e1229;
+  --ds-card-bg: #1e1229;
+  --ds-card-bg-hover: #2a1a38;
+  --ds-card-border: rgb(205 184 221 / 0.14);
+  --ds-card-radius: 20px;
+  --ds-card-shadow: 0 16px 40px -28px rgb(245 158 11 / 0.35);
+  --ds-button-bg: #2a1a38;
+  --ds-button-fg: #f3eaf9;
+  --ds-button-border: rgb(205 184 221 / 0.14);
+  --ds-button-radius: 999px;
+  --ds-button-primary-bg: #fbbf24;
+  --ds-button-primary-hover-bg: #fcd34d;
+  --ds-button-primary-fg: #140b1c;
+  --ds-input-bg: #140b1c;
+  --ds-input-border: rgb(205 184 221 / 0.3);
+  --ds-chip-radius: 999px;
+  --ds-poster-shadow: 0 16px 34px -20px rgb(0 0 0 / 0.9);
+}

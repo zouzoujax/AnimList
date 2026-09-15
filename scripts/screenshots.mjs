@@ -21,14 +21,18 @@ import { join } from 'node:path'
 const ENDPOINT = 'https://graphql.anilist.co'
 /*
  *   npm run screenshots -- [dossier] [--theme=laque] [--only=accueil,fiche]
+ *   npm run screenshots -- screens --themes=ui-ux-pro-max,design-system --only=accueil
  *
  * Le thème et le sous-ensemble servent à juger un thème à l'écran : ces
  * captures-là vont dans un dossier ignoré par git, pas dans docs/.
+ * `--themes=` prend des familles ou des thèmes, tous photographiés dans le même
+ * lancement et rangés par famille puis par thème.
  */
 const ARGS = process.argv.slice(2)
 const flag = (name) => ARGS.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
 const OUT_DIR = ARGS.find((a) => !a.startsWith('--')) ?? 'docs/screenshots'
 const THEME = flag('theme') ?? 'nebula'
+const THEMES = flag('themes')
 const ONLY = flag('only')
 
 /**
@@ -406,6 +410,7 @@ async function main() {
       `--screenshots=${OUT_DIR}`,
       `--shot-anime=${media[0].id}`,
       ...(ONLY ? [`--shot-only=${ONLY}`] : []),
+      ...(THEMES ? [`--shot-themes=${THEMES}`] : []),
       '--disable-gpu-vsync'
     ],
     { stdio: 'inherit' }

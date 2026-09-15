@@ -1,0 +1,252 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "$description": "Carbon — gris industriels, primaire bleu 60, angles droits, densité élevée. Sombre.",
+  "primitive": {
+    "color": {
+      "neutral": {
+        "10": {
+          "$value": "#F4F4F4",
+          "$type": "color"
+        },
+        "30": {
+          "$value": "#C6C6C6",
+          "$type": "color"
+        },
+        "50": {
+          "$value": "#8D8D8D",
+          "$type": "color"
+        },
+        "80": {
+          "$value": "#393939",
+          "$type": "color"
+        },
+        "90": {
+          "$value": "#262626",
+          "$type": "color"
+        },
+        "100": {
+          "$value": "#161616",
+          "$type": "color"
+        }
+      },
+      "brand": {
+        "40": {
+          "$value": "#78A9FF",
+          "$type": "color"
+        },
+        "50": {
+          "$value": "#4589FF",
+          "$type": "color"
+        },
+        "60": {
+          "$value": "#0F62FE",
+          "$type": "color"
+        }
+      },
+      "alpha": {
+        "border": {
+          "$value": "rgb(141 141 141 / 0.28)",
+          "$type": "color"
+        },
+        "border-strong": {
+          "$value": "rgb(141 141 141 / 0.5)",
+          "$type": "color"
+        },
+        "scrim": {
+          "$value": "rgb(22 22 22 / 0.95)",
+          "$type": "color"
+        }
+      },
+      "white": {
+        "$value": "#FFFFFF",
+        "$type": "color"
+      }
+    },
+    "radius": {
+      "control": {
+        "$value": "0px",
+        "$type": "dimension"
+      },
+      "surface": {
+        "$value": "0px",
+        "$type": "dimension"
+      },
+      "chip": {
+        "$value": "0px",
+        "$type": "dimension"
+      }
+    },
+    "shadow": {
+      "surface": {
+        "$value": "none",
+        "$type": "shadow"
+      },
+      "poster": {
+        "$value": "none",
+        "$type": "shadow"
+      }
+    },
+    "font": {
+      "body": {
+        "$value": "'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      },
+      "display": {
+        "$value": "'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      }
+    },
+    "number": {
+      "ambient": {
+        "$value": "0",
+        "$type": "number"
+      },
+      "heading-weight": {
+        "$value": "500",
+        "$type": "number"
+      }
+    }
+  },
+  "semantic": {
+    "ds": {
+      "scheme": {
+        "$value": "dark"
+      },
+      "ambient": {
+        "$value": "{primitive.number.ambient}"
+      },
+      "scrim": {
+        "$value": "{primitive.color.alpha.scrim}"
+      },
+      "color": {
+        "background": {
+          "$value": "{primitive.color.neutral.100}"
+        },
+        "surface": {
+          "$value": "{primitive.color.neutral.90}"
+        },
+        "surface-raised": {
+          "$value": "{primitive.color.neutral.80}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "border-strong": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        },
+        "foreground": {
+          "$value": "{primitive.color.neutral.10}"
+        },
+        "foreground-muted": {
+          "$value": "{primitive.color.neutral.30}"
+        },
+        "foreground-subtle": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "primary": {
+          "$value": "{primitive.color.brand.60}"
+        },
+        "primary-hover": {
+          "$value": "{primitive.color.brand.50}"
+        },
+        "primary-foreground": {
+          "$value": "#FFFFFF"
+        },
+        "ring": {
+          "$value": "{primitive.color.brand.40}"
+        }
+      },
+      "font": {
+        "body": {
+          "$value": "{primitive.font.body}"
+        },
+        "display": {
+          "$value": "{primitive.font.display}"
+        }
+      },
+      "heading": {
+        "weight": {
+          "$value": "{primitive.number.heading-weight}"
+        },
+        "tracking": {
+          "$value": "-0.01em"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "$value": "{primitive.shadow.surface}"
+        },
+        "poster": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  },
+  "component": {
+    "ds": {
+      "chrome": {
+        "bg": {
+          "$value": "{primitive.color.neutral.100}"
+        }
+      },
+      "card": {
+        "bg": {
+          "$value": "{primitive.color.neutral.90}"
+        },
+        "bg-hover": {
+          "$value": "{primitive.color.neutral.80}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.surface}"
+        },
+        "shadow": {
+          "$value": "{primitive.shadow.surface}"
+        }
+      },
+      "button": {
+        "bg": {
+          "$value": "{primitive.color.neutral.80}"
+        },
+        "fg": {
+          "$value": "{primitive.color.neutral.10}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.control}"
+        },
+        "primary-bg": {
+          "$value": "{primitive.color.brand.60}"
+        },
+        "primary-hover-bg": {
+          "$value": "{primitive.color.brand.50}"
+        },
+        "primary-fg": {
+          "$value": "#FFFFFF"
+        }
+      },
+      "input": {
+        "bg": {
+          "$value": "{primitive.color.neutral.90}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        }
+      },
+      "chip": {
+        "radius": {
+          "$value": "{primitive.radius.chip}"
+        }
+      },
+      "poster": {
+        "shadow": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  }
+}

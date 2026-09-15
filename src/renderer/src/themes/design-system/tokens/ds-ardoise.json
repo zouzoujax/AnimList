@@ -1,0 +1,256 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "$description": "Ardoise — neutres ardoise froids, primaire bleu, rayons moyens. Sombre.",
+  "primitive": {
+    "color": {
+      "neutral": {
+        "50": {
+          "$value": "#F8FAFC",
+          "$type": "color"
+        },
+        "300": {
+          "$value": "#CBD5E1",
+          "$type": "color"
+        },
+        "400": {
+          "$value": "#94A3B8",
+          "$type": "color"
+        },
+        "700": {
+          "$value": "#334155",
+          "$type": "color"
+        },
+        "800": {
+          "$value": "#1E293B",
+          "$type": "color"
+        },
+        "900": {
+          "$value": "#0F172A",
+          "$type": "color"
+        },
+        "950": {
+          "$value": "#020617",
+          "$type": "color"
+        }
+      },
+      "brand": {
+        "300": {
+          "$value": "#93C5FD",
+          "$type": "color"
+        },
+        "400": {
+          "$value": "#60A5FA",
+          "$type": "color"
+        },
+        "500": {
+          "$value": "#3B82F6",
+          "$type": "color"
+        }
+      },
+      "alpha": {
+        "border": {
+          "$value": "rgb(148 163 184 / 0.16)",
+          "$type": "color"
+        },
+        "border-strong": {
+          "$value": "rgb(148 163 184 / 0.32)",
+          "$type": "color"
+        },
+        "scrim": {
+          "$value": "rgb(2 6 23 / 0.9)",
+          "$type": "color"
+        }
+      },
+      "white": {
+        "$value": "#FFFFFF",
+        "$type": "color"
+      }
+    },
+    "radius": {
+      "control": {
+        "$value": "8px",
+        "$type": "dimension"
+      },
+      "surface": {
+        "$value": "12px",
+        "$type": "dimension"
+      },
+      "chip": {
+        "$value": "8px",
+        "$type": "dimension"
+      }
+    },
+    "shadow": {
+      "surface": {
+        "$value": "0 1px 2px rgb(0 0 0 / 0.4)",
+        "$type": "shadow"
+      },
+      "poster": {
+        "$value": "0 8px 20px -12px rgb(0 0 0 / 0.8)",
+        "$type": "shadow"
+      }
+    },
+    "font": {
+      "body": {
+        "$value": "'DM Sans Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      },
+      "display": {
+        "$value": "'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      }
+    },
+    "number": {
+      "ambient": {
+        "$value": "0.25",
+        "$type": "number"
+      },
+      "heading-weight": {
+        "$value": "700",
+        "$type": "number"
+      }
+    }
+  },
+  "semantic": {
+    "ds": {
+      "scheme": {
+        "$value": "dark"
+      },
+      "ambient": {
+        "$value": "{primitive.number.ambient}"
+      },
+      "scrim": {
+        "$value": "{primitive.color.alpha.scrim}"
+      },
+      "color": {
+        "background": {
+          "$value": "{primitive.color.neutral.950}"
+        },
+        "surface": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "surface-raised": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "border-strong": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        },
+        "foreground": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "foreground-muted": {
+          "$value": "{primitive.color.neutral.300}"
+        },
+        "foreground-subtle": {
+          "$value": "{primitive.color.neutral.400}"
+        },
+        "primary": {
+          "$value": "{primitive.color.brand.500}"
+        },
+        "primary-hover": {
+          "$value": "{primitive.color.brand.400}"
+        },
+        "primary-foreground": {
+          "$value": "#FFFFFF"
+        },
+        "ring": {
+          "$value": "{primitive.color.brand.400}"
+        }
+      },
+      "font": {
+        "body": {
+          "$value": "{primitive.font.body}"
+        },
+        "display": {
+          "$value": "{primitive.font.display}"
+        }
+      },
+      "heading": {
+        "weight": {
+          "$value": "{primitive.number.heading-weight}"
+        },
+        "tracking": {
+          "$value": "-0.03em"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "$value": "{primitive.shadow.surface}"
+        },
+        "poster": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  },
+  "component": {
+    "ds": {
+      "chrome": {
+        "bg": {
+          "$value": "{primitive.color.neutral.900}"
+        }
+      },
+      "card": {
+        "bg": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "bg-hover": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.surface}"
+        },
+        "shadow": {
+          "$value": "{primitive.shadow.surface}"
+        }
+      },
+      "button": {
+        "bg": {
+          "$value": "{primitive.color.neutral.800}"
+        },
+        "fg": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.control}"
+        },
+        "primary-bg": {
+          "$value": "{primitive.color.brand.500}"
+        },
+        "primary-hover-bg": {
+          "$value": "{primitive.color.brand.400}"
+        },
+        "primary-fg": {
+          "$value": "#FFFFFF"
+        }
+      },
+      "input": {
+        "bg": {
+          "$value": "{primitive.color.neutral.950}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        }
+      },
+      "chip": {
+        "radius": {
+          "$value": "{primitive.radius.chip}"
+        }
+      },
+      "poster": {
+        "shadow": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  }
+}

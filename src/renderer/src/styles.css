@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import './themes/ui-ux-pro-max.css';
+@import './themes/design-system/index.css';
 
 @theme {
   --color-ink: #e9ecf8;
@@ -788,12 +790,19 @@ textarea {
   --search-bg: rgba(28, 26, 23, 0.05);
 }
 
+/* Le reflet du squelette est blanc : invisible sur un fond clair. */
+:root[data-tone='light'] .skeleton {
+  background: linear-gradient(100deg, rgba(0, 0, 0, 0.04) 20%, rgba(0, 0, 0, 0.08) 40%, rgba(0, 0, 0, 0.04) 60%);
+  background-size: 220% 100%;
+}
+
 /*
  * `.on-art` : la une et les cartes « À rattraper » posent leur texte sur une
- * jaquette assombrie, quel que soit le thème. Sur Papier, l'encre sombre y
- * disparaissait — on y remet donc les jetons d'un thème sombre.
+ * jaquette assombrie, quel que soit le thème. Sur un thème clair, l'encre sombre
+ * y disparaissait — on y remet donc les jetons d'un thème sombre. `data-tone`
+ * vient du `light` de la définition du thème.
  */
-:root[data-theme='paper'] .on-art {
+:root[data-tone='light'] .on-art {
   --color-ink: #eef0f6;
   --color-muted: #b9bfd2;
   --color-faint: #9097ad;

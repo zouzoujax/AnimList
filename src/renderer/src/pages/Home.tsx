@@ -146,6 +146,8 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
           </div>
         </div>
       </div>
+      {/* Magic UI « Border Beam » : éteint, sauf dans les thèmes qui l'allument. */}
+      <span aria-hidden className="fx-beam" />
     </motion.div>
   )
 }

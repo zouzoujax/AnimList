@@ -1,0 +1,75 @@
+/* Design Tokens - Auto-generated */
+/* Ne pas modifier : généré depuis tokens/ds-foret.json par generate-tokens.cjs (skill design-system) */
+
+/* === PRIMITIVES === */
+:root[data-theme='ds-foret'] {
+  --primitive-color-neutral-100: #e3f1e9;
+  --primitive-color-neutral-300: #a9c7b7;
+  --primitive-color-neutral-400: #86a898;
+  --primitive-color-neutral-700: #1b3a2b;
+  --primitive-color-neutral-800: #12291e;
+  --primitive-color-neutral-900: #0b1c14;
+  --primitive-color-neutral-950: #06120c;
+  --primitive-color-brand-300: #6ee7b7;
+  --primitive-color-brand-400: #34d399;
+  --primitive-color-brand-500: #10b981;
+  --primitive-color-alpha-border: rgb(169 199 183 / 0.14);
+  --primitive-color-alpha-border-strong: rgb(169 199 183 / 0.3);
+  --primitive-color-alpha-scrim: rgb(6 18 12 / 0.88);
+  --primitive-color-white: #ffffff;
+  --primitive-radius-control: 12px;
+  --primitive-radius-surface: 18px;
+  --primitive-radius-chip: 999px;
+  --primitive-shadow-surface: 0 12px 32px -24px rgb(0 0 0 / 0.9);
+  --primitive-shadow-poster: 0 14px 30px -18px rgb(0 0 0 / 0.85);
+  --primitive-font-body: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-font-display: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-number-ambient: 0.3;
+  --primitive-number-heading-weight: 650;
+}
+
+/* === SEMANTIC === */
+:root[data-theme='ds-foret'] {
+  --ds-scheme: dark;
+  --ds-ambient: 0.3;
+  --ds-scrim: rgb(6 18 12 / 0.88);
+  --ds-color-background: #06120c;
+  --ds-color-surface: #0b1c14;
+  --ds-color-surface-raised: #12291e;
+  --ds-color-border: rgb(169 199 183 / 0.14);
+  --ds-color-border-strong: rgb(169 199 183 / 0.3);
+  --ds-color-foreground: #e3f1e9;
+  --ds-color-foreground-muted: #a9c7b7;
+  --ds-color-foreground-subtle: #86a898;
+  --ds-color-primary: #34d399;
+  --ds-color-primary-hover: #6ee7b7;
+  --ds-color-primary-foreground: #06120c;
+  --ds-color-ring: #6ee7b7;
+  --ds-font-body: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-font-display: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-heading-weight: 650;
+  --ds-heading-tracking: -0.03em;
+  --ds-elevation-surface: 0 12px 32px -24px rgb(0 0 0 / 0.9);
+  --ds-elevation-poster: 0 14px 30px -18px rgb(0 0 0 / 0.85);
+}
+
+/* === COMPONENTS === */
+:root[data-theme='ds-foret'] {
+  --ds-chrome-bg: #0b1c14;
+  --ds-card-bg: #0b1c14;
+  --ds-card-bg-hover: #12291e;
+  --ds-card-border: rgb(169 199 183 / 0.14);
+  --ds-card-radius: 18px;
+  --ds-card-shadow: 0 12px 32px -24px rgb(0 0 0 / 0.9);
+  --ds-button-bg: #12291e;
+  --ds-button-fg: #e3f1e9;
+  --ds-button-border: rgb(169 199 183 / 0.14);
+  --ds-button-radius: 12px;
+  --ds-button-primary-bg: #34d399;
+  --ds-button-primary-hover-bg: #6ee7b7;
+  --ds-button-primary-fg: #06120c;
+  --ds-input-bg: #06120c;
+  --ds-input-border: rgb(169 199 183 / 0.3);
+  --ds-chip-radius: 999px;
+  --ds-poster-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.85);
+}

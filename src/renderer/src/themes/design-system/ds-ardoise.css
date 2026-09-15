@@ -1,0 +1,75 @@
+/* Design Tokens - Auto-generated */
+/* Ne pas modifier : généré depuis tokens/ds-ardoise.json par generate-tokens.cjs (skill design-system) */
+
+/* === PRIMITIVES === */
+:root[data-theme='ds-ardoise'] {
+  --primitive-color-neutral-50: #f8fafc;
+  --primitive-color-neutral-300: #cbd5e1;
+  --primitive-color-neutral-400: #94a3b8;
+  --primitive-color-neutral-700: #334155;
+  --primitive-color-neutral-800: #1e293b;
+  --primitive-color-neutral-900: #0f172a;
+  --primitive-color-neutral-950: #020617;
+  --primitive-color-brand-300: #93c5fd;
+  --primitive-color-brand-400: #60a5fa;
+  --primitive-color-brand-500: #3b82f6;
+  --primitive-color-alpha-border: rgb(148 163 184 / 0.16);
+  --primitive-color-alpha-border-strong: rgb(148 163 184 / 0.32);
+  --primitive-color-alpha-scrim: rgb(2 6 23 / 0.9);
+  --primitive-color-white: #ffffff;
+  --primitive-radius-control: 8px;
+  --primitive-radius-surface: 12px;
+  --primitive-radius-chip: 8px;
+  --primitive-shadow-surface: 0 1px 2px rgb(0 0 0 / 0.4);
+  --primitive-shadow-poster: 0 8px 20px -12px rgb(0 0 0 / 0.8);
+  --primitive-font-body: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-font-display: 'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-number-ambient: 0.25;
+  --primitive-number-heading-weight: 700;
+}
+
+/* === SEMANTIC === */
+:root[data-theme='ds-ardoise'] {
+  --ds-scheme: dark;
+  --ds-ambient: 0.25;
+  --ds-scrim: rgb(2 6 23 / 0.9);
+  --ds-color-background: #020617;
+  --ds-color-surface: #0f172a;
+  --ds-color-surface-raised: #1e293b;
+  --ds-color-border: rgb(148 163 184 / 0.16);
+  --ds-color-border-strong: rgb(148 163 184 / 0.32);
+  --ds-color-foreground: #f8fafc;
+  --ds-color-foreground-muted: #cbd5e1;
+  --ds-color-foreground-subtle: #94a3b8;
+  --ds-color-primary: #3b82f6;
+  --ds-color-primary-hover: #60a5fa;
+  --ds-color-primary-foreground: #ffffff;
+  --ds-color-ring: #60a5fa;
+  --ds-font-body: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-font-display: 'Space Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-heading-weight: 700;
+  --ds-heading-tracking: -0.03em;
+  --ds-elevation-surface: 0 1px 2px rgb(0 0 0 / 0.4);
+  --ds-elevation-poster: 0 8px 20px -12px rgb(0 0 0 / 0.8);
+}
+
+/* === COMPONENTS === */
+:root[data-theme='ds-ardoise'] {
+  --ds-chrome-bg: #0f172a;
+  --ds-card-bg: #0f172a;
+  --ds-card-bg-hover: #1e293b;
+  --ds-card-border: rgb(148 163 184 / 0.16);
+  --ds-card-radius: 12px;
+  --ds-card-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --ds-button-bg: #1e293b;
+  --ds-button-fg: #f8fafc;
+  --ds-button-border: rgb(148 163 184 / 0.16);
+  --ds-button-radius: 8px;
+  --ds-button-primary-bg: #3b82f6;
+  --ds-button-primary-hover-bg: #60a5fa;
+  --ds-button-primary-fg: #ffffff;
+  --ds-input-bg: #020617;
+  --ds-input-border: rgb(148 163 184 / 0.32);
+  --ds-chip-radius: 8px;
+  --ds-poster-shadow: 0 8px 20px -12px rgb(0 0 0 / 0.8);
+}

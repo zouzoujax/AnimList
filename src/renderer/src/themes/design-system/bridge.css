@@ -1,0 +1,106 @@
+/*
+ * Pont entre les jetons Design System et l'app.
+ *
+ * Les fichiers ds-*.css ne définissent que des jetons en trois couches :
+ * `--primitive-*` (valeurs brutes), `--ds-color-*` (rôles) et `--ds-<composant>-*`.
+ * Ce pont est le seul endroit qui les lit : il remplit les jetons historiques de
+ * l'app, puis habille chaque composant avec ses propres jetons de composant. Aucun
+ * de ces thèmes n'écrit une couleur ici — tout passe par la couche du dessous.
+ */
+:root[data-theme^='ds-'] {
+  --bg: var(--ds-color-background);
+  --chrome: var(--ds-chrome-bg);
+  --scrim: var(--ds-scrim);
+  --panel: var(--ds-card-bg);
+  --panel-2: var(--ds-card-bg-hover);
+  --line: var(--ds-color-border);
+  --line-2: var(--ds-color-border-strong);
+  --inset-hi: transparent;
+  --color-ink: var(--ds-color-foreground);
+  --color-muted: var(--ds-color-foreground-muted);
+  --color-faint: var(--ds-color-foreground-subtle);
+  --font-sans: var(--ds-font-body);
+  --font-display: var(--ds-font-display);
+  --radius-ctl: var(--ds-button-radius);
+  --blur: 0px;
+  --num-hi: var(--ds-color-foreground);
+  --on-accent: var(--ds-color-foreground);
+  --on-accent-ink: var(--ds-button-primary-fg);
+  --aurora: var(--ds-ambient);
+  --noise: 0;
+  --search-bg: var(--ds-input-bg);
+  --thumb: var(--ds-color-border-strong);
+  --thumb-hover: var(--ds-color-foreground-subtle);
+  color-scheme: var(--ds-scheme);
+}
+
+:root[data-theme^='ds-'] [class*='rounded-['] {
+  border-radius: var(--ds-card-radius) !important;
+}
+:root[data-theme^='ds-'] .glass {
+  background: var(--ds-card-bg);
+  border-color: var(--ds-card-border);
+  box-shadow: var(--ds-card-shadow);
+}
+:root[data-theme^='ds-'] .glass-blur {
+  background: var(--ds-chrome-bg);
+  backdrop-filter: none;
+}
+:root[data-theme^='ds-'] .btn {
+  background: var(--ds-button-bg);
+  border-color: var(--ds-button-border);
+  color: var(--ds-button-fg);
+}
+:root[data-theme^='ds-'] .btn:hover {
+  background: var(--ds-card-bg-hover);
+}
+/* Couleur explicite : `button { color: inherit }`, hors couche, l'emporterait. */
+:root[data-theme^='ds-'] .btn-primary {
+  background: var(--ds-button-primary-bg);
+  border-color: transparent;
+  color: var(--ds-button-primary-fg);
+  box-shadow: none;
+}
+:root[data-theme^='ds-'] .btn-primary:hover {
+  background: var(--ds-button-primary-hover-bg);
+  box-shadow: none;
+}
+:root[data-theme^='ds-'] .btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ds-color-foreground-muted);
+}
+:root[data-theme^='ds-'] .chip {
+  border-radius: var(--ds-chip-radius);
+}
+:root[data-theme^='ds-'] .field {
+  background: var(--ds-input-bg);
+  border-color: var(--ds-input-border);
+}
+:root[data-theme^='ds-'] .field:focus {
+  border-color: var(--ds-color-ring);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--ds-color-ring) 25%, transparent);
+}
+:root[data-theme^='ds-'] .ring-accent {
+  box-shadow: 0 0 0 2px var(--ds-color-ring);
+}
+:root[data-theme^='ds-'] .title-xl {
+  font-weight: var(--ds-heading-weight);
+  letter-spacing: var(--ds-heading-tracking);
+}
+:root[data-theme^='ds-'] .stat-num {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: var(--ds-color-foreground);
+}
+/* Un système se veut prévisible : pas de bascule 3D, pas de dérive de la une. */
+:root[data-theme^='ds-'] .tilt-inner {
+  transform: none !important;
+  box-shadow: var(--ds-poster-shadow) !important;
+}
+:root[data-theme^='ds-'] .sp-plane {
+  transform: none;
+}
+:root[data-theme^='ds-'] .sp-drift {
+  animation: none;
+}

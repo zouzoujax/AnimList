@@ -302,6 +302,7 @@ export function ContinueCard({
           </ProgressRing>
         </div>
       </div>
+      <span aria-hidden className="fx-beam" />
     </motion.button>
   )
 }

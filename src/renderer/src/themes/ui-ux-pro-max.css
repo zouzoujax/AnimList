@@ -1,0 +1,894 @@
+/*
+ * ═══════════════════════════════════════════════════════════════════════════
+ * THÈMES « UI UX PRO MAX » + MAGIC UI
+ *
+ * Chaque direction sort de `search.py "<requête>" --design-system` (skill
+ * ui-ux-pro-max) : le style, la palette et les polices viennent de sa réponse,
+ * citée en tête de bloc, avec les écarts assumés. L'effet signature vient du
+ * catalogue Magic UI, lu par son serveur MCP, puis réécrit en CSS ici ou dans
+ * components/ThemeFx.tsx pour les fonds animés.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+
+/* Les clairs : champ blanc et squelette sombre. Le texte posé sur une jaquette
+   assombrie est réglé pour tous les thèmes clairs dans styles.css (`.on-art`). */
+:root:is([data-theme='manga'], [data-theme='washi'], [data-theme='kawaii']) .field {
+  background: #ffffff;
+}
+
+/* `button { color: inherit }` n'est dans aucune couche et passe donc devant la
+   couleur de `.btn-primary` : sans ceci, le texte restait clair sur un accent
+   clair (turquoise, or, vert). */
+:root:is(
+    [data-theme='indigo'],
+    [data-theme='oled'],
+    [data-theme='manga'],
+    [data-theme='washi'],
+    [data-theme='arcade'],
+    [data-theme='cyber'],
+    [data-theme='kawaii'],
+    [data-theme='liquid'],
+    [data-theme='bento'],
+    [data-theme='boreal']
+  )
+  .btn-primary {
+  color: var(--on-accent-ink);
+}
+
+/* Calque du Border Beam, posé dans la une et les cartes « Reprendre ». */
+.fx-beam {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════ INDIGO
+   Requête « anime tracker entertainment dark cinematic »
+   → Minimalism & Swiss Style · #4338CA / #6366F1 / #7C3AED sur #0F172A · Inter
+   Écart : l'accent passe au #6366F1 (le #4338CA n'atteint pas 3:1 sur ce fond).
+   Magic UI : Border Beam, un trait de lumière qui fait le tour de la une. */
+:root[data-theme='indigo'] {
+  --bg: #0b1120;
+  --chrome: #0f172a;
+  --scrim: rgba(11, 17, 32, 0.9);
+  --panel: #111a2e;
+  --panel-2: #17223a;
+  --line: rgba(148, 163, 184, 0.13);
+  --line-2: rgba(148, 163, 184, 0.28);
+  --inset-hi: transparent;
+  --color-ink: #e2e8f0;
+  --color-muted: #a3b0c2;
+  --color-faint: #7d8ba1;
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 8px;
+  --blur: 0px;
+  --aurora: 0.35;
+  --noise: 0;
+  --lume-3: color-mix(in oklab, #7c3aed 60%, var(--lume-src));
+  --thumb: rgba(148, 163, 184, 0.2);
+}
+:root[data-theme='indigo'] [class*='rounded-['] {
+  border-radius: 12px !important;
+}
+:root[data-theme='indigo'] .glass {
+  box-shadow: 0 24px 48px -36px rgba(0, 0, 0, 0.9);
+}
+:root[data-theme='indigo'] .btn-primary {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+:root[data-theme='indigo'] .title-xl {
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+:root[data-theme='indigo'] .label {
+  font-weight: 600;
+  letter-spacing: 0.16em;
+}
+:root[data-theme='indigo'] .fx-beam {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1.5px;
+  border-radius: inherit;
+  pointer-events: none;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+:root[data-theme='indigo'] .fx-beam::after {
+  content: '';
+  position: absolute;
+  width: 180px;
+  aspect-ratio: 1;
+  background: linear-gradient(to left, #c7d2fe, #7c3aed, transparent);
+  offset-path: rect(0 auto auto 0 round 180px);
+  animation: fx-beam 9s linear infinite;
+}
+@keyframes fx-beam {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+/* ══════════════════════════════════════════════════ OLED
+   Requête « anime streaming glassmorphism vibrant »
+   → Dark Mode (OLED) · #1E1B4B / #4338CA, action #22C55E sur #0F0F23 · Inter
+   Écart : fond noir pur, comme le style le demande (« Deep black #000000 »).
+   Magic UI : Meteors, une pluie d'étoiles filantes sur le noir. */
+:root[data-theme='oled'] {
+  --bg: #000000;
+  --chrome: #000000;
+  --scrim: rgba(0, 0, 0, 0.55);
+  --panel: rgba(255, 255, 255, 0.035);
+  --panel-2: #0f0e24;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(129, 140, 248, 0.35);
+  --inset-hi: rgba(255, 255, 255, 0.04);
+  --color-ink: #f5f5f7;
+  --color-muted: #a1a1aa;
+  --color-faint: #8b8b94;
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 12px;
+  --blur: 18px;
+  --on-accent-ink: #0f172a;
+  --aurora: 0.25;
+  --noise: 0;
+  --lume-2: color-mix(in oklab, #4338ca 60%, var(--lume-src));
+  --thumb: rgba(255, 255, 255, 0.12);
+}
+:root[data-theme='oled'] [class*='rounded-['] {
+  border-radius: 16px !important;
+}
+:root[data-theme='oled'] .glass {
+  background: rgba(10, 10, 16, 0.72);
+}
+:root[data-theme='oled'] .btn-primary {
+  background: var(--accent);
+  box-shadow: 0 0 26px -8px var(--accent);
+}
+:root[data-theme='oled'] .title-xl {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.12);
+}
+:root[data-theme='oled'] .tilt-inner {
+  outline: 1px solid rgba(255, 255, 255, 0.07);
+}
+.fx-meteor {
+  position: absolute;
+  top: -5%;
+  width: 2px;
+  height: 2px;
+  border-radius: 99px;
+  background: #e4e4e7;
+  box-shadow: 0 0 8px 1px color-mix(in oklab, var(--accent) 70%, transparent);
+  animation: fx-meteor linear infinite;
+}
+.fx-meteor::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 1px;
+  width: 90px;
+  height: 1px;
+  translate: 0 -50%;
+  background: linear-gradient(90deg, transparent, #e4e4e7);
+}
+@keyframes fx-meteor {
+  0% {
+    transform: rotate(145deg) translateX(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(145deg) translateX(1100px);
+    opacity: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════ MANGA
+   Requête « manga comic playful bold »
+   → #F97316 orange, #2563EB bleu sur #FFF7ED · Baloo 2 / Comic Neue
+   Écart : DM Sans remplace Comic Neue pour le texte courant, illisible en petit.
+   Magic UI : Dot Pattern en trame de points, comme les aplats d'un manga. */
+:root[data-theme='manga'] {
+  --bg: #fff7ed;
+  --chrome: #fff7ed;
+  --scrim: rgba(255, 247, 237, 0.9);
+  --panel: #ffffff;
+  --panel-2: #fffbf5;
+  --line: rgba(15, 23, 42, 0.2);
+  --line-2: #0f172a;
+  --inset-hi: transparent;
+  --color-ink: #0f172a;
+  --color-muted: #3f3f46;
+  --color-faint: #5b5560;
+  --font-sans: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Baloo 2 Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 8px;
+  --blur: 0px;
+  --num-hi: #0f172a;
+  --on-accent: #0f172a;
+  --on-accent-ink: #0f172a;
+  --aurora: 0.2;
+  --noise: 0;
+  --lume-2: color-mix(in oklab, #2563eb 60%, var(--lume-src));
+  --thumb: rgba(15, 23, 42, 0.3);
+  --thumb-hover: rgba(15, 23, 42, 0.5);
+  --search-bg: #ffffff;
+  color-scheme: light;
+}
+:root[data-theme='manga'] [class*='rounded-['] {
+  border-radius: 10px !important;
+}
+:root[data-theme='manga'] .glass {
+  border: 2px solid #0f172a;
+  box-shadow: 4px 4px 0 #0f172a;
+}
+:root[data-theme='manga'] .btn {
+  border: 2px solid #0f172a;
+  box-shadow: 2px 2px 0 #0f172a;
+  font-weight: 700;
+}
+:root[data-theme='manga'] .btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 #0f172a;
+}
+:root[data-theme='manga'] .btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+:root[data-theme='manga'] .btn-primary {
+  background: var(--accent);
+}
+:root[data-theme='manga'] .btn-ghost {
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-theme='manga'] .chip {
+  border: 1.5px solid #0f172a;
+  color: #0f172a;
+}
+:root[data-theme='manga'] .chip[data-on='true'] {
+  background: #2563eb;
+  color: #ffffff;
+}
+:root[data-theme='manga'] .title-xl {
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+:root[data-theme='manga'] .label {
+  color: #2563eb;
+  font-weight: 800;
+}
+:root[data-theme='manga'] .stat-num {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: #0f172a;
+}
+:root[data-theme='manga'] .tilt-inner {
+  transform: none !important;
+  outline: 2px solid #0f172a;
+  box-shadow: 5px 5px 0 #0f172a !important;
+}
+:root[data-theme='manga'] .spotlight {
+  outline: 2px solid #0f172a;
+  box-shadow: 6px 6px 0 #0f172a !important;
+}
+:root[data-theme='manga'] .fx-grid {
+  display: block;
+  top: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle, rgba(15, 23, 42, 0.16) 1.2px, transparent 1.7px);
+  background-size: 14px 14px;
+  mask-image: linear-gradient(135deg, #000 0%, transparent 65%);
+}
+
+/* ══════════════════════════════════════════════════ WASHI
+   Requête « japanese minimal zen elegant »
+   → Minimalism & Swiss Style · encre #171717, or #A16207 sur #FFFFFF
+     · Noto Serif JP / Noto Sans JP
+   Écart : fond blanc cassé de papier washi, et Yu Gothic pour le texte courant
+   (la version latine de Noto Sans JP n'apporte rien de plus sous Windows).
+   Magic UI : Ripple, des cercles concentriques comme un jardin sec ratissé. */
+:root[data-theme='washi'] {
+  --bg: #faf9f6;
+  --chrome: #ffffff;
+  --scrim: rgba(250, 249, 246, 0.9);
+  --panel: rgba(255, 255, 255, 0.86);
+  --panel-2: #ffffff;
+  --line: rgba(23, 23, 23, 0.1);
+  --line-2: rgba(23, 23, 23, 0.24);
+  --inset-hi: transparent;
+  --color-ink: #171717;
+  --color-muted: #404040;
+  --color-faint: #686868;
+  --font-sans: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Noto Serif JP', 'Yu Mincho', Georgia, serif;
+  --radius-ctl: 3px;
+  --blur: 0px;
+  --num-hi: #171717;
+  --on-accent: #171717;
+  --on-accent-ink: #ffffff;
+  --aurora: 0;
+  --noise: 0.05;
+  --thumb: rgba(23, 23, 23, 0.16);
+  --thumb-hover: rgba(23, 23, 23, 0.32);
+  --search-bg: rgba(23, 23, 23, 0.04);
+  color-scheme: light;
+}
+:root[data-theme='washi'] [class*='rounded-['] {
+  border-radius: 4px !important;
+}
+:root[data-theme='washi'] .glass {
+  box-shadow: none;
+}
+:root[data-theme='washi'] .btn-primary {
+  background: #171717;
+  color: #ffffff;
+  box-shadow: none;
+}
+:root[data-theme='washi'] .btn-primary:hover {
+  background: #404040;
+}
+:root[data-theme='washi'] .title-xl {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+:root[data-theme='washi'] .label {
+  color: var(--accent);
+  letter-spacing: 0.3em;
+}
+:root[data-theme='washi'] .stat-num {
+  font-weight: 500;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: #171717;
+}
+:root[data-theme='washi'] .hairline {
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+:root[data-theme='washi'] .tilt-inner {
+  transform: none !important;
+  box-shadow: 0 14px 30px -22px rgba(23, 23, 23, 0.55) !important;
+}
+:root[data-theme='washi'] .sp-drift {
+  animation: none;
+}
+.fx-ripple {
+  position: absolute;
+  left: 82%;
+  top: 16%;
+  translate: -50% -50%;
+  border-radius: 50%;
+  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  background: color-mix(in oklab, var(--color-ink) 2%, transparent);
+  animation: fx-ripple 3.4s ease infinite;
+}
+@keyframes fx-ripple {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.9);
+  }
+}
+
+/* ══════════════════════════════════════════════════ ARCADE
+   Requête « retro arcade pixel gaming »
+   → Pixel Art · rouge #DC2626, bleu #2563EB, action #22C55E sur #0F172A
+     · Press Start 2P / VT323
+   Magic UI : Flickering Grid, une trame de pixels qui clignote (ThemeFx). */
+:root[data-theme='arcade'] {
+  --bg: #0f172a;
+  --chrome: #0b1222;
+  --scrim: rgba(15, 23, 42, 0.86);
+  --panel: #16213a;
+  --panel-2: #1e293b;
+  --line: rgba(226, 232, 240, 0.16);
+  --line-2: rgba(226, 232, 240, 0.4);
+  --inset-hi: transparent;
+  --color-ink: #e2e8f0;
+  --color-muted: #a3b0c2;
+  --color-faint: #8391a7;
+  --font-sans: 'VT323', 'Cascadia Mono', Consolas, monospace;
+  --font-display: 'Press Start 2P', 'Cascadia Mono', Consolas, monospace;
+  --radius-ctl: 0px;
+  --blur: 0px;
+  --on-accent-ink: #0f172a;
+  --aurora: 0.2;
+  --noise: 0;
+  --lume-2: color-mix(in oklab, #2563eb 60%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #dc2626 60%, var(--lume-src));
+  --thumb: #334155;
+  --pixel-edge: -4px 0 0 0 #020617, 4px 0 0 0 #020617, 0 -4px 0 0 #020617, 0 4px 0 0 #020617;
+}
+/* VT323 est minuscule à taille égale, Press Start 2P énorme : on règle la
+   hauteur d'x plutôt que chaque taille de texte de l'app. */
+:root[data-theme='arcade'] body {
+  font-size-adjust: 0.52;
+}
+:root[data-theme='arcade'] [class*='rounded-['] {
+  border-radius: 0 !important;
+}
+:root[data-theme='arcade'] .glass {
+  box-shadow: var(--pixel-edge);
+}
+:root[data-theme='arcade'] .btn {
+  box-shadow: var(--pixel-edge);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+:root[data-theme='arcade'] .btn:active {
+  transform: translateY(3px);
+}
+:root[data-theme='arcade'] .btn-primary {
+  background: var(--accent);
+}
+:root[data-theme='arcade'] .chip {
+  border-radius: 0;
+}
+/* Press Start 2P pour les seuls titres : réduite pour tenir dans les libellés
+   et les boutons, elle devenait une bouillie de pixels. */
+:root[data-theme='arcade'] .title-xl {
+  font-size-adjust: none;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-shadow: 2px 2px 0 #dc2626;
+}
+:root[data-theme='arcade'] .label {
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+:root[data-theme='arcade'] .stat-num {
+  font-family: var(--font-sans);
+  font-weight: 400;
+  letter-spacing: 0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: #f8fafc;
+  text-shadow: 3px 3px 0 #2563eb;
+}
+:root[data-theme='arcade'] .tilt-inner {
+  transform: none !important;
+  box-shadow: var(--pixel-edge) !important;
+}
+:root[data-theme='arcade'] .tilt-img img {
+  image-rendering: pixelated;
+}
+:root[data-theme='arcade'] .fx-scanlines {
+  display: block;
+  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.22) 0 1px, transparent 1px 3px);
+}
+
+/* ══════════════════════════════════════════════════ CYBERPUNK
+   Requête « cyberpunk neon futuristic »
+   → violet #7C3AED / #A78BFA, action #F43F5E sur #0F0F23 · Orbitron / JetBrains Mono
+   Ambiance du résultat : « hud, glitch, chamfered, tactical » — d'où les angles
+   coupés et le décalage de couleurs sur les titres.
+   Magic UI : Animated Grid Pattern, une grille de HUD dont les cases s'allument. */
+:root[data-theme='cyber'] {
+  --bg: #0f0f23;
+  --chrome: #0b0b1c;
+  --scrim: rgba(15, 15, 35, 0.8);
+  --panel: rgba(124, 58, 237, 0.07);
+  --panel-2: rgba(124, 58, 237, 0.15);
+  --line: rgba(167, 139, 250, 0.22);
+  --line-2: rgba(167, 139, 250, 0.5);
+  --inset-hi: transparent;
+  --color-ink: #ede9fe;
+  --color-muted: #b8acd9;
+  --color-faint: #9285bb;
+  --font-sans: 'JetBrains Mono Variable', 'Cascadia Mono', Consolas, monospace;
+  --font-display: 'Orbitron Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 0px;
+  --blur: 10px;
+  --on-accent-ink: #000000;
+  --aurora: 0.6;
+  --noise: 0.03;
+  --lume-2: color-mix(in oklab, #7c3aed 60%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #a78bfa 60%, var(--lume-src));
+  --fx-grid-line: rgba(167, 139, 250, 0.12);
+  --chamfer: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  --thumb: rgba(167, 139, 250, 0.35);
+}
+:root[data-theme='cyber'] [class*='rounded-['] {
+  border-radius: 0 !important;
+}
+:root[data-theme='cyber'] .glass {
+  clip-path: var(--chamfer);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.14), rgba(15, 15, 35, 0.6) 45%);
+}
+:root[data-theme='cyber'] .btn {
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+:root[data-theme='cyber'] .btn-primary {
+  background: var(--accent);
+  box-shadow: none;
+}
+:root[data-theme='cyber'] .chip {
+  border-radius: 0;
+}
+:root[data-theme='cyber'] .title-xl {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow:
+    2px 0 rgba(244, 63, 94, 0.55),
+    -2px 0 rgba(34, 211, 238, 0.45);
+}
+:root[data-theme='cyber'] .label {
+  color: var(--accent);
+}
+:root[data-theme='cyber'] .tilt-inner,
+:root[data-theme='cyber'] .spotlight {
+  clip-path: var(--chamfer);
+}
+.fx-grid-cell {
+  fill: color-mix(in oklab, var(--accent) 55%, #7c3aed);
+  opacity: 0;
+  animation: fx-grid-cell 8s ease-in-out infinite;
+}
+@keyframes fx-grid-cell {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.35;
+  }
+  30% {
+    opacity: 0;
+  }
+}
+
+/* ══════════════════════════════════════════════════ KAWAII
+   Requête « kawaii pastel soft cute »
+   → rose #EC4899 / #F472B6, bleu #0284C7 sur #FDF2F8 · Outfit / Work Sans
+   Magic UI : Particles, des bulles pastel qui remontent (ThemeFx). */
+:root[data-theme='kawaii'] {
+  --bg: #fdf2f8;
+  --chrome: #fff7fb;
+  --scrim: rgba(253, 242, 248, 0.82);
+  --panel: rgba(255, 255, 255, 0.8);
+  --panel-2: #ffffff;
+  --line: rgba(236, 72, 153, 0.16);
+  --line-2: rgba(236, 72, 153, 0.34);
+  --inset-hi: rgba(255, 255, 255, 0.9);
+  --color-ink: #4a1d35;
+  --color-muted: #7a4a63;
+  --color-faint: #875670;
+  --font-sans: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 999px;
+  --blur: 16px;
+  --num-hi: #4a1d35;
+  --on-accent: #4a1d35;
+  --on-accent-ink: #1f0a14;
+  --aurora: 0.7;
+  --noise: 0;
+  --lume-2: color-mix(in oklab, #0284c7 55%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #c4b5fd 60%, var(--lume-src));
+  --search-bg: #ffffff;
+  --thumb: rgba(236, 72, 153, 0.25);
+  --thumb-hover: rgba(236, 72, 153, 0.45);
+  color-scheme: light;
+}
+:root[data-theme='kawaii'] [class*='rounded-['] {
+  border-radius: 24px !important;
+}
+:root[data-theme='kawaii'] .glass {
+  box-shadow:
+    inset 0 1px 0 var(--inset-hi),
+    0 14px 32px -20px rgba(236, 72, 153, 0.5);
+}
+:root[data-theme='kawaii'] .btn-primary {
+  background: linear-gradient(135deg, #f9a8d4, var(--accent));
+  box-shadow: 0 10px 24px -12px rgba(236, 72, 153, 0.7);
+}
+:root[data-theme='kawaii'] .btn:hover {
+  transform: translateY(-1px);
+}
+:root[data-theme='kawaii'] .title-xl {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+:root[data-theme='kawaii'] .stat-num {
+  background: linear-gradient(135deg, #db2777, #0284c7);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+:root[data-theme='kawaii'] .tilt-inner {
+  box-shadow: 0 18px 32px -20px rgba(236, 72, 153, 0.65) !important;
+}
+
+/* ══════════════════════════════════════════════════ LIQUID GLASS
+   Requête « luxury premium dark gold »
+   → Liquid Glass · pierre #1C1917 / #44403C, or #A16207 · Cormorant / Montserrat
+   Écart : le résultat pose ce noir et cet or sur fond clair ; ici le fond est la
+   pierre, et l'or retrouve sa teinte d'origine #CA8A04 que le fond sombre supporte.
+   Magic UI : Shine Border, un reflet d'or qui tourne sur le contour des panneaux. */
+@property --fx-shine {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+:root[data-theme='liquid'] {
+  --bg: #0c0a09;
+  --chrome: #1c1917;
+  --scrim: rgba(12, 10, 9, 0.7);
+  --panel: rgba(28, 25, 23, 0.9);
+  --panel-2: rgba(41, 37, 36, 0.95);
+  --line: rgba(250, 250, 249, 0.1);
+  --line-2: rgba(250, 250, 249, 0.22);
+  --inset-hi: rgba(255, 255, 255, 0.1);
+  --color-ink: #fafaf9;
+  --color-muted: #d6d3d1;
+  --color-faint: #a8a29e;
+  --font-sans: 'Montserrat Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Cormorant Variable', Georgia, serif;
+  --radius-ctl: 999px;
+  --blur: 30px;
+  --on-accent-ink: #0c0a09;
+  --aurora: 0.55;
+  --noise: 0.02;
+  --lume-2: color-mix(in oklab, #44403c 60%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #ca8a04 60%, var(--lume-src));
+  --thumb: rgba(202, 138, 4, 0.3);
+}
+:root[data-theme='liquid'] [class*='rounded-['] {
+  border-radius: 22px !important;
+}
+:root[data-theme='liquid'] .glass {
+  border-color: transparent;
+  background:
+    linear-gradient(165deg, rgba(41, 37, 36, 0.96), rgba(20, 17, 15, 0.97)) padding-box,
+    conic-gradient(
+        from var(--fx-shine),
+        rgba(250, 250, 249, 0.1) 0 55%,
+        #fde68a 68%,
+        #ca8a04 76%,
+        rgba(250, 250, 249, 0.1) 90%
+      )
+      border-box;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 30px 60px -40px rgba(0, 0, 0, 0.9);
+  animation: fx-shine 12s linear infinite;
+}
+@keyframes fx-shine {
+  to {
+    --fx-shine: 360deg;
+  }
+}
+:root[data-theme='liquid'] .glass-blur {
+  background: color-mix(in oklab, var(--chrome) 55%, transparent);
+}
+:root[data-theme='liquid'] .btn {
+  backdrop-filter: blur(12px);
+}
+:root[data-theme='liquid'] .btn-primary {
+  background: linear-gradient(135deg, #fde68a, #ca8a04 55%, #a16207);
+}
+/* Cormorant a un œil minuscule : à taille égale, ses titres paraissaient d'un cran plus petits. */
+:root[data-theme='liquid'] .title-xl {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size-adjust: 0.5;
+}
+:root[data-theme='liquid'] .label {
+  color: var(--accent);
+  letter-spacing: 0.22em;
+}
+/* Les chiffres elzéviriens de Cormorant sautaient de ligne en ligne : Montserrat pour les nombres. */
+:root[data-theme='liquid'] .stat-num {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  background: linear-gradient(160deg, #fef3c7, #ca8a04 70%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* ══════════════════════════════════════════════════ BENTO
+   Requête « bento grid modern dashboard »
+   → Vibrant & Block-based · rose #EC4899, orange #EA580C · Inter / Playfair Display
+   Ambiance : « poster, near-black, type-as-hero ». Écart : Playfair ne sert
+   qu'aux grands chiffres, en italique ; en texte courant, il gênait la lecture.
+   Magic UI : Magic Card, une bordure qui s'allume sous le curseur. */
+:root[data-theme='bento'] {
+  --bg: #0a0a0a;
+  --chrome: #0a0a0a;
+  --scrim: rgba(10, 10, 10, 0.9);
+  --panel: #171717;
+  --panel-2: #212121;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.18);
+  --inset-hi: transparent;
+  --color-ink: #fafafa;
+  --color-muted: #a3a3a3;
+  --color-faint: #8c8c8c;
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 14px;
+  --blur: 0px;
+  --on-accent-ink: #000000;
+  --aurora: 0.15;
+  --noise: 0;
+  --lume-2: color-mix(in oklab, #ea580c 60%, var(--lume-src));
+  --thumb: #333333;
+}
+:root[data-theme='bento'] [class*='rounded-['] {
+  border-radius: 26px !important;
+}
+:root[data-theme='bento'] .glass {
+  border-color: transparent;
+  box-shadow: none;
+}
+:root[data-theme='bento'] .btn-primary {
+  background: var(--accent);
+  box-shadow: none;
+}
+:root[data-theme='bento'] .chip[data-on='true'] {
+  background: #ea580c;
+  border-color: transparent;
+  color: #000000;
+}
+:root[data-theme='bento'] .title-xl {
+  font-weight: 850;
+  letter-spacing: -0.055em;
+}
+:root[data-theme='bento'] .label {
+  color: #fb923c;
+  letter-spacing: 0.14em;
+}
+:root[data-theme='bento'] .stat-num {
+  font-family: 'Playfair Display Variable', Georgia, serif;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #ec4899, #ea580c);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+/* --rx/--ry sont déjà écrits sur la carte par le survol ; --px/--py sur la une. */
+:root[data-theme='bento'] .tilt-inner::after,
+:root[data-theme='bento'] .spotlight::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 2px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(
+    220px circle at calc((var(--mx, 0) + 0.5) * 100%) calc((var(--my, 0) + 0.5) * 100%),
+    #ec4899,
+    #ea580c 45%,
+    rgba(255, 255, 255, 0.08) 75%
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+:root[data-theme='bento'] .tilt-inner::after {
+  --mx: var(--rx);
+  --my: var(--ry);
+}
+:root[data-theme='bento'] .spotlight::after {
+  --mx: var(--px);
+  --my: var(--py);
+  padding: 2.5px;
+}
+:root[data-theme='bento'] .group:hover .tilt-inner::after,
+:root[data-theme='bento'] .spotlight:hover::after {
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════ AURORE
+   Requête « aurora gradient dreamy night »
+   → Aurora UI · rose #BE185D / #EC4899 / #DC2626 · Baloo 2 / Comic Neue
+   Écarts : fond de nuit (la requête dit « night », le résultat donnait un fond
+   clair), turquoise en accent pour que les rideaux ne soient pas tous roses, et
+   DM Sans pour le texte courant.
+   Magic UI : Light Rays pour les rideaux, Aurora Text sur les titres. */
+:root[data-theme='boreal'] {
+  --bg: #050816;
+  --chrome: #0a0f24;
+  --scrim: rgba(5, 8, 22, 0.55);
+  --panel: rgba(148, 163, 255, 0.05);
+  --panel-2: rgba(148, 163, 255, 0.1);
+  --line: rgba(165, 180, 252, 0.12);
+  --line-2: rgba(165, 180, 252, 0.28);
+  --inset-hi: rgba(255, 255, 255, 0.07);
+  --color-ink: #eef2ff;
+  --color-muted: #aab6d3;
+  --color-faint: #8492b0;
+  --font-sans: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Baloo 2 Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 14px;
+  --blur: 26px;
+  --on-accent-ink: #042f2e;
+  --aurora: 1.6;
+  --noise: 0.02;
+  --lume-2: color-mix(in oklab, #ec4899 55%, var(--lume-src));
+  --lume-3: color-mix(in oklab, #be185d 60%, var(--lume-src));
+  --ray-color: rgba(94, 234, 212, 0.55);
+  --ray-color-2: rgba(236, 72, 153, 0.45);
+}
+:root[data-theme='boreal'] [class*='rounded-['] {
+  border-radius: 22px !important;
+}
+:root[data-theme='boreal'] .glass {
+  box-shadow:
+    inset 0 1px 0 var(--inset-hi),
+    0 22px 60px -42px rgba(45, 212, 191, 0.45);
+}
+:root[data-theme='boreal'] .btn-primary {
+  background: linear-gradient(135deg, #99f6e4, var(--accent));
+}
+:root[data-theme='boreal'] .title-xl {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  background: linear-gradient(100deg, #5eead4, #a5b4fc 30%, #f472b6 60%, #5eead4);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: fx-aurora-text 9s ease-in-out infinite alternate;
+}
+@keyframes fx-aurora-text {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+:root[data-theme='boreal'] .stat-num {
+  background: linear-gradient(150deg, #ccfbf1, #5eead4 45%, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.fx-ray {
+  position: absolute;
+  top: -12%;
+  height: 78vh;
+  translate: -50% 0;
+  transform-origin: top;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, var(--ray-color, rgba(160, 210, 255, 0.4)), transparent);
+  mix-blend-mode: screen;
+  filter: blur(36px);
+  opacity: 0;
+  animation: fx-ray ease-in-out infinite;
+}
+.fx-ray-alt {
+  background: linear-gradient(to bottom, var(--ray-color-2, rgba(160, 210, 255, 0.4)), transparent);
+}
+@keyframes fx-ray {
+  0%,
+  100% {
+    opacity: 0;
+    rotate: calc(var(--ray-rotate) - var(--ray-swing));
+  }
+  50% {
+    opacity: var(--ray-intensity);
+    rotate: calc(var(--ray-rotate) + var(--ray-swing));
+  }
+}

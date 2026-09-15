@@ -18,6 +18,10 @@ DATA EXPORT/
 .claude/
 .impeccable/
 
+# Captures de comparaison des thèmes (`npm run screenshots -- screens --themes=…`) :
+# à regarder en local, pas à verser dans l'historique d'un dépôt public.
+screens/
+
 # Scripts de lancement locaux. Celui qui publie les releases contient un jeton
 # GitHub en clair : renommé .bat → .ps1, il était ressorti de l'oubli. Les deux
 # extensions sont couvertes, le dépôt est public.

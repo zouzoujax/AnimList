@@ -1,0 +1,14 @@
+/*
+ * Thèmes « Design System » : trois couches de jetons (primitives → rôles →
+ * composants), selon l'architecture du skill design-system.
+ *
+ * La source de chaque thème est son JSON dans tokens/. Le .css voisin en est
+ * généré par le script generate-tokens.cjs du skill, puis limité à son thème
+ * (`:root[data-theme='ds-…']`). bridge.css branche ensuite ces jetons sur l'app.
+ */
+@import './ds-ardoise.css';
+@import './ds-lin.css';
+@import './ds-carbon.css';
+@import './ds-foret.css';
+@import './ds-crepuscule.css';
+@import './bridge.css';

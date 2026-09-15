@@ -1,0 +1,76 @@
+/* Design Tokens - Auto-generated */
+/* Ne pas modifier : généré depuis tokens/ds-lin.json par generate-tokens.cjs (skill design-system) */
+
+/* === PRIMITIVES === */
+:root[data-theme='ds-lin'] {
+  --primitive-color-neutral-50: #fafaf9;
+  --primitive-color-neutral-100: #f7f5f0;
+  --primitive-color-neutral-200: #e7e5e4;
+  --primitive-color-neutral-500: #78716c;
+  --primitive-color-neutral-600: #57534e;
+  --primitive-color-neutral-700: #44403c;
+  --primitive-color-neutral-900: #1c1917;
+  --primitive-color-neutral-white: #ffffff;
+  --primitive-color-brand-500: #14b8a6;
+  --primitive-color-brand-600: #0d9488;
+  --primitive-color-brand-700: #0f766e;
+  --primitive-color-alpha-border: rgb(28 25 23 / 0.1);
+  --primitive-color-alpha-border-strong: rgb(28 25 23 / 0.22);
+  --primitive-color-alpha-scrim: rgb(247 245 240 / 0.92);
+  --primitive-color-white: #ffffff;
+  --primitive-radius-control: 10px;
+  --primitive-radius-surface: 16px;
+  --primitive-radius-chip: 999px;
+  --primitive-shadow-surface: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -16px rgb(28 25 23 / 0.25);
+  --primitive-shadow-poster: 0 12px 28px -18px rgb(28 25 23 / 0.5);
+  --primitive-font-body: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-font-display: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --primitive-number-ambient: 0.15;
+  --primitive-number-heading-weight: 650;
+}
+
+/* === SEMANTIC === */
+:root[data-theme='ds-lin'] {
+  --ds-scheme: light;
+  --ds-ambient: 0.15;
+  --ds-scrim: rgb(247 245 240 / 0.92);
+  --ds-color-background: #f7f5f0;
+  --ds-color-surface: #ffffff;
+  --ds-color-surface-raised: #fafaf9;
+  --ds-color-border: rgb(28 25 23 / 0.1);
+  --ds-color-border-strong: rgb(28 25 23 / 0.22);
+  --ds-color-foreground: #1c1917;
+  --ds-color-foreground-muted: #44403c;
+  --ds-color-foreground-subtle: #57534e;
+  --ds-color-primary: #0f766e;
+  --ds-color-primary-hover: #0d9488;
+  --ds-color-primary-foreground: #ffffff;
+  --ds-color-ring: #0d9488;
+  --ds-font-body: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-font-display: 'DM Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --ds-heading-weight: 650;
+  --ds-heading-tracking: -0.025em;
+  --ds-elevation-surface: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -16px rgb(28 25 23 / 0.25);
+  --ds-elevation-poster: 0 12px 28px -18px rgb(28 25 23 / 0.5);
+}
+
+/* === COMPONENTS === */
+:root[data-theme='ds-lin'] {
+  --ds-chrome-bg: #ffffff;
+  --ds-card-bg: #ffffff;
+  --ds-card-bg-hover: #fafaf9;
+  --ds-card-border: rgb(28 25 23 / 0.1);
+  --ds-card-radius: 16px;
+  --ds-card-shadow: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -16px rgb(28 25 23 / 0.25);
+  --ds-button-bg: #fafaf9;
+  --ds-button-fg: #1c1917;
+  --ds-button-border: rgb(28 25 23 / 0.1);
+  --ds-button-radius: 10px;
+  --ds-button-primary-bg: #0f766e;
+  --ds-button-primary-hover-bg: #0d9488;
+  --ds-button-primary-fg: #ffffff;
+  --ds-input-bg: #ffffff;
+  --ds-input-border: rgb(28 25 23 / 0.22);
+  --ds-chip-radius: 999px;
+  --ds-poster-shadow: 0 12px 28px -18px rgb(28 25 23 / 0.5);
+}

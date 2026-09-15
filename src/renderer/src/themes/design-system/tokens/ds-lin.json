@@ -1,0 +1,260 @@
+{
+  "$schema": "https://design-tokens.org/schema.json",
+  "$description": "Lin — neutres pierre chauds, primaire sarcelle, grands rayons, ombres douces. Clair.",
+  "primitive": {
+    "color": {
+      "neutral": {
+        "50": {
+          "$value": "#FAFAF9",
+          "$type": "color"
+        },
+        "100": {
+          "$value": "#F7F5F0",
+          "$type": "color"
+        },
+        "200": {
+          "$value": "#E7E5E4",
+          "$type": "color"
+        },
+        "500": {
+          "$value": "#78716C",
+          "$type": "color"
+        },
+        "600": {
+          "$value": "#57534E",
+          "$type": "color"
+        },
+        "700": {
+          "$value": "#44403C",
+          "$type": "color"
+        },
+        "900": {
+          "$value": "#1C1917",
+          "$type": "color"
+        },
+        "white": {
+          "$value": "#FFFFFF",
+          "$type": "color"
+        }
+      },
+      "brand": {
+        "500": {
+          "$value": "#14B8A6",
+          "$type": "color"
+        },
+        "600": {
+          "$value": "#0D9488",
+          "$type": "color"
+        },
+        "700": {
+          "$value": "#0F766E",
+          "$type": "color"
+        }
+      },
+      "alpha": {
+        "border": {
+          "$value": "rgb(28 25 23 / 0.1)",
+          "$type": "color"
+        },
+        "border-strong": {
+          "$value": "rgb(28 25 23 / 0.22)",
+          "$type": "color"
+        },
+        "scrim": {
+          "$value": "rgb(247 245 240 / 0.92)",
+          "$type": "color"
+        }
+      },
+      "white": {
+        "$value": "#FFFFFF",
+        "$type": "color"
+      }
+    },
+    "radius": {
+      "control": {
+        "$value": "10px",
+        "$type": "dimension"
+      },
+      "surface": {
+        "$value": "16px",
+        "$type": "dimension"
+      },
+      "chip": {
+        "$value": "999px",
+        "$type": "dimension"
+      }
+    },
+    "shadow": {
+      "surface": {
+        "$value": "0 1px 2px rgb(28 25 23 / 0.06), 0 8px 24px -16px rgb(28 25 23 / 0.25)",
+        "$type": "shadow"
+      },
+      "poster": {
+        "$value": "0 12px 28px -18px rgb(28 25 23 / 0.5)",
+        "$type": "shadow"
+      }
+    },
+    "font": {
+      "body": {
+        "$value": "'DM Sans Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      },
+      "display": {
+        "$value": "'DM Sans Variable', 'Segoe UI', system-ui, sans-serif",
+        "$type": "fontFamily"
+      }
+    },
+    "number": {
+      "ambient": {
+        "$value": "0.15",
+        "$type": "number"
+      },
+      "heading-weight": {
+        "$value": "650",
+        "$type": "number"
+      }
+    }
+  },
+  "semantic": {
+    "ds": {
+      "scheme": {
+        "$value": "light"
+      },
+      "ambient": {
+        "$value": "{primitive.number.ambient}"
+      },
+      "scrim": {
+        "$value": "{primitive.color.alpha.scrim}"
+      },
+      "color": {
+        "background": {
+          "$value": "{primitive.color.neutral.100}"
+        },
+        "surface": {
+          "$value": "{primitive.color.neutral.white}"
+        },
+        "surface-raised": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "border-strong": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        },
+        "foreground": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "foreground-muted": {
+          "$value": "{primitive.color.neutral.700}"
+        },
+        "foreground-subtle": {
+          "$value": "{primitive.color.neutral.600}"
+        },
+        "primary": {
+          "$value": "{primitive.color.brand.700}"
+        },
+        "primary-hover": {
+          "$value": "{primitive.color.brand.600}"
+        },
+        "primary-foreground": {
+          "$value": "#FFFFFF"
+        },
+        "ring": {
+          "$value": "{primitive.color.brand.600}"
+        }
+      },
+      "font": {
+        "body": {
+          "$value": "{primitive.font.body}"
+        },
+        "display": {
+          "$value": "{primitive.font.display}"
+        }
+      },
+      "heading": {
+        "weight": {
+          "$value": "{primitive.number.heading-weight}"
+        },
+        "tracking": {
+          "$value": "-0.025em"
+        }
+      },
+      "elevation": {
+        "surface": {
+          "$value": "{primitive.shadow.surface}"
+        },
+        "poster": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  },
+  "component": {
+    "ds": {
+      "chrome": {
+        "bg": {
+          "$value": "{primitive.color.neutral.white}"
+        }
+      },
+      "card": {
+        "bg": {
+          "$value": "{primitive.color.neutral.white}"
+        },
+        "bg-hover": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.surface}"
+        },
+        "shadow": {
+          "$value": "{primitive.shadow.surface}"
+        }
+      },
+      "button": {
+        "bg": {
+          "$value": "{primitive.color.neutral.50}"
+        },
+        "fg": {
+          "$value": "{primitive.color.neutral.900}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border}"
+        },
+        "radius": {
+          "$value": "{primitive.radius.control}"
+        },
+        "primary-bg": {
+          "$value": "{primitive.color.brand.700}"
+        },
+        "primary-hover-bg": {
+          "$value": "{primitive.color.brand.600}"
+        },
+        "primary-fg": {
+          "$value": "#FFFFFF"
+        }
+      },
+      "input": {
+        "bg": {
+          "$value": "{primitive.color.neutral.white}"
+        },
+        "border": {
+          "$value": "{primitive.color.alpha.border-strong}"
+        }
+      },
+      "chip": {
+        "radius": {
+          "$value": "{primitive.radius.chip}"
+        }
+      },
+      "poster": {
+        "shadow": {
+          "$value": "{primitive.shadow.poster}"
+        }
+      }
+    }
+  }
+}
