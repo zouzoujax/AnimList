@@ -15,7 +15,6 @@ export type ThemeId =
   | 'indigo'
   | 'oled'
   | 'manga'
-  | 'washi'
   | 'arcade'
   | 'cyber'
   | 'kawaii'
@@ -23,33 +22,12 @@ export type ThemeId =
   | 'bento'
   | 'boreal'
   | 'ds-ardoise'
-  | 'ds-lin'
   | 'ds-carbon'
-  | 'ds-foret'
-  | 'ds-crepuscule'
-
-/** D'où vient un thème : les réglages et les captures les rangent par famille. */
-export type ThemeFamily = 'origine' | 'ui-ux-pro-max' | 'design-system'
-
-export const THEME_FAMILIES: { id: ThemeFamily; name: string; hint: string }[] = [
-  { id: 'origine', name: 'Thèmes d’origine', hint: 'Les quatre thèmes de départ' },
-  {
-    id: 'ui-ux-pro-max',
-    name: 'UI UX Pro Max + Magic UI',
-    hint: 'Directions générées par le skill, chacune avec un effet Magic UI'
-  },
-  {
-    id: 'design-system',
-    name: 'Design System',
-    hint: 'Jetons en trois couches — primitives, rôles, composants — sans effet'
-  }
-]
 
 export interface ThemeDef {
   id: ThemeId
   name: string
   hint: string
-  family: ThemeFamily
   swatch: [string, string]
   /** Native Windows caption buttons have to match the active theme. */
   titlebar: { color: string; symbolColor: string }
@@ -64,7 +42,6 @@ export const THEMES: ThemeDef[] = [
     id: 'nebula',
     name: 'Nébuleuse',
     hint: 'Verre dépoli, aurore, néons doux',
-    family: 'origine',
     swatch: ['#0a0c18', '#7c5cff'],
     titlebar: { color: '#0B0E1A', symbolColor: '#C9D0EA' }
   },
@@ -72,7 +49,6 @@ export const THEMES: ThemeDef[] = [
     id: 'paper',
     name: 'Papier',
     hint: 'Clair, éditorial, sans effets',
-    family: 'origine',
     swatch: ['#f6f4ef', '#1c1a17'],
     titlebar: { color: '#FFFFFF', symbolColor: '#3A362F' },
     light: true
@@ -81,7 +57,6 @@ export const THEMES: ThemeDef[] = [
     id: 'terminal',
     name: 'Terminal',
     hint: 'Monospace, angles vifs, contraste',
-    family: 'origine',
     swatch: ['#05070a', '#2bff88'],
     titlebar: { color: '#080B10', symbolColor: '#92A49B' }
   },
@@ -89,7 +64,6 @@ export const THEMES: ThemeDef[] = [
     id: 'synth',
     name: 'Synthwave',
     hint: 'Saturé, arrondi, néon assumé',
-    family: 'origine',
     swatch: ['#1a0b2e', '#ff2e97'],
     titlebar: { color: '#210D3A', symbolColor: '#C9A4DC' }
   },
@@ -98,7 +72,6 @@ export const THEMES: ThemeDef[] = [
     id: 'indigo',
     name: 'Indigo',
     hint: 'Suisse et sombre, un trait de lumière en bordure',
-    family: 'ui-ux-pro-max',
     swatch: ['#0b1120', '#6366f1'],
     titlebar: { color: '#0F172A', symbolColor: '#A3B0C2' },
     accent: '#6366f1'
@@ -107,7 +80,6 @@ export const THEMES: ThemeDef[] = [
     id: 'oled',
     name: 'OLED',
     hint: 'Noir pur, étoiles filantes',
-    family: 'ui-ux-pro-max',
     swatch: ['#000000', '#22c55e'],
     titlebar: { color: '#000000', symbolColor: '#A1A1AA' },
     accent: '#22c55e'
@@ -116,27 +88,15 @@ export const THEMES: ThemeDef[] = [
     id: 'manga',
     name: 'Manga',
     hint: 'Cases encrées, trame de points',
-    family: 'ui-ux-pro-max',
     swatch: ['#fff7ed', '#f97316'],
     titlebar: { color: '#FFF7ED', symbolColor: '#0F172A' },
     light: true,
     accent: '#f97316'
   },
   {
-    id: 'washi',
-    name: 'Washi',
-    hint: 'Papier japonais, encre et or, cercles ratissés',
-    family: 'ui-ux-pro-max',
-    swatch: ['#faf9f6', '#a16207'],
-    titlebar: { color: '#FFFFFF', symbolColor: '#404040' },
-    light: true,
-    accent: '#a16207'
-  },
-  {
     id: 'arcade',
     name: 'Arcade',
     hint: 'Pixels, polices 8 bits, grille qui clignote',
-    family: 'ui-ux-pro-max',
     swatch: ['#0f172a', '#22c55e'],
     titlebar: { color: '#0B1222', symbolColor: '#A3B0C2' },
     accent: '#22c55e'
@@ -145,7 +105,6 @@ export const THEMES: ThemeDef[] = [
     id: 'cyber',
     name: 'Cyberpunk',
     hint: 'HUD, angles coupés, grille qui s’allume',
-    family: 'ui-ux-pro-max',
     swatch: ['#0f0f23', '#f43f5e'],
     titlebar: { color: '#0B0B1C', symbolColor: '#B8ACD9' },
     accent: '#f43f5e'
@@ -154,7 +113,6 @@ export const THEMES: ThemeDef[] = [
     id: 'kawaii',
     name: 'Kawaii',
     hint: 'Pastel, tout arrondi, bulles',
-    family: 'ui-ux-pro-max',
     swatch: ['#fdf2f8', '#ec4899'],
     titlebar: { color: '#FFF7FB', symbolColor: '#7A4A63' },
     light: true,
@@ -164,7 +122,6 @@ export const THEMES: ThemeDef[] = [
     id: 'liquid',
     name: 'Liquid Glass',
     hint: 'Verre sombre, reflet d’or qui tourne',
-    family: 'ui-ux-pro-max',
     swatch: ['#0c0a09', '#ca8a04'],
     titlebar: { color: '#1C1917', symbolColor: '#D6D3D1' },
     accent: '#ca8a04'
@@ -173,7 +130,6 @@ export const THEMES: ThemeDef[] = [
     id: 'bento',
     name: 'Bento',
     hint: 'Blocs noirs, chiffres d’affiche, bordure sous le curseur',
-    family: 'ui-ux-pro-max',
     swatch: ['#0a0a0a', '#ec4899'],
     titlebar: { color: '#0A0A0A', symbolColor: '#A3A3A3' },
     accent: '#ec4899'
@@ -182,7 +138,6 @@ export const THEMES: ThemeDef[] = [
     id: 'boreal',
     name: 'Aurore',
     hint: 'Nuit polaire, rideaux de lumière',
-    family: 'ui-ux-pro-max',
     swatch: ['#050816', '#2dd4bf'],
     titlebar: { color: '#0A0F24', symbolColor: '#AAB6D3' },
     accent: '#2dd4bf'
@@ -192,47 +147,17 @@ export const THEMES: ThemeDef[] = [
     id: 'ds-ardoise',
     name: 'Ardoise',
     hint: 'Neutres froids, bleu, rayons moyens',
-    family: 'design-system',
     swatch: ['#020617', '#3b82f6'],
     titlebar: { color: '#0F172A', symbolColor: '#CBD5E1' },
     accent: '#3b82f6'
   },
   {
-    id: 'ds-lin',
-    name: 'Lin',
-    hint: 'Clair, pierre chaude, sarcelle',
-    family: 'design-system',
-    swatch: ['#f7f5f0', '#0f766e'],
-    titlebar: { color: '#FFFFFF', symbolColor: '#44403C' },
-    light: true,
-    accent: '#0f766e'
-  },
-  {
     id: 'ds-carbon',
     name: 'Carbon',
     hint: 'Gris industriels, angles droits',
-    family: 'design-system',
     swatch: ['#161616', '#0f62fe'],
     titlebar: { color: '#161616', symbolColor: '#C6C6C6' },
     accent: '#0f62fe'
-  },
-  {
-    id: 'ds-foret',
-    name: 'Forêt',
-    hint: 'Vert-de-gris, émeraude',
-    family: 'design-system',
-    swatch: ['#06120c', '#34d399'],
-    titlebar: { color: '#0B1C14', symbolColor: '#A9C7B7' },
-    accent: '#34d399'
-  },
-  {
-    id: 'ds-crepuscule',
-    name: 'Crépuscule',
-    hint: 'Prune, ambre, pilules',
-    family: 'design-system',
-    swatch: ['#140b1c', '#fbbf24'],
-    titlebar: { color: '#1E1229', symbolColor: '#CDB8DD' },
-    accent: '#fbbf24'
   }
 ]
 

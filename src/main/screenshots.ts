@@ -77,13 +77,13 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     ?.split('=')[1]
     ?.split(',')
 
-  // `--shot-themes=ui-ux-pro-max,ds-lin` : des familles entières ou des thèmes
-  // précis, tous photographiés dans le même lancement.
+  // `--shot-themes=indigo,oled` ou `--shot-themes=all` : plusieurs thèmes,
+  // tous photographiés dans le même lancement.
   const wanted = process.argv
     .find((a) => a.startsWith('--shot-themes='))
     ?.split('=')[1]
     ?.split(',')
-  const themes = wanted ? THEMES.filter((t) => wanted.includes(t.id) || wanted.includes(t.family)).map((t) => t.id) : []
+  const themes = wanted ? THEMES.filter((t) => wanted.includes('all') || wanted.includes(t.id)).map((t) => t.id) : []
 
   return { outDir, plan: only ? plan.filter((shot) => only.includes(shot.name)) : plan, themes }
 }
@@ -195,8 +195,7 @@ export async function captureAll(
    * minute. On change le réglage puis on recharge la page — le processus
    * principal garde ses caches, seul l'habillage repart de zéro.
    *
-   * Rangement : `<dossier>/<famille>/<rang>-<thème>/`, pour comparer les
-   * familles côte à côte dans l'explorateur.
+   * Rangement : `<dossier>/<rang>-<thème>/`, dans l'ordre des Réglages.
    */
   for (const id of themes) {
     const theme = THEMES.find((t) => t.id === id) ?? THEMES[0]
@@ -207,9 +206,9 @@ export async function captureAll(
     await reloaded
     await sleep(3500)
 
-    const rank = THEMES.filter((t) => t.family === theme.family).indexOf(theme) + 1
-    process.stdout.write(`\n${theme.family} · ${theme.name}\n`)
-    await walk(win, join(dir, theme.family, `${String(rank).padStart(2, '0')}-${theme.id}`), plan)
+    const rank = THEMES.indexOf(theme) + 1
+    process.stdout.write(`\n${theme.name}\n`)
+    await walk(win, join(dir, `${String(rank).padStart(2, '0')}-${theme.id}`), plan)
   }
 
   app.exit(0)

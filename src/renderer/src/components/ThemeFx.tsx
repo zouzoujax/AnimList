@@ -188,30 +188,6 @@ function AnimatedGrid(): React.JSX.Element {
   )
 }
 
-/** Magic UI « Ripple » : des cercles concentriques, comme un sable ratissé. */
-function Ripple(): React.JSX.Element {
-  return (
-    <div
-      className="absolute inset-0 overflow-hidden"
-      style={{ maskImage: 'linear-gradient(to bottom, #000, transparent)' }}
-    >
-      {Array.from({ length: 8 }, (_, i) => (
-        <span
-          key={i}
-          className="fx-ripple"
-          style={{
-            width: 220 + i * 110,
-            height: 220 + i * 110,
-            opacity: 0.5 - i * 0.055,
-            animationDelay: `${i * 0.06}s`,
-            borderStyle: i === 7 ? 'dashed' : 'solid'
-          }}
-        />
-      ))}
-    </div>
-  )
-}
-
 const RAYS = (() => {
   const rand = seeded(5)
   return Array.from({ length: 8 }, (_, i) => {
@@ -265,8 +241,6 @@ export function ThemeFx(): React.JSX.Element | null {
       return <Canvas paint={bubbles} />
     case 'cyber':
       return <AnimatedGrid />
-    case 'washi':
-      return <Ripple />
     case 'boreal':
       return <LightRays />
     default:

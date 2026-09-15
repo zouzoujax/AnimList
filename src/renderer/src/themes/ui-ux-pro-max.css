@@ -12,7 +12,7 @@
 
 /* Les clairs : champ blanc et squelette sombre. Le texte posé sur une jaquette
    assombrie est réglé pour tous les thèmes clairs dans styles.css (`.on-art`). */
-:root:is([data-theme='manga'], [data-theme='washi'], [data-theme='kawaii']) .field {
+:root:is([data-theme='manga'], [data-theme='kawaii']) .field {
   background: #ffffff;
 }
 
@@ -23,7 +23,6 @@
     [data-theme='indigo'],
     [data-theme='oled'],
     [data-theme='manga'],
-    [data-theme='washi'],
     [data-theme='arcade'],
     [data-theme='cyber'],
     [data-theme='kawaii'],
@@ -288,97 +287,6 @@
   background-image: radial-gradient(circle, rgba(15, 23, 42, 0.16) 1.2px, transparent 1.7px);
   background-size: 14px 14px;
   mask-image: linear-gradient(135deg, #000 0%, transparent 65%);
-}
-
-/* ══════════════════════════════════════════════════ WASHI
-   Requête « japanese minimal zen elegant »
-   → Minimalism & Swiss Style · encre #171717, or #A16207 sur #FFFFFF
-     · Noto Serif JP / Noto Sans JP
-   Écart : fond blanc cassé de papier washi, et Yu Gothic pour le texte courant
-   (la version latine de Noto Sans JP n'apporte rien de plus sous Windows).
-   Magic UI : Ripple, des cercles concentriques comme un jardin sec ratissé. */
-:root[data-theme='washi'] {
-  --bg: #faf9f6;
-  --chrome: #ffffff;
-  --scrim: rgba(250, 249, 246, 0.9);
-  --panel: rgba(255, 255, 255, 0.86);
-  --panel-2: #ffffff;
-  --line: rgba(23, 23, 23, 0.1);
-  --line-2: rgba(23, 23, 23, 0.24);
-  --inset-hi: transparent;
-  --color-ink: #171717;
-  --color-muted: #404040;
-  --color-faint: #686868;
-  --font-sans: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'Noto Serif JP', 'Yu Mincho', Georgia, serif;
-  --radius-ctl: 3px;
-  --blur: 0px;
-  --num-hi: #171717;
-  --on-accent: #171717;
-  --on-accent-ink: #ffffff;
-  --aurora: 0;
-  --noise: 0.05;
-  --thumb: rgba(23, 23, 23, 0.16);
-  --thumb-hover: rgba(23, 23, 23, 0.32);
-  --search-bg: rgba(23, 23, 23, 0.04);
-  color-scheme: light;
-}
-:root[data-theme='washi'] [class*='rounded-['] {
-  border-radius: 4px !important;
-}
-:root[data-theme='washi'] .glass {
-  box-shadow: none;
-}
-:root[data-theme='washi'] .btn-primary {
-  background: #171717;
-  color: #ffffff;
-  box-shadow: none;
-}
-:root[data-theme='washi'] .btn-primary:hover {
-  background: #404040;
-}
-:root[data-theme='washi'] .title-xl {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-}
-:root[data-theme='washi'] .label {
-  color: var(--accent);
-  letter-spacing: 0.3em;
-}
-:root[data-theme='washi'] .stat-num {
-  font-weight: 500;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  color: #171717;
-}
-:root[data-theme='washi'] .hairline {
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-}
-:root[data-theme='washi'] .tilt-inner {
-  transform: none !important;
-  box-shadow: 0 14px 30px -22px rgba(23, 23, 23, 0.55) !important;
-}
-:root[data-theme='washi'] .sp-drift {
-  animation: none;
-}
-.fx-ripple {
-  position: absolute;
-  left: 82%;
-  top: 16%;
-  translate: -50% -50%;
-  border-radius: 50%;
-  border: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
-  background: color-mix(in oklab, var(--color-ink) 2%, transparent);
-  animation: fx-ripple 3.4s ease infinite;
-}
-@keyframes fx-ripple {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(0.9);
-  }
 }
 
 /* ══════════════════════════════════════════════════ ARCADE

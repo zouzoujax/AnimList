@@ -21,12 +21,12 @@ import { join } from 'node:path'
 const ENDPOINT = 'https://graphql.anilist.co'
 /*
  *   npm run screenshots -- [dossier] [--theme=laque] [--only=accueil,fiche]
- *   npm run screenshots -- screens --themes=ui-ux-pro-max,design-system --only=accueil
+ *   npm run screenshots -- screens --themes=all --only=accueil
  *
  * Le thème et le sous-ensemble servent à juger un thème à l'écran : ces
  * captures-là vont dans un dossier ignoré par git, pas dans docs/.
- * `--themes=` prend des familles ou des thèmes, tous photographiés dans le même
- * lancement et rangés par famille puis par thème.
+ * `--themes=` prend des thèmes ou `all`, tous photographiés dans le même
+ * lancement, un dossier par thème.
  */
 const ARGS = process.argv.slice(2)
 const flag = (name) => ARGS.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]

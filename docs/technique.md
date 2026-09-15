@@ -50,8 +50,8 @@ La rampe de la heatmap est une rampe ordinale validée (teinte unique, clarté m
 plus clair à ≥ 2:1 sur la surface du graphique), et les libellés portent des couleurs de texte,
 jamais celle de la série.
 
-Dix-neuf **thèmes**, rangés en trois familles, et quatre **dispositions** (Classique, Rail,
-Barre haute, Tableau de bord) se combinent librement depuis les Réglages. Un thème est une réécriture complète du jeu de
+Quinze **thèmes** et quatre **dispositions** (Classique, Rail, Barre haute, Tableau de bord)
+se combinent librement depuis les Réglages. Un thème est une réécriture complète du jeu de
 variables — couleurs, typographie, rayons, ombres, flou, effets de fond — pas seulement une
 teinte.
 
@@ -62,17 +62,16 @@ teinte.
 | **Terminal** | Monospace, angles vifs, scanlines, fort contraste |
 | **Synthwave** | Saturé, entièrement arrondi, néon assumé |
 
-**UI UX Pro Max + Magic UI** (`src/renderer/src/themes/ui-ux-pro-max.css`) : chaque direction
-sort du générateur `--design-system` du skill ui-ux-pro-max (style, palette, polices), avec un
-effet du catalogue Magic UI lu par son serveur MCP puis réécrit en CSS ou dans
-`components/ThemeFx.tsx`. Ces thèmes imposent leur accent.
+Neuf thèmes viennent du générateur `--design-system` du skill ui-ux-pro-max (style, palette,
+polices), chacun avec un effet du catalogue Magic UI lu par son serveur MCP puis réécrit en CSS
+(`src/renderer/src/themes/ui-ux-pro-max.css`) ou dans `components/ThemeFx.tsx`. Ils imposent
+leur accent.
 
 | Thème | Style du générateur | Effet Magic UI |
 |---|---|---|
 | **Indigo** | Minimalism & Swiss Style | Border Beam |
 | **OLED** | Dark Mode (OLED) | Meteors |
 | **Manga** | Clair, orange et bleu, Baloo 2 | Dot Pattern |
-| **Washi** | Minimalisme japonais, encre et or | Ripple |
 | **Arcade** | Pixel Art, Press Start 2P / VT323 | Flickering Grid |
 | **Cyberpunk** | HUD, Orbitron / JetBrains Mono | Animated Grid Pattern |
 | **Kawaii** | Pastel, Outfit / Work Sans | Particles |
@@ -80,10 +79,10 @@ effet du catalogue Magic UI lu par son serveur MCP puis réécrit en CSS ou dans
 | **Bento** | Vibrant & Block-based | Magic Card |
 | **Aurore** | Aurora UI | Light Rays, Aurora Text |
 
-**Design System** (`src/renderer/src/themes/design-system/`) : Ardoise, Lin, Carbon, Forêt et
-Crépuscule. Trois couches de jetons — primitives, rôles, composants — écrites en JSON dans
-`tokens/`, converties en CSS par le script `generate-tokens.cjs` du skill design-system, puis
-branchées sur l'app par `bridge.css`. Aucun effet de fond ni bascule 3D.
+**Ardoise** et **Carbon** (`src/renderer/src/themes/design-system/`) suivent le skill
+design-system : trois couches de jetons — primitives, rôles, composants — écrites en JSON dans
+`tokens/`, converties en CSS par son script `generate-tokens.cjs`, puis branchées sur l'app par
+`bridge.css`. Aucun effet de fond ni bascule 3D.
 
 Les polices de ces thèmes sont embarquées (`@fontsource`) : l'app fonctionne hors ligne.
 
