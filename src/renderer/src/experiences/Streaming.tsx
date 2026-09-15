@@ -9,6 +9,7 @@ import { useBehind, useContinue, useShelf } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { StreamingCalendar, StreamingDetailHero, StreamingDiscover, StreamingManga } from './streaming-pages'
 import { StreamingBadges } from './badges-pages'
+import { StreamingDetailBody } from './detail-bodies'
 import type { Experience } from '.'
 
 /*
@@ -467,6 +468,7 @@ export const streaming: Experience = {
   Manga: StreamingManga,
   DetailHero: StreamingDetailHero,
   Badges: StreamingBadges,
+  DetailBody: StreamingDetailBody,
   motion: {
     initial: { opacity: 0, scale: 1.015 },
     animate: { opacity: 1, scale: 1 },

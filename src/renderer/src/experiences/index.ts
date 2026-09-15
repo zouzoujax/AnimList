@@ -1,4 +1,5 @@
 import type { HTMLMotionProps } from 'motion/react'
+import type { ReactNode } from 'react'
 import { THEMES, type Entry, type ExperienceId, type LibraryStatus, type Media } from '@shared/types'
 import { useApp } from '@/store/app'
 import { carnet } from './Carnet'
@@ -28,8 +29,10 @@ export interface Experience {
   Calendar?: () => React.JSX.Element
   Manga?: () => React.JSX.Element
   motion: Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'exit' | 'transition'>
-  /** Remplace l'en-tête de la fiche ; le corps (synopsis, épisodes, casting…) reste commun. */
+  /** Remplace l'en-tête de la fiche ; `DetailBody` s'occupe du reste. */
   DetailHero?: (props: DetailHeroProps) => React.JSX.Element
+  /** Dispose les blocs du corps de la fiche ; sans lui, les deux colonnes classiques. */
+  DetailBody?: (props: { media: Media; parts: DetailParts }) => React.JSX.Element
 }
 
 /** Tout ce que l'en-tête d'une fiche affiche ou déclenche, calculé par la fiche elle-même. */
@@ -49,6 +52,27 @@ export interface DetailHeroProps {
   onFavorite: () => void
   onLists: () => void
 }
+
+/** Les blocs du corps d'une fiche, déjà rendus par la fiche ; `null` quand il n'y a rien à montrer. */
+export type DetailPartKey =
+  | 'synopsis'
+  | 'trailer'
+  | 'language'
+  | 'franchise'
+  | 'episodes'
+  | 'files'
+  | 'cast'
+  | 'relations'
+  | 'manga'
+  | 'films'
+  | 'recommendations'
+  | 'progress'
+  | 'rating'
+  | 'info'
+  | 'watch'
+  | 'error'
+
+export type DetailParts = Record<DetailPartKey, ReactNode>
 
 export const PAGE_MOTION: Experience['motion'] = {
   initial: { opacity: 0, y: 10 },

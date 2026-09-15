@@ -108,8 +108,11 @@ genres, cadran horaire, courbe sur douze mois) pour Cockpit, et « Mon bilan » 
 anneau des genres, podium et timbres des mois pour Carnet.
 
 Elles ont enfin leurs pages **Découvrir**, **Calendrier** et **Manga**, et leur propre en-tête de
-**fiche** : `DetailHero` remplace le haut de la fiche, dont le corps (synopsis, épisodes, casting,
-notes) reste commun. Les données de ces pages viennent de `experiences/pages-data.ts`, avec les
+**fiche** : `DetailHero` remplace le haut de la fiche, et `DetailBody` en dispose le corps : la fiche
+découpe synopsis, épisodes, casting, liens, note et notes en blocs nommés (`parts`), que chaque
+expérience range à sa façon — onglets pour Streaming, menu latéral pour Console, article avec
+encadré pour Magazine, grille de panneaux pour Cockpit, pages de carnet pour Carnet. La logique
+de chaque bloc n'existe qu'une fois. Les données de ces pages viennent de `experiences/pages-data.ts`, avec les
 mêmes requêtes que les pages classiques. Streaming : catalogue par rayons, programme en colonnes,
 Top 10 manga, fiche en bannière. Console : Store avec jeu en vedette, agenda en frise, mangas en
 tuiles, fiche « hub de jeu ». Magazine : critiques, programme télé à points de conduite, cahier

@@ -8,6 +8,7 @@ import { useBehind, useContinue, useShelf, useTotals } from './data'
 import { WEEKDAYS, useStats } from './stats'
 import { CarnetCalendar, CarnetDetailHero, CarnetDiscover, CarnetManga } from './carnet-pages'
 import { CarnetBadges } from './badges-pages'
+import { CarnetDetailBody } from './detail-bodies'
 import type { Experience } from '.'
 
 /*
@@ -384,6 +385,7 @@ export const carnet: Experience = {
   Manga: CarnetManga,
   DetailHero: CarnetDetailHero,
   Badges: CarnetBadges,
+  DetailBody: CarnetDetailBody,
   motion: {
     initial: { opacity: 0, y: 36, rotate: -1.2 },
     animate: { opacity: 1, y: 0, rotate: 0 },

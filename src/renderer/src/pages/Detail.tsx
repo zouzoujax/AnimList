@@ -47,7 +47,7 @@ import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonL
 import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons, useTranslated } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
-import { useExperience, type DetailHeroProps } from '@/experiences'
+import { useExperience, type DetailHeroProps, type DetailParts } from '@/experiences'
 
 const STATUS_ORDER: LibraryStatus[] = ['watching', 'planned', 'completed', 'paused', 'dropped']
 
@@ -787,6 +787,411 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const mangaRow = detail?.manga ?? []
   const alsoKnownAs = otherTitles(media, lang)
 
+  // Le corps de la fiche en blocs nommés : la mise en page classique les
+  // empile en deux colonnes, une expérience les dispose à sa façon.
+  const parts: DetailParts = {
+    synopsis: media.description ? (
+      <section className="mb-8">
+        <h2 className="label mb-2">Synopsis</h2>
+        <p className={`whitespace-pre-line text-[0.885rem] leading-relaxed text-muted ${expanded ? '' : 'clamp-3'}`}>
+          {synopsis ?? media.description}
+        </p>
+        {media.description.length > 240 && (
+          <button
+            className="mt-1.5 text-[0.78rem] font-semibold"
+            style={{ color: 'var(--accent-2)' }}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? 'Réduire' : 'Lire la suite'}
+          </button>
+        )}
+      </section>
+    ) : null,
+    trailer: media.trailer ? (
+      <section className="mb-8">
+        {/* Keyed by the video: moving to another anime must start from the
+                  poster again rather than carry the previous player over. */}
+        <Trailer
+          key={media.trailer.id}
+          id={media.trailer.id}
+          animeId={media.id}
+          cover={media.banner ?? media.cover.xl}
+          title={titleOf(media, lang)}
+        />
+      </section>
+    ) : null,
+    /* Deux langues chez Anime-Sama, deux pastilles — les mêmes que sur
+              leur page. Rien quand il n'y a rien à choisir : un bouton unique
+              n'est pas un choix, c'est du bruit. */
+    language:
+      langs.length > 1 ? (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="label mr-0.5">Langue</span>
+          {langs.map((code) => (
+            <button
+              key={code}
+              className="chip"
+              data-on={code === current}
+              aria-pressed={code === current}
+              title={code === 'vostfr' ? 'Version originale sous-titrée' : 'Version française'}
+              onClick={() => {
+                setSpoken(code)
+                void window.api.watch.setLanguage(id, code)
+              }}
+            >
+              {LANG_LABELS[code]}
+            </button>
+          ))}
+        </div>
+      ) : null,
+    /* ESSAI — arbre des franchises. Supprimer ce bloc, l'état `tree` et
+              l'import suffit à le retirer. */
+    franchise: (
+      <>
+        <button className="btn mb-4 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
+          <GitBranch size={13} />
+          Arbre de la franchise
+        </button>
+        <Modal open={tree} onClose={() => setTree(false)} width={680}>
+          {tree && (
+            <Franchise
+              animeId={id}
+              onOpen={(other) => {
+                setTree(false)
+                navigate({ name: 'anime', id: other })
+              }}
+            />
+          )}
+        </Modal>
+      </>
+    ),
+    episodes: (
+      <Section title="Épisodes" subtitle={episodesSubtitle}>
+        {loading && !detail ? (
+          <Skeleton className="h-28 w-full" />
+        ) : detail ? (
+          <EpisodeGrid detail={detail} glow={glow} watchUrl={watchUrl} />
+        ) : (
+          // Sans cette ligne, la section n'affichait rien : un titre, un
+          // décompte, puis un trou. On croit l'app cassée alors qu'elle a
+          // simplement perdu le catalogue.
+          <p className="text-[0.82rem] text-faint">
+            La liste des épisodes n’a pas pu être chargée. Ta progression, elle, est intacte.
+          </p>
+        )}
+      </Section>
+    ),
+    files: <LocalFiles animeId={id} title={titleOf(media, lang)} glow={glow} />,
+    cast:
+      detail && detail.characters.length > 0 ? (
+        <Section title="Personnages" subtitle="Voix japonaises">
+          <RowScroller>
+            {detail.characters.map((c, i) => (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.025 }}
+                className="glass w-[168px] shrink-0 rounded-[15px] p-2.5"
+              >
+                <div className="flex gap-2">
+                  <Poster
+                    src={c.image ?? media.cover.large}
+                    alt=""
+                    className="h-[74px] w-[52px]"
+                    rounded="rounded-[9px]"
+                  />
+                  {c.vaImage && (
+                    <Poster src={c.vaImage} alt="" className="h-[74px] w-[52px] opacity-75" rounded="rounded-[9px]" />
+                  )}
+                </div>
+                {/* « Où l'ai-je déjà entendu ? » est l'une des questions
+                        qu'on se pose le plus souvent devant un anime, et rien
+                        ici n'était cliquable. */}
+                <button
+                  className="clamp-2 mt-2 text-left text-[0.75rem] font-semibold leading-snug transition hover:text-white"
+                  onClick={() => navigate({ name: 'person', kind: 'character', id: c.id })}
+                  title="Voir ses autres apparitions"
+                >
+                  {c.name}
+                </button>
+                <p className="mt-0.5 text-[0.67rem] text-faint">{c.role}</p>
+                {c.va &&
+                  (c.vaId ? (
+                    <button
+                      className="clamp-2 mt-1 text-left text-[0.67rem] text-muted transition hover:text-white"
+                      onClick={() => navigate({ name: 'person', kind: 'staff', id: c.vaId as number })}
+                      title="Voir ses autres rôles"
+                    >
+                      {c.va}
+                    </button>
+                  ) : (
+                    <p className="clamp-2 mt-1 text-[0.67rem] text-muted">{c.va}</p>
+                  ))}
+              </motion.div>
+            ))}
+          </RowScroller>
+        </Section>
+      ) : null,
+    relations:
+      relationRow.length > 0 ? (
+        <Section title="Dans la même série">
+          <RowScroller>
+            {relationRow.map((r, i) => (
+              <MiniCard key={`${r.id}-${i}`} id={r.id} title={r.title} cover={r.cover} caption={r.extra} index={i} />
+            ))}
+          </RowScroller>
+        </Section>
+      ) : null,
+    /* Pas de sous-titre : chaque vignette dit déjà « Source » ou
+              « Adaptation », et en affirmer un ici se tromperait une fois sur deux.
+
+              Le titre, lui, suit le pays d'origine : « Le manga » sous Solo
+              Leveling, tiré d'un manhwa coréen, était simplement faux. */
+    manga:
+      mangaRow.length > 0 ? (
+        <Section title={originTitle(mangaRow.map((m) => m.origin ?? 'other'))}>
+          <RowScroller>
+            {mangaRow.map((m, i) => (
+              <MiniCard
+                key={m.id}
+                id={m.id}
+                title={m.title}
+                cover={m.cover}
+                caption={m.extra}
+                index={i}
+                onOpen={() => setMangaId(m.id)}
+              />
+            ))}
+          </RowScroller>
+        </Section>
+      ) : null,
+    films:
+      filmRow.length > 0 ? (
+        <Section title="Films de la série" subtitle={`${filmRow.length} longs métrages`}>
+          <RowScroller>
+            {filmRow.map((film, i) => (
+              <MiniCard
+                key={film.id}
+                id={film.id}
+                title={film.title}
+                cover={film.cover}
+                caption={film.caption}
+                index={i}
+              />
+            ))}
+          </RowScroller>
+        </Section>
+      ) : null,
+    recommendations:
+      detail && detail.recommendations.length > 0 ? (
+        <Section title="Tu aimeras peut-être">
+          <RowScroller>
+            {detail.recommendations.map((r, i) => (
+              <MiniCard key={r.id} id={r.id} title={r.title} cover={r.cover} caption={r.extra} index={i} />
+            ))}
+          </RowScroller>
+        </Section>
+      ) : null,
+    progress: (
+      <div className="glass rounded-[20px] p-4">
+        <div className="flex items-center gap-4">
+          <ProgressRing value={ratio} size={68} stroke={5}>
+            <span className="text-[0.78rem] font-bold tabular-nums">{Math.round(ratio * 100)}%</span>
+          </ProgressRing>
+          <div className="min-w-0">
+            <p className="stat-num text-[1.5rem] leading-none">
+              {seenCount}
+              <span className="text-[0.9rem] text-faint"> / {total ?? '?'}</span>
+            </p>
+            <p className="mt-1.5 text-[0.74rem] text-faint">{minutesToHuman(watchedMinutes)} de visionnage</p>
+          </div>
+        </div>
+      </div>
+    ),
+    rating: (
+      <div className="glass rounded-[20px] p-4">
+        <h3 className="label mb-2.5">Ma note</h3>
+        <Stars value={entry?.score ?? null} onChange={(score) => patch({ score })} />
+
+        <h3 className="label mb-2 mt-5">Ressenti</h3>
+        <div className="flex flex-wrap gap-1.5">
+          {EMOTIONS.map((emotion) => {
+            const on = entry?.emotions.includes(emotion.id) ?? false
+            return (
+              <button
+                key={emotion.id}
+                onClick={() => toggleEmotion(emotion.id)}
+                title={emotion.label}
+                data-on={on}
+                className="chip !h-8 !px-2.5 !text-[0.95rem]"
+              >
+                <span style={{ filter: on ? 'none' : 'grayscale(.65)' }}>{emotion.emoji}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <h3 className="label mb-2 mt-5">Mes notes</h3>
+        <textarea
+          value={notes}
+          onChange={(e) => onNotes(e.target.value)}
+          rows={3}
+          placeholder="Une pensée, un moment marquant…"
+          className="field w-full !h-auto resize-y py-2 text-[0.8rem] leading-relaxed"
+        />
+      </div>
+    ),
+    info: (
+      <div className="glass rounded-[20px] p-4">
+        <h3 className="label mb-1.5">Informations</h3>
+        <InfoRow label="Format" value={formatLabel(media.format)} />
+        <InfoRow label="Épisodes" value={total ?? '—'} />
+        <InfoRow label="Durée" value={media.duration ? `${media.duration} min` : '—'} />
+        <InfoRow label="Diffusion" value={seasonLabel(media.season, media.seasonYear)} />
+        <InfoRow label="Studio" value={media.studios.join(', ') || '—'} />
+        <InfoRow
+          label="Score AniList"
+          value={
+            media.averageScore !== null ? (
+              <span className="inline-flex items-center gap-1">
+                <Star size={11} className="text-amber-300" fill="currentColor" strokeWidth={0} />
+                {media.averageScore}%
+              </span>
+            ) : (
+              '—'
+            )
+          }
+        />
+        <InfoRow
+          label="Popularité"
+          value={
+            <span className="inline-flex items-center gap-1">
+              <Users size={11} />
+              {media.popularity.toLocaleString('fr-FR')}
+            </span>
+          }
+        />
+
+        {detail && detail.tags.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {detail.tags.map((tag) => (
+              <span key={tag} className="chip !h-6 !cursor-default !text-[0.65rem]">
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    ),
+    watch: (
+      <div className="glass rounded-[20px] p-4">
+        <h3 className="label mb-2.5">Regarder</h3>
+        {/* Les rangées suivantes visent la série ; celle-ci vise l'épisode
+                où tu en es. C'est AniList qui fournit l'adresse exacte —
+                l'identifiant d'un épisode Crunchyroll ne se devine pas. */}
+        {nextLink && (
+          <button
+            onClick={() => void window.api.app.openExternal(nextLink.url as string)}
+            title={nextLink.url ?? undefined}
+            className="mb-2.5 flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left transition hover:brightness-110"
+            style={{ background: rgba(glow, 0.16), border: `1px solid ${rgba(glow, 0.4)}` }}
+          >
+            <Play size={14} fill="currentColor" strokeWidth={0} style={{ color: rgba(glow, 1) }} />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[0.8rem] font-semibold">Épisode {nextLink.number}</span>
+              {nextLink.title && <span className="block truncate text-[0.68rem] text-faint">{nextLink.title}</span>}
+            </span>
+            <ExternalLink size={13} className="shrink-0 text-faint" />
+          </button>
+        )}
+        <div className="flex flex-col gap-1.5">
+          {watchLinks(media, detail, animeSama, knownMedia, watchAt).map((link) => (
+            <div key={link.id} className="flex flex-col gap-1.5">
+              <button
+                onClick={() => {
+                  if (!link.url) return
+                  // Anime-Sama n'a pas d'adresse par épisode : une fenêtre de
+                  // l'app peut poser le numéro avant que leur page ne le
+                  // lise, ce que le navigateur système ne permet pas. Si
+                  // l'ouverture est refusée, on retombe sur le navigateur.
+                  if (link.id === 'anime-sama' && link.pick) {
+                    void window.api.watch.openEpisode(link.url, watchAt, id).then((ok) => {
+                      if (!ok && link.url) void window.api.app.openExternal(link.url)
+                    })
+                    return
+                  }
+                  void window.api.app.openExternal(link.url)
+                }}
+                disabled={isWatchDisabled(link.kind)}
+                title={link.url ? `${link.hint}\n${link.url}` : link.hint}
+                className="group flex items-center gap-2.5 rounded-[12px] border border-white/8 bg-white/5 px-3 py-2.5 text-left transition enabled:hover:border-white/20 enabled:hover:bg-white/10 disabled:cursor-default disabled:opacity-45"
+              >
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full"
+                  style={{ background: link.color, boxShadow: `0 0 10px ${link.color}` }}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[0.82rem] font-semibold">{link.label}</span>
+                  {link.pick && <span className="block truncate text-[0.66rem] text-faint">{link.pick}</span>}
+                </span>
+                <span
+                  className="shrink-0 text-[0.62rem] font-bold uppercase tracking-wider"
+                  style={{ color: WATCH_BADGE[link.kind].color }}
+                >
+                  {WATCH_BADGE[link.kind].label}
+                </span>
+                {!isWatchDisabled(link.kind) && (
+                  <ExternalLink size={12} className="shrink-0 text-faint transition group-hover:text-white" />
+                )}
+              </button>
+              {/* Leur site n'a pas d'adresse par épisode : l'app retrouve la
+                    saison, le film ou l'OAV, puis l'épisode, d'après leurs
+                    pages — qui changent sans prévenir. Mieux vaut le dire
+                    avant le clic que laisser croire à une adresse exacte. */}
+              {link.id === 'anime-sama' && !isWatchDisabled(link.kind) && (
+                <p
+                  role="note"
+                  className="flex items-start gap-2 rounded-[12px] px-3 py-2 text-[0.7rem] leading-snug text-amber-100/85"
+                  style={{ background: 'rgba(252, 211, 77, 0.07)', border: '1px solid rgba(252, 211, 77, 0.45)' }}
+                >
+                  <TriangleAlert size={13} className="mt-[1px] shrink-0 text-amber-300" />
+                  <span>
+                    <b className="font-semibold text-amber-300">Attention</b> — le lecteur Anime-Sama peut ouvrir un
+                    mauvais épisode, film ou saison : vérifie ce qui se lance.
+                  </span>
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {media.status === 'NOT_YET_RELEASED' && (
+          <p className="mt-3 text-[0.73rem] leading-snug text-faint">
+            Aucun service ne diffuse encore ce titre. Ajoute-le à « À voir » pour être prévenu à la sortie du premier
+            épisode.
+          </p>
+        )}
+
+        {others.length > 0 && media.status !== 'NOT_YET_RELEASED' && (
+          <>
+            <div className="hairline my-3.5" />
+            <h4 className="label mb-2">Autres plateformes</h4>
+            <div className="flex flex-wrap gap-1.5">
+              {others.map((link) => (
+                <button key={link.url} className="chip" onClick={() => window.api.app.openExternal(link.url)}>
+                  {link.site}
+                  <ExternalLink size={11} />
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    ),
+    error: error ? <ErrorBox message={error} onRetry={retry} /> : null
+  }
+
   const heroProps: DetailHeroProps = {
     media,
     entry,
@@ -980,422 +1385,32 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
       )}
 
       {/* ---------------------------------------------------------------- body */}
-      <div className="mx-auto mt-9 grid max-w-[1400px] gap-7 px-7 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <div>
-          {media.description && (
-            <section className="mb-8">
-              <h2 className="label mb-2">Synopsis</h2>
-              <p
-                className={`whitespace-pre-line text-[0.885rem] leading-relaxed text-muted ${expanded ? '' : 'clamp-3'}`}
-              >
-                {synopsis ?? media.description}
-              </p>
-              {media.description.length > 240 && (
-                <button
-                  className="mt-1.5 text-[0.78rem] font-semibold"
-                  style={{ color: 'var(--accent-2)' }}
-                  onClick={() => setExpanded(!expanded)}
-                >
-                  {expanded ? 'Réduire' : 'Lire la suite'}
-                </button>
-              )}
-            </section>
-          )}
-
-          {media.trailer && (
-            <section className="mb-8">
-              {/* Keyed by the video: moving to another anime must start from the
-                  poster again rather than carry the previous player over. */}
-              <Trailer
-                key={media.trailer.id}
-                id={media.trailer.id}
-                animeId={media.id}
-                cover={media.banner ?? media.cover.xl}
-                title={titleOf(media, lang)}
-              />
-            </section>
-          )}
-
-          {/* Deux langues chez Anime-Sama, deux pastilles — les mêmes que sur
-              leur page. Rien quand il n'y a rien à choisir : un bouton unique
-              n'est pas un choix, c'est du bruit. */}
-          {langs.length > 1 && (
-            <div className="mb-4 flex items-center gap-2">
-              <span className="label mr-0.5">Langue</span>
-              {langs.map((code) => (
-                <button
-                  key={code}
-                  className="chip"
-                  data-on={code === current}
-                  aria-pressed={code === current}
-                  title={code === 'vostfr' ? 'Version originale sous-titrée' : 'Version française'}
-                  onClick={() => {
-                    setSpoken(code)
-                    void window.api.watch.setLanguage(id, code)
-                  }}
-                >
-                  {LANG_LABELS[code]}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* ESSAI — arbre des franchises. Supprimer ce bloc, l'état `tree` et
-              l'import suffit à le retirer. */}
-          <button className="btn mb-4 !h-8 text-[0.75rem]" onClick={() => setTree(true)}>
-            <GitBranch size={13} />
-            Arbre de la franchise
-          </button>
-          <Modal open={tree} onClose={() => setTree(false)} width={680}>
-            {tree && (
-              <Franchise
-                animeId={id}
-                onOpen={(other) => {
-                  setTree(false)
-                  navigate({ name: 'anime', id: other })
-                }}
-              />
-            )}
-          </Modal>
-
-          <Section title="Épisodes" subtitle={episodesSubtitle}>
-            {loading && !detail ? (
-              <Skeleton className="h-28 w-full" />
-            ) : detail ? (
-              <EpisodeGrid detail={detail} glow={glow} watchUrl={watchUrl} />
-            ) : (
-              // Sans cette ligne, la section n'affichait rien : un titre, un
-              // décompte, puis un trou. On croit l'app cassée alors qu'elle a
-              // simplement perdu le catalogue.
-              <p className="text-[0.82rem] text-faint">
-                La liste des épisodes n’a pas pu être chargée. Ta progression, elle, est intacte.
-              </p>
-            )}
-          </Section>
-
-          <LocalFiles animeId={id} title={titleOf(media, lang)} glow={glow} />
-
-          {detail && detail.characters.length > 0 && (
-            <Section title="Personnages" subtitle="Voix japonaises">
-              <RowScroller>
-                {detail.characters.map((c, i) => (
-                  <motion.div
-                    key={c.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.025 }}
-                    className="glass w-[168px] shrink-0 rounded-[15px] p-2.5"
-                  >
-                    <div className="flex gap-2">
-                      <Poster
-                        src={c.image ?? media.cover.large}
-                        alt=""
-                        className="h-[74px] w-[52px]"
-                        rounded="rounded-[9px]"
-                      />
-                      {c.vaImage && (
-                        <Poster
-                          src={c.vaImage}
-                          alt=""
-                          className="h-[74px] w-[52px] opacity-75"
-                          rounded="rounded-[9px]"
-                        />
-                      )}
-                    </div>
-                    {/* « Où l'ai-je déjà entendu ? » est l'une des questions
-                        qu'on se pose le plus souvent devant un anime, et rien
-                        ici n'était cliquable. */}
-                    <button
-                      className="clamp-2 mt-2 text-left text-[0.75rem] font-semibold leading-snug transition hover:text-white"
-                      onClick={() => navigate({ name: 'person', kind: 'character', id: c.id })}
-                      title="Voir ses autres apparitions"
-                    >
-                      {c.name}
-                    </button>
-                    <p className="mt-0.5 text-[0.67rem] text-faint">{c.role}</p>
-                    {c.va &&
-                      (c.vaId ? (
-                        <button
-                          className="clamp-2 mt-1 text-left text-[0.67rem] text-muted transition hover:text-white"
-                          onClick={() => navigate({ name: 'person', kind: 'staff', id: c.vaId as number })}
-                          title="Voir ses autres rôles"
-                        >
-                          {c.va}
-                        </button>
-                      ) : (
-                        <p className="clamp-2 mt-1 text-[0.67rem] text-muted">{c.va}</p>
-                      ))}
-                  </motion.div>
-                ))}
-              </RowScroller>
-            </Section>
-          )}
-
-          {relationRow.length > 0 && (
-            <Section title="Dans la même série">
-              <RowScroller>
-                {relationRow.map((r, i) => (
-                  <MiniCard
-                    key={`${r.id}-${i}`}
-                    id={r.id}
-                    title={r.title}
-                    cover={r.cover}
-                    caption={r.extra}
-                    index={i}
-                  />
-                ))}
-              </RowScroller>
-            </Section>
-          )}
-
-          {/* Pas de sous-titre : chaque vignette dit déjà « Source » ou
-              « Adaptation », et en affirmer un ici se tromperait une fois sur deux.
-
-              Le titre, lui, suit le pays d'origine : « Le manga » sous Solo
-              Leveling, tiré d'un manhwa coréen, était simplement faux. */}
-          {mangaRow.length > 0 && (
-            <Section title={originTitle(mangaRow.map((m) => m.origin ?? 'other'))}>
-              <RowScroller>
-                {mangaRow.map((m, i) => (
-                  <MiniCard
-                    key={m.id}
-                    id={m.id}
-                    title={m.title}
-                    cover={m.cover}
-                    caption={m.extra}
-                    index={i}
-                    onOpen={() => setMangaId(m.id)}
-                  />
-                ))}
-              </RowScroller>
-            </Section>
-          )}
-
-          {filmRow.length > 0 && (
-            <Section title="Films de la série" subtitle={`${filmRow.length} longs métrages`}>
-              <RowScroller>
-                {filmRow.map((film, i) => (
-                  <MiniCard
-                    key={film.id}
-                    id={film.id}
-                    title={film.title}
-                    cover={film.cover}
-                    caption={film.caption}
-                    index={i}
-                  />
-                ))}
-              </RowScroller>
-            </Section>
-          )}
-
-          {detail && detail.recommendations.length > 0 && (
-            <Section title="Tu aimeras peut-être">
-              <RowScroller>
-                {detail.recommendations.map((r, i) => (
-                  <MiniCard key={r.id} id={r.id} title={r.title} cover={r.cover} caption={r.extra} index={i} />
-                ))}
-              </RowScroller>
-            </Section>
-          )}
+      {xp?.DetailBody ? (
+        <xp.DetailBody media={media} parts={parts} />
+      ) : (
+        <div className="mx-auto mt-9 grid max-w-[1400px] gap-7 px-7 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div>
+            {parts.synopsis}
+            {parts.trailer}
+            {parts.language}
+            {parts.franchise}
+            {parts.episodes}
+            {parts.files}
+            {parts.cast}
+            {parts.relations}
+            {parts.manga}
+            {parts.films}
+            {parts.recommendations}
+          </div>
+          <aside className="flex flex-col gap-4">
+            {parts.progress}
+            {parts.rating}
+            {parts.info}
+            {parts.watch}
+            {parts.error}
+          </aside>
         </div>
-
-        {/* ------------------------------------------------------------ aside */}
-        <aside className="flex flex-col gap-4">
-          <div className="glass rounded-[20px] p-4">
-            <div className="flex items-center gap-4">
-              <ProgressRing value={ratio} size={68} stroke={5}>
-                <span className="text-[0.78rem] font-bold tabular-nums">{Math.round(ratio * 100)}%</span>
-              </ProgressRing>
-              <div className="min-w-0">
-                <p className="stat-num text-[1.5rem] leading-none">
-                  {seenCount}
-                  <span className="text-[0.9rem] text-faint"> / {total ?? '?'}</span>
-                </p>
-                <p className="mt-1.5 text-[0.74rem] text-faint">{minutesToHuman(watchedMinutes)} de visionnage</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="glass rounded-[20px] p-4">
-            <h3 className="label mb-2.5">Ma note</h3>
-            <Stars value={entry?.score ?? null} onChange={(score) => patch({ score })} />
-
-            <h3 className="label mb-2 mt-5">Ressenti</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {EMOTIONS.map((emotion) => {
-                const on = entry?.emotions.includes(emotion.id) ?? false
-                return (
-                  <button
-                    key={emotion.id}
-                    onClick={() => toggleEmotion(emotion.id)}
-                    title={emotion.label}
-                    data-on={on}
-                    className="chip !h-8 !px-2.5 !text-[0.95rem]"
-                  >
-                    <span style={{ filter: on ? 'none' : 'grayscale(.65)' }}>{emotion.emoji}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            <h3 className="label mb-2 mt-5">Mes notes</h3>
-            <textarea
-              value={notes}
-              onChange={(e) => onNotes(e.target.value)}
-              rows={3}
-              placeholder="Une pensée, un moment marquant…"
-              className="field w-full !h-auto resize-y py-2 text-[0.8rem] leading-relaxed"
-            />
-          </div>
-
-          <div className="glass rounded-[20px] p-4">
-            <h3 className="label mb-1.5">Informations</h3>
-            <InfoRow label="Format" value={formatLabel(media.format)} />
-            <InfoRow label="Épisodes" value={total ?? '—'} />
-            <InfoRow label="Durée" value={media.duration ? `${media.duration} min` : '—'} />
-            <InfoRow label="Diffusion" value={seasonLabel(media.season, media.seasonYear)} />
-            <InfoRow label="Studio" value={media.studios.join(', ') || '—'} />
-            <InfoRow
-              label="Score AniList"
-              value={
-                media.averageScore !== null ? (
-                  <span className="inline-flex items-center gap-1">
-                    <Star size={11} className="text-amber-300" fill="currentColor" strokeWidth={0} />
-                    {media.averageScore}%
-                  </span>
-                ) : (
-                  '—'
-                )
-              }
-            />
-            <InfoRow
-              label="Popularité"
-              value={
-                <span className="inline-flex items-center gap-1">
-                  <Users size={11} />
-                  {media.popularity.toLocaleString('fr-FR')}
-                </span>
-              }
-            />
-
-            {detail && detail.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {detail.tags.map((tag) => (
-                  <span key={tag} className="chip !h-6 !cursor-default !text-[0.65rem]">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="glass rounded-[20px] p-4">
-            <h3 className="label mb-2.5">Regarder</h3>
-            {/* Les rangées suivantes visent la série ; celle-ci vise l'épisode
-                où tu en es. C'est AniList qui fournit l'adresse exacte —
-                l'identifiant d'un épisode Crunchyroll ne se devine pas. */}
-            {nextLink && (
-              <button
-                onClick={() => void window.api.app.openExternal(nextLink.url as string)}
-                title={nextLink.url ?? undefined}
-                className="mb-2.5 flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left transition hover:brightness-110"
-                style={{ background: rgba(glow, 0.16), border: `1px solid ${rgba(glow, 0.4)}` }}
-              >
-                <Play size={14} fill="currentColor" strokeWidth={0} style={{ color: rgba(glow, 1) }} />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[0.8rem] font-semibold">Épisode {nextLink.number}</span>
-                  {nextLink.title && <span className="block truncate text-[0.68rem] text-faint">{nextLink.title}</span>}
-                </span>
-                <ExternalLink size={13} className="shrink-0 text-faint" />
-              </button>
-            )}
-            <div className="flex flex-col gap-1.5">
-              {watchLinks(media, detail, animeSama, knownMedia, watchAt).map((link) => (
-                <div key={link.id} className="flex flex-col gap-1.5">
-                  <button
-                    onClick={() => {
-                      if (!link.url) return
-                      // Anime-Sama n'a pas d'adresse par épisode : une fenêtre de
-                      // l'app peut poser le numéro avant que leur page ne le
-                      // lise, ce que le navigateur système ne permet pas. Si
-                      // l'ouverture est refusée, on retombe sur le navigateur.
-                      if (link.id === 'anime-sama' && link.pick) {
-                        void window.api.watch.openEpisode(link.url, watchAt, id).then((ok) => {
-                          if (!ok && link.url) void window.api.app.openExternal(link.url)
-                        })
-                        return
-                      }
-                      void window.api.app.openExternal(link.url)
-                    }}
-                    disabled={isWatchDisabled(link.kind)}
-                    title={link.url ? `${link.hint}\n${link.url}` : link.hint}
-                    className="group flex items-center gap-2.5 rounded-[12px] border border-white/8 bg-white/5 px-3 py-2.5 text-left transition enabled:hover:border-white/20 enabled:hover:bg-white/10 disabled:cursor-default disabled:opacity-45"
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: link.color, boxShadow: `0 0 10px ${link.color}` }}
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[0.82rem] font-semibold">{link.label}</span>
-                      {link.pick && <span className="block truncate text-[0.66rem] text-faint">{link.pick}</span>}
-                    </span>
-                    <span
-                      className="shrink-0 text-[0.62rem] font-bold uppercase tracking-wider"
-                      style={{ color: WATCH_BADGE[link.kind].color }}
-                    >
-                      {WATCH_BADGE[link.kind].label}
-                    </span>
-                    {!isWatchDisabled(link.kind) && (
-                      <ExternalLink size={12} className="shrink-0 text-faint transition group-hover:text-white" />
-                    )}
-                  </button>
-                  {/* Leur site n'a pas d'adresse par épisode : l'app retrouve la
-                    saison, le film ou l'OAV, puis l'épisode, d'après leurs
-                    pages — qui changent sans prévenir. Mieux vaut le dire
-                    avant le clic que laisser croire à une adresse exacte. */}
-                  {link.id === 'anime-sama' && !isWatchDisabled(link.kind) && (
-                    <p
-                      role="note"
-                      className="flex items-start gap-2 rounded-[12px] px-3 py-2 text-[0.7rem] leading-snug text-amber-100/85"
-                      style={{ background: 'rgba(252, 211, 77, 0.07)', border: '1px solid rgba(252, 211, 77, 0.45)' }}
-                    >
-                      <TriangleAlert size={13} className="mt-[1px] shrink-0 text-amber-300" />
-                      <span>
-                        <b className="font-semibold text-amber-300">Attention</b> — le lecteur Anime-Sama peut ouvrir un
-                        mauvais épisode, film ou saison : vérifie ce qui se lance.
-                      </span>
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {media.status === 'NOT_YET_RELEASED' && (
-              <p className="mt-3 text-[0.73rem] leading-snug text-faint">
-                Aucun service ne diffuse encore ce titre. Ajoute-le à « À voir » pour être prévenu à la sortie du
-                premier épisode.
-              </p>
-            )}
-
-            {others.length > 0 && media.status !== 'NOT_YET_RELEASED' && (
-              <>
-                <div className="hairline my-3.5" />
-                <h4 className="label mb-2">Autres plateformes</h4>
-                <div className="flex flex-wrap gap-1.5">
-                  {others.map((link) => (
-                    <button key={link.url} className="chip" onClick={() => window.api.app.openExternal(link.url)}>
-                      {link.site}
-                      <ExternalLink size={11} />
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-
-          {error && <ErrorBox message={error} onRetry={retry} />}
-        </aside>
-      </div>
+      )}
 
       <ListPicker open={picking} onClose={() => setPicking(false)} animeIds={[id]} />
 

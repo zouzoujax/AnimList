@@ -8,6 +8,7 @@ import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data
 import { WEEKDAYS, useStats } from './stats'
 import { MagazineCalendar, MagazineDetailHero, MagazineDiscover, MagazineManga } from './magazine-pages'
 import { MagazineBadges } from './badges-pages'
+import { MagazineDetailBody } from './detail-bodies'
 import type { Experience } from '.'
 
 /*
@@ -360,6 +361,7 @@ export const magazine: Experience = {
   Manga: MagazineManga,
   DetailHero: MagazineDetailHero,
   Badges: MagazineBadges,
+  DetailBody: MagazineDetailBody,
   motion: {
     initial: { opacity: 0, rotateY: -8, x: 30, transformPerspective: 1400, originX: 0 },
     animate: { opacity: 1, rotateY: 0, x: 0 },
