@@ -114,14 +114,13 @@ interface AppState {
 function applyTheme(prefs: Prefs): void {
   const root = document.documentElement
   const theme = THEMES.find((t) => t.id === prefs.theme)
-  // Un thème bâti sur sa propre palette impose son accent ; les autres gardent
-  // celui des réglages.
-  const accent = theme?.accent ?? prefs.accent
   root.dataset.theme = prefs.theme
   root.dataset.tone = theme?.light ? 'light' : 'dark'
   root.dataset.layout = prefs.layout
-  root.style.setProperty('--accent', accent)
-  root.style.setProperty('--accent-2', secondaryFor(accent))
+  // La couleur du thème n'est qu'un point de départ : choisir un thème la copie
+  // dans les réglages (voir Settings), et l'utilisateur peut ensuite la changer.
+  root.style.setProperty('--accent', prefs.accent)
+  root.style.setProperty('--accent-2', secondaryFor(prefs.accent))
   document.body.classList.toggle('mica', prefs.mica)
   document.body.classList.toggle('reduce-motion', prefs.reduceMotion)
 }

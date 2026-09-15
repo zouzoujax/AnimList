@@ -25,8 +25,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
 import {
+  DEFAULT_PREFS,
   LAYOUTS,
   THEMES,
+  accentFor,
   type Follow,
   type ImportReport,
   type LayoutId,
@@ -314,7 +316,7 @@ export default function SettingsPage(): React.JSX.Element {
               return (
                 <button
                   key={theme.id}
-                  onClick={() => setPrefs({ theme: theme.id })}
+                  onClick={() => setPrefs({ theme: theme.id, accent: theme.accent ?? DEFAULT_PREFS.accent })}
                   className="rounded-[14px] border p-2.5 text-left transition"
                   style={{
                     borderColor: active ? 'color-mix(in oklab, var(--accent) 55%, transparent)' : 'var(--line)',
@@ -391,6 +393,16 @@ export default function SettingsPage(): React.JSX.Element {
                 className="absolute h-0 w-0 opacity-0"
               />
             </label>
+            {/* Chaque thème a sa couleur de départ : on peut toujours y revenir. */}
+            <button
+              className="btn ml-2 !h-7 !px-2.5 !text-[0.72rem]"
+              disabled={prefs.accent.toLowerCase() === accentFor(prefs.theme).toLowerCase()}
+              onClick={() => setPrefs({ accent: accentFor(prefs.theme) })}
+              title="Revenir à la couleur par défaut du thème"
+            >
+              <span className="h-3 w-3 rounded-full" style={{ background: accentFor(prefs.theme) }} />
+              Couleur du thème
+            </button>
           </div>
         </Row>
 

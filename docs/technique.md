@@ -64,8 +64,8 @@ teinte.
 
 Neuf thèmes viennent du générateur `--design-system` du skill ui-ux-pro-max (style, palette,
 polices), chacun avec un effet du catalogue Magic UI lu par son serveur MCP puis réécrit en CSS
-(`src/renderer/src/themes/ui-ux-pro-max.css`) ou dans `components/ThemeFx.tsx`. Ils imposent
-leur accent.
+(`src/renderer/src/themes/ui-ux-pro-max.css`) ou dans `components/ThemeFx.tsx`. Choisir un thème applique sa couleur
+d’accent, que le sélecteur des Réglages peut ensuite changer ; « Couleur du thème » la rétablit.
 
 | Thème | Style du générateur | Effet Magic UI |
 |---|---|---|

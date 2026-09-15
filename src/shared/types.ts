@@ -33,7 +33,7 @@ export interface ThemeDef {
   titlebar: { color: string; symbolColor: string }
   /** Fond clair : le texte posé sur une jaquette assombrie reprend des jetons sombres. */
   light?: boolean
-  /** Couleur imposée par la palette du thème ; sinon, l'accent choisi dans les réglages. */
+  /** Accent appliqué quand on choisit le thème ; sans lui, l'accent par défaut. Modifiable ensuite. */
   accent?: string
 }
 
@@ -163,6 +163,11 @@ export const THEMES: ThemeDef[] = [
 
 export function chromeFor(theme: ThemeId): { color: string; symbolColor: string } {
   return (THEMES.find((t) => t.id === theme) ?? THEMES[0]).titlebar
+}
+
+/** Couleur de départ d'un thème, celle que « Couleur du thème » rétablit. */
+export function accentFor(theme: ThemeId): string {
+  return THEMES.find((t) => t.id === theme)?.accent ?? DEFAULT_PREFS.accent
 }
 
 /** Where the navigation lives and how densely pages are composed. */
