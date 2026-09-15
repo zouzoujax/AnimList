@@ -9,6 +9,24 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.6.0 — 15 septembre 2026
+
+### Ajouts
+
+- Onze nouveaux thèmes dans les Réglages : Indigo, OLED, Manga, Arcade, Cyberpunk, Kawaii, Liquid Glass, Bento, Aurore, Ardoise et Carbon. Chacun a ses couleurs, ses polices et, pour la plupart, un effet animé : trait de lumière autour de la une, étoiles filantes, trame de points, grille qui clignote, bulles, reflet d'or, rideaux de lumière…
+- Cinq « expériences », rangées à part dans les Réglages, qui refont l'app entière et pas seulement ses couleurs : Streaming, Console, Magazine, Cockpit et Carnet. Chacune a son propre menu, son accueil, sa bibliothèque, ses statistiques, son calendrier, ses pages Découvrir et Manga, sa fiche d'anime et ses transitions entre les pages
+- Dans les expériences, les badges ont leur propre page : médailles pour Streaming, trophées pour Console, palmarès pour Magazine, décorations pour Cockpit, album d'autocollants pour Carnet
+- L'arbre de la franchise prend l'apparence de l'expérience choisie
+
+### Modifications
+
+- Chaque thème arrive avec sa couleur d'accent, que tu peux toujours changer ; un bouton « Couleur du thème » la rétablit
+- L'arbre de la franchise se construit bien plus vite quand rien n'est encore en cache
+
+### Corrections
+
+- Les étoiles vides de « Ma note » redeviennent visibles sur les thèmes clairs
+
 ## 0.5.11 — 13 septembre 2026
 
 ### Ajouts
