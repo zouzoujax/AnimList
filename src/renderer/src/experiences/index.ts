@@ -1,5 +1,5 @@
 import type { HTMLMotionProps } from 'motion/react'
-import { THEMES, type ExperienceId } from '@shared/types'
+import { THEMES, type Entry, type ExperienceId, type LibraryStatus, type Media } from '@shared/types'
 import { useApp } from '@/store/app'
 import { carnet } from './Carnet'
 import { gameConsole } from './Console'
@@ -22,7 +22,30 @@ export interface Experience {
   Home: () => React.JSX.Element
   Library: () => React.JSX.Element
   Stats?: () => React.JSX.Element
+  Discover?: (props: { initialSearch?: string }) => React.JSX.Element
+  Calendar?: () => React.JSX.Element
+  Manga?: () => React.JSX.Element
   motion: Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'exit' | 'transition'>
+  /** Remplace l'en-tête de la fiche ; le corps (synopsis, épisodes, casting…) reste commun. */
+  DetailHero?: (props: DetailHeroProps) => React.JSX.Element
+}
+
+/** Tout ce que l'en-tête d'une fiche affiche ou déclenche, calculé par la fiche elle-même. */
+export interface DetailHeroProps {
+  media: Media
+  entry: Entry | undefined
+  /** L'épisode qu'on peut cocher maintenant, ou `null` s'il n'est pas encore sorti. */
+  next: number | null
+  seen: number
+  total: number | null
+  alsoKnownAs: string[]
+  inLists: number
+  onBack: () => void
+  onMark: () => void
+  onAdd: () => void
+  onStatus: (status: LibraryStatus) => void
+  onFavorite: () => void
+  onLists: () => void
 }
 
 export const PAGE_MOTION: Experience['motion'] = {

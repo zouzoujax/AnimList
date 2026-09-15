@@ -159,12 +159,17 @@ export default function App(): React.JSX.Element {
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
                   <Suspense fallback={<Spinner label="Chargement de la page…" />}>
                     {route.name === 'home' && (xp ? <xp.Home /> : <HomePage />)}
-                    {route.name === 'discover' && <DiscoverPage initialSearch={route.search} />}
+                    {route.name === 'discover' &&
+                      (xp?.Discover ? (
+                        <xp.Discover initialSearch={route.search} />
+                      ) : (
+                        <DiscoverPage initialSearch={route.search} />
+                      ))}
                     {route.name === 'library' && (xp ? <xp.Library /> : <LibraryPage initialGenre={route.genre} />)}
                     {route.name === 'studio' && <StudioPage studio={route.studio} />}
                     {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
-                    {route.name === 'manga' && <MangaPage />}
-                    {route.name === 'calendar' && <CalendarPage />}
+                    {route.name === 'manga' && (xp?.Manga ? <xp.Manga /> : <MangaPage />)}
+                    {route.name === 'calendar' && (xp?.Calendar ? <xp.Calendar /> : <CalendarPage />)}
                     {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}

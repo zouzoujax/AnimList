@@ -177,6 +177,39 @@
 .xc-card[data-locked='true'] .xc-cup {
   filter: grayscale(1);
 }
+.xc-search {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: min(340px, 100%);
+  height: 2.6rem;
+  padding: 0 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.xc-search input {
+  flex: 1;
+  background: transparent;
+  outline: none;
+}
+.xc-feature {
+  height: 360px;
+  border-radius: 24px;
+}
+.xc-feature:hover {
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 30px 60px -20px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+.xc-card[data-today='true'] {
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    0 0 40px -10px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+.xc-round[data-on='true'] {
+  background: #ffffff;
+  color: #07102b;
+}
 .xc-trophy {
   position: absolute;
   right: 0.5rem;

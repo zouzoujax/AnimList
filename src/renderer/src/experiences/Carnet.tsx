@@ -6,6 +6,7 @@ import { useBrowse } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals } from './data'
 import { WEEKDAYS, useStats } from './stats'
+import { CarnetCalendar, CarnetDetailHero, CarnetDiscover, CarnetManga } from './carnet-pages'
 import type { Experience } from '.'
 
 /*
@@ -376,6 +377,10 @@ export const carnet: Experience = {
   Home,
   Library,
   Stats,
+  Discover: CarnetDiscover,
+  Calendar: CarnetCalendar,
+  Manga: CarnetManga,
+  DetailHero: CarnetDetailHero,
   motion: {
     initial: { opacity: 0, y: 36, rotate: -1.2 },
     animate: { opacity: 1, y: 0, rotate: 0 },

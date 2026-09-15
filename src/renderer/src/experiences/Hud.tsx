@@ -7,6 +7,7 @@ import { useBrowse, useNow } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
+import { HudCalendar, HudDetailHero, HudDiscover, HudManga } from './hud-pages'
 import type { Experience } from '.'
 
 /*
@@ -475,6 +476,10 @@ export const hud: Experience = {
   Home,
   Library,
   Stats,
+  Discover: HudDiscover,
+  Calendar: HudCalendar,
+  Manga: HudManga,
+  DetailHero: HudDetailHero,
   motion: {
     initial: { opacity: 0, clipPath: 'inset(0 0 100% 0)' },
     animate: { opacity: 1, clipPath: 'inset(0 0 0% 0)' },

@@ -287,6 +287,94 @@
   stroke-linejoin: round;
   filter: drop-shadow(0 0 6px var(--accent));
 }
+.xh-cmd[data-on='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(34, 211, 238, 0.08);
+}
+.xh-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line-2);
+  background: rgba(0, 0, 0, 0.4);
+  font-size: 1rem;
+}
+.xh-prompt input {
+  flex: 1;
+  background: transparent;
+  outline: none;
+  color: var(--color-ink);
+}
+.xh-cursor {
+  width: 0.6rem;
+  height: 1.1rem;
+  background: var(--accent);
+  animation: xh-blink 1s steps(1) infinite;
+}
+@keyframes xh-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.xh-row {
+  padding: 0.55rem 0.6rem;
+  border: 1px solid rgba(34, 211, 238, 0.12);
+  background: rgba(34, 211, 238, 0.03);
+  transition:
+    background 0.2s,
+    border-color 0.2s;
+}
+.xh-row:hover {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.1);
+}
+.xh-orbits {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.xh-orbit-axis {
+  position: relative;
+  height: 1rem;
+  margin: 0 3.2rem 0 3.6rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  color: var(--color-faint);
+}
+.xh-orbit-axis span {
+  position: absolute;
+  translate: -50% 0;
+}
+.xh-orbit {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.xh-orbit-line {
+  height: 2rem;
+  background:
+    linear-gradient(var(--line-2), var(--line-2)) center / 100% 1px no-repeat,
+    repeating-linear-gradient(90deg, rgba(34, 211, 238, 0.12) 0 1px, transparent 1px calc(100% / 24));
+}
+.xh-blip {
+  position: absolute;
+  top: 50%;
+  width: 0.8rem;
+  height: 0.8rem;
+  translate: -50% -50%;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.2),
+    0 0 12px var(--accent);
+}
+.xh-blip:hover {
+  box-shadow:
+    0 0 0 6px rgba(34, 211, 238, 0.35),
+    0 0 18px var(--accent);
+}
 .xh-meter {
   display: block;
   width: 140px;

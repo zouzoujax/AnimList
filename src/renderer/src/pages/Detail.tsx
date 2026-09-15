@@ -47,6 +47,7 @@ import { countdown, formatLabel, isUnaired, minutesToHuman, otherTitles, seasonL
 import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons, useTranslated } from '@/lib/hooks'
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
+import { useExperience, type DetailHeroProps } from '@/experiences'
 
 const STATUS_ORDER: LibraryStatus[] = ['watching', 'planned', 'completed', 'paused', 'dropped']
 
@@ -588,6 +589,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const removeEntry = useApp((s) => s.removeEntry)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
   const toast = useApp((s) => s.toast)
+  // Une expérience peut remplacer l'en-tête ; le corps de la fiche reste commun.
+  const xp = useExperience()
 
   const media: Media | MediaDetail | undefined = data ?? cached
   /**
@@ -784,11 +787,33 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const mangaRow = detail?.manga ?? []
   const alsoKnownAs = otherTitles(media, lang)
 
+  const heroProps: DetailHeroProps = {
+    media,
+    entry,
+    next: next && total !== 0 && !isUnaired(media, next) ? next : null,
+    seen: seenCount,
+    total,
+    alsoKnownAs,
+    inLists: inLists.length,
+    onBack: back,
+    onMark: () => {
+      if (!next) return
+      void toggleEpisode(id, next, media).then(() => toast(`Épisode ${next} coché`))
+    },
+    onAdd: () => void patch({ status: 'planned' }),
+    onStatus: (status) => void patch({ status }),
+    onFavorite: () => void patch({ favorite: !entry?.favorite }),
+    onLists: () => setPicking(true)
+  }
+
   return (
     <div className="pb-14">
       {/* ---------------------------------------------------------------- hero */}
-      <div className="relative">
-        {/*
+      {xp?.DetailHero ? (
+        <xp.DetailHero {...heroProps} />
+      ) : (
+        <div className="relative">
+          {/*
           Revenir en arrière n'existait que dans la barre de titre : un chevron
           de sept pixels, collé au bord de la fenêtre, à sept cents pixels de ce
           qu'on est en train de lire. Les pages Personne et Studio ont leur
@@ -799,157 +824,160 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
           aurait décalé de trente pixels une mise en page calée au pixel sur la
           hauteur de l'image.
         */}
-        <div className="absolute inset-x-0 top-0 z-10 mx-auto max-w-[1400px] px-7 pt-5">
-          <button className="btn !h-8" onClick={back}>
-            <ArrowLeft size={14} />
-            Retour
-          </button>
-        </div>
+          <div className="absolute inset-x-0 top-0 z-10 mx-auto max-w-[1400px] px-7 pt-5">
+            <button className="btn !h-8" onClick={back}>
+              <ArrowLeft size={14} />
+              Retour
+            </button>
+          </div>
 
-        <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden">
-          {media.banner ? (
-            <img src={media.banner} alt="" className="h-full w-full object-cover" />
-          ) : (
-            <img src={media.cover.xl} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
-          )}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: `linear-gradient(180deg, ${rgba(glow, 0.22)} 0%, rgba(5,6,12,.72) 45%, var(--bg) 100%)`
-            }}
-          />
-        </div>
-
-        <div className="relative mx-auto flex max-w-[1400px] gap-7 px-7 pt-[168px]">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 220, damping: 26 }}
-            className="hidden shrink-0 md:block"
-          >
-            <Poster src={media.cover.xl} alt="" className="h-[286px] w-[194px]" rounded="rounded-[18px]" />
-          </motion.div>
-
-          <div className="min-w-0 flex-1 pb-1">
-            <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.74rem] text-muted">
-              <span
-                className="chip !cursor-default !h-6"
-                style={{ background: rgba(glow, 0.2), color: '#fff', borderColor: rgba(glow, 0.4) }}
-              >
-                {formatLabel(media.format)}
-              </span>
-              <span>{seasonLabel(media.season, media.seasonYear)}</span>
-              {media.studios[0] && <span>· {media.studios[0]}</span>}
-              {media.averageScore !== null && <span>· {media.averageScore}% AniList</span>}
-            </div>
-
-            <h1 className="title-xl text-[2.35rem] leading-[1.06]">{titleOf(media, lang)}</h1>
-            {alsoKnownAs.length > 0 && <p className="mt-1 text-[0.86rem] text-faint">{alsoKnownAs.join(' · ')}</p>}
-
-            {media.nextAiring && (
-              <p
-                className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.76rem] font-semibold"
-                style={{ background: rgba(glow, 0.18), color: rgba(glow, 1) }}
-              >
-                Épisode {media.nextAiring.episode} {countdown(media.nextAiring.airingAt)}
-              </p>
+          <div className="absolute inset-x-0 top-0 h-[330px] overflow-hidden">
+            {media.banner ? (
+              <img src={media.banner} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <img src={media.cover.xl} alt="" className="h-full w-full scale-110 object-cover blur-2xl" />
             )}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: `linear-gradient(180deg, ${rgba(glow, 0.22)} 0%, rgba(5,6,12,.72) 45%, var(--bg) 100%)`
+              }}
+            />
+          </div>
 
-            <div className="mt-5 flex flex-wrap items-center gap-2">
-              {next && total !== 0 && !isUnaired(media, next) && (
-                <button
-                  className="btn btn-primary"
-                  onClick={async () => {
-                    await toggleEpisode(id, next, media)
-                    toast(`Épisode ${next} coché`)
-                  }}
+          <div className="relative mx-auto flex max-w-[1400px] gap-7 px-7 pt-[168px]">
+            <motion.div
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 26 }}
+              className="hidden shrink-0 md:block"
+            >
+              <Poster src={media.cover.xl} alt="" className="h-[286px] w-[194px]" rounded="rounded-[18px]" />
+            </motion.div>
+
+            <div className="min-w-0 flex-1 pb-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-[0.74rem] text-muted">
+                <span
+                  className="chip !cursor-default !h-6"
+                  style={{ background: rgba(glow, 0.2), color: '#fff', borderColor: rgba(glow, 0.4) }}
                 >
-                  <Play size={14} fill="currentColor" strokeWidth={0} />
-                  Marquer l'épisode {next}
-                </button>
+                  {formatLabel(media.format)}
+                </span>
+                <span>{seasonLabel(media.season, media.seasonYear)}</span>
+                {media.studios[0] && <span>· {media.studios[0]}</span>}
+                {media.averageScore !== null && <span>· {media.averageScore}% AniList</span>}
+              </div>
+
+              <h1 className="title-xl text-[2.35rem] leading-[1.06]">{titleOf(media, lang)}</h1>
+              {alsoKnownAs.length > 0 && <p className="mt-1 text-[0.86rem] text-faint">{alsoKnownAs.join(' · ')}</p>}
+
+              {media.nextAiring && (
+                <p
+                  className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-[0.76rem] font-semibold"
+                  style={{ background: rgba(glow, 0.18), color: rgba(glow, 1) }}
+                >
+                  Épisode {media.nextAiring.episode} {countdown(media.nextAiring.airingAt)}
+                </p>
               )}
 
-              {!entry ? (
-                <button className="btn" onClick={() => patch({ status: 'planned' })}>
-                  <Bookmark size={14} />
-                  Ajouter à ma liste
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                {next && total !== 0 && !isUnaired(media, next) && (
+                  <button
+                    className="btn btn-primary"
+                    onClick={async () => {
+                      await toggleEpisode(id, next, media)
+                      toast(`Épisode ${next} coché`)
+                    }}
+                  >
+                    <Play size={14} fill="currentColor" strokeWidth={0} />
+                    Marquer l'épisode {next}
+                  </button>
+                )}
+
+                {!entry ? (
+                  <button className="btn" onClick={() => patch({ status: 'planned' })}>
+                    <Bookmark size={14} />
+                    Ajouter à ma liste
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {STATUS_ORDER.map((status) => (
+                      <button
+                        key={status}
+                        data-on={entry.status === status}
+                        className="chip !h-[38px] !px-3"
+                        onClick={() => patch({ status })}
+                      >
+                        {STATUS_LABELS[status]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  className="icon-btn !h-[38px] !w-[38px]"
+                  onClick={() => patch({ favorite: !entry?.favorite })}
+                  aria-label="Favori"
+                  style={entry?.favorite ? { color: '#fb7185', background: 'rgba(251,113,133,.12)' } : undefined}
+                >
+                  <Heart size={16} fill={entry?.favorite ? 'currentColor' : 'none'} />
                 </button>
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {STATUS_ORDER.map((status) => (
-                    <button
-                      key={status}
-                      data-on={entry.status === status}
-                      className="chip !h-[38px] !px-3"
-                      onClick={() => patch({ status })}
-                    >
-                      {STATUS_LABELS[status]}
-                    </button>
+
+                {entry && (
+                  <button
+                    className="icon-btn !h-[38px] !w-[38px]"
+                    onClick={() => setPicking(true)}
+                    aria-label="Listes"
+                    title={inLists.length > 0 ? inLists.map((l) => l.name).join(', ') : 'Ranger dans une liste'}
+                    style={inLists.length > 0 ? { color: 'var(--accent)', background: 'var(--panel-2)' } : undefined}
+                  >
+                    <FolderPlus size={15} />
+                  </button>
+                )}
+
+                {entry && (
+                  <button
+                    className="icon-btn !h-[38px] !w-[38px]"
+                    onClick={() => patch({ notify: entry.notify === false })}
+                    aria-label={entry.notify === false ? 'Réactiver les notifications' : 'Couper les notifications'}
+                    title={
+                      entry.notify === false
+                        ? 'Notifications coupées pour cette série'
+                        : 'Prévenir quand un épisode sort'
+                    }
+                    style={entry.notify === false ? { color: 'var(--color-faint)' } : undefined}
+                  >
+                    {entry.notify === false ? <BellOff size={15} /> : <Bell size={15} />}
+                  </button>
+                )}
+
+                {entry && (
+                  <button
+                    className="icon-btn !h-[38px] !w-[38px]"
+                    onClick={async () => {
+                      await removeEntry(id)
+                      toast('Retiré de ta bibliothèque', 'info')
+                    }}
+                    aria-label="Retirer de ma liste"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                )}
+              </div>
+
+              {media.genres.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {media.genres.map((g) => (
+                    <span key={g} className="chip !h-6 !cursor-default !text-[0.68rem]">
+                      {GENRE_LABELS[g] ?? g}
+                    </span>
                   ))}
                 </div>
               )}
-
-              <button
-                className="icon-btn !h-[38px] !w-[38px]"
-                onClick={() => patch({ favorite: !entry?.favorite })}
-                aria-label="Favori"
-                style={entry?.favorite ? { color: '#fb7185', background: 'rgba(251,113,133,.12)' } : undefined}
-              >
-                <Heart size={16} fill={entry?.favorite ? 'currentColor' : 'none'} />
-              </button>
-
-              {entry && (
-                <button
-                  className="icon-btn !h-[38px] !w-[38px]"
-                  onClick={() => setPicking(true)}
-                  aria-label="Listes"
-                  title={inLists.length > 0 ? inLists.map((l) => l.name).join(', ') : 'Ranger dans une liste'}
-                  style={inLists.length > 0 ? { color: 'var(--accent)', background: 'var(--panel-2)' } : undefined}
-                >
-                  <FolderPlus size={15} />
-                </button>
-              )}
-
-              {entry && (
-                <button
-                  className="icon-btn !h-[38px] !w-[38px]"
-                  onClick={() => patch({ notify: entry.notify === false })}
-                  aria-label={entry.notify === false ? 'Réactiver les notifications' : 'Couper les notifications'}
-                  title={
-                    entry.notify === false ? 'Notifications coupées pour cette série' : 'Prévenir quand un épisode sort'
-                  }
-                  style={entry.notify === false ? { color: 'var(--color-faint)' } : undefined}
-                >
-                  {entry.notify === false ? <BellOff size={15} /> : <Bell size={15} />}
-                </button>
-              )}
-
-              {entry && (
-                <button
-                  className="icon-btn !h-[38px] !w-[38px]"
-                  onClick={async () => {
-                    await removeEntry(id)
-                    toast('Retiré de ta bibliothèque', 'info')
-                  }}
-                  aria-label="Retirer de ma liste"
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
             </div>
-
-            {media.genres.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {media.genres.map((g) => (
-                  <span key={g} className="chip !h-6 !cursor-default !text-[0.68rem]">
-                    {GENRE_LABELS[g] ?? g}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* ---------------------------------------------------------------- body */}
       <div className="mx-auto mt-9 grid max-w-[1400px] gap-7 px-7 lg:grid-cols-[minmax(0,1fr)_320px]">

@@ -64,6 +64,7 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     // espacées, et la rangée n'apparaît qu'une fois le vivier constitué.
     { name: 'decouvrir', route: { name: 'discover' }, settleMs: 7000 },
     { name: 'calendrier', route: { name: 'calendar' }, settleMs: 2200 },
+    { name: 'manga', route: { name: 'manga' }, settleMs: 2000 },
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
     // The badge wall sits under every chart, so its offset moves with the data.
     { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },

@@ -18,6 +18,7 @@ import { useBrowse, useNow } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
+import { ConsoleCalendar, ConsoleDetailHero, ConsoleDiscover, ConsoleManga } from './console-pages'
 import type { Experience } from '.'
 
 /*
@@ -423,6 +424,10 @@ export const gameConsole: Experience = {
   Home,
   Library,
   Stats,
+  Discover: ConsoleDiscover,
+  Calendar: ConsoleCalendar,
+  Manga: ConsoleManga,
+  DetailHero: ConsoleDetailHero,
   motion: {
     initial: { opacity: 0, x: 48, filter: 'blur(6px)' },
     animate: { opacity: 1, x: 0, filter: 'blur(0px)' },

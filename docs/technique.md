@@ -107,6 +107,16 @@ Console, double page « L'année en chiffres » pour Magazine, écran de télém
 genres, cadran horaire, courbe sur douze mois) pour Cockpit, et « Mon bilan » manuscrit avec
 anneau des genres, podium et timbres des mois pour Carnet.
 
+Elles ont enfin leurs pages **Découvrir**, **Calendrier** et **Manga**, et leur propre en-tête de
+**fiche** : `DetailHero` remplace le haut de la fiche, dont le corps (synopsis, épisodes, casting,
+notes) reste commun. Les données de ces pages viennent de `experiences/pages-data.ts`, avec les
+mêmes requêtes que les pages classiques. Streaming : catalogue par rayons, programme en colonnes,
+Top 10 manga, fiche en bannière. Console : Store avec jeu en vedette, agenda en frise, mangas en
+tuiles, fiche « hub de jeu ». Magazine : critiques, programme télé à points de conduite, cahier
+manga, fiche en article. Cockpit : scanner à invite, carte des orbites horaires, archives en
+registre, dossier de cible. Carnet : trouvailles épinglées, agenda en double page, étagère de
+tranches de mangas, carte de collection annotée.
+
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle
 tenue partout est donc que l'accent teinte les fonds et les contours, et que le texte reste de

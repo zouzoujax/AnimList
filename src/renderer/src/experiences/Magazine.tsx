@@ -6,6 +6,7 @@ import { useBrowse } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
 import { WEEKDAYS, useStats } from './stats'
+import { MagazineCalendar, MagazineDetailHero, MagazineDiscover, MagazineManga } from './magazine-pages'
 import type { Experience } from '.'
 
 /*
@@ -352,6 +353,10 @@ export const magazine: Experience = {
   Home,
   Library,
   Stats,
+  Discover: MagazineDiscover,
+  Calendar: MagazineCalendar,
+  Manga: MagazineManga,
+  DetailHero: MagazineDetailHero,
   motion: {
     initial: { opacity: 0, rotateY: -8, x: 30, transformPerspective: 1400, originX: 0 },
     animate: { opacity: 1, rotateY: 0, x: 0 },

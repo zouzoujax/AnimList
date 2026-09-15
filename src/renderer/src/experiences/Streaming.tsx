@@ -7,6 +7,7 @@ import { useBrowse } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf } from './data'
 import { WEEKDAYS, useStats } from './stats'
+import { StreamingCalendar, StreamingDetailHero, StreamingDiscover, StreamingManga } from './streaming-pages'
 import type { Experience } from '.'
 
 /*
@@ -167,7 +168,7 @@ function Billboard({ items }: { items: Media[] }): React.JSX.Element {
   )
 }
 
-function Row({ title, children }: { title: string; children: ReactNode }): React.JSX.Element {
+export function Row({ title, children }: { title: string; children: ReactNode }): React.JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const slide = (dir: number): void =>
     ref.current?.scrollBy({ left: dir * ref.current.clientWidth * 0.85, behavior: 'smooth' })
@@ -188,7 +189,7 @@ function Row({ title, children }: { title: string; children: ReactNode }): React
   )
 }
 
-function Tile({ media, progress, note }: { media: Media; progress?: number; note?: string }): React.JSX.Element {
+export function Tile({ media, progress, note }: { media: Media; progress?: number; note?: string }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
   return (
@@ -459,6 +460,10 @@ export const streaming: Experience = {
   Home,
   Library,
   Stats,
+  Discover: StreamingDiscover,
+  Calendar: StreamingCalendar,
+  Manga: StreamingManga,
+  DetailHero: StreamingDetailHero,
   motion: {
     initial: { opacity: 0, scale: 1.015 },
     animate: { opacity: 1, scale: 1 },
