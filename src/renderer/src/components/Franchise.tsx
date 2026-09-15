@@ -63,7 +63,7 @@ function Leaf({ node, onOpen }: { node: Node; onOpen: (id: number) => void }): R
     <button
       onClick={() => onOpen(node.id)}
       title={node.tracked ? `${node.seen} vu${node.seen > 1 ? 's' : ''}` : 'Pas dans ta bibliothèque'}
-      className="flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/6"
+      className="fr-leaf flex w-full items-center gap-2 rounded-lg px-2 py-1 text-left transition-colors hover:bg-white/6"
     >
       <span className="h-[6px] w-[6px] shrink-0 rounded-full" style={pastille} />
       <span className={`truncate text-[0.76rem] ${node.tracked ? 'text-muted' : 'text-faint'}`}>{node.title}</span>
@@ -126,8 +126,8 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
   const dehors = tree.count - tree.tracked
 
   return (
-    <div className="max-h-[68vh] overflow-y-auto p-5">
-      <div className="mb-5 flex items-center gap-3">
+    <div className="fr-tree max-h-[68vh] overflow-y-auto p-5">
+      <div className="fr-head mb-5 flex items-center gap-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: rgba(glow, 0.16) }}>
           <GitBranch size={17} />
         </span>
@@ -161,27 +161,27 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
           <li key={season.id} className="relative flex gap-3">
             {/* Le rail : un trait continu qui s'arrête au dernier nœud. */}
             <div className="relative flex w-4 shrink-0 flex-col items-center">
-              <CircleDot size={15} className="relative z-10 mt-4 shrink-0" style={{ color: glow }} />
+              <CircleDot size={15} className="fr-node relative z-10 mt-4 shrink-0" style={{ color: glow }} />
               {i < tree.trunk.length - 1 && (
-                <div className="w-px flex-1" style={{ background: 'var(--line)' }} aria-hidden />
+                <div className="fr-rail w-px flex-1" style={{ background: 'var(--line)' }} aria-hidden />
               )}
             </div>
 
             <div className="min-w-0 flex-1 pb-4">
               <button
                 onClick={() => onOpen(season.id)}
-                className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/6"
+                className="fr-season flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition-colors hover:bg-white/6"
               >
                 {season.cover && (
                   <Poster src={season.cover} alt="" className="h-[52px] w-[36px] shrink-0" rounded="rounded-md" />
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
-                    <span className="shrink-0 text-[0.7rem] font-semibold tabular-nums" style={{ color: glow }}>
+                    <span className="fr-num shrink-0 text-[0.7rem] font-semibold tabular-nums" style={{ color: glow }}>
                       S{season.number}
                       {season.part ? `.${season.part}` : ''}
                     </span>
-                    <span className="truncate text-[0.86rem] font-medium">{season.title}</span>
+                    <span className="fr-title truncate text-[0.86rem] font-medium">{season.title}</span>
                     {season.year && <span className="shrink-0 text-[0.7rem] text-faint">{season.year}</span>}
                   </span>
                   {season.tracked ? (
@@ -193,7 +193,11 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
               </button>
 
               {season.branches.map((branch) => (
-                <div key={branch.kind} className="mt-1.5 ml-3 pl-3" style={{ borderLeft: '1px solid var(--line)' }}>
+                <div
+                  key={branch.kind}
+                  className="fr-branch mt-1.5 ml-3 pl-3"
+                  style={{ borderLeft: '1px solid var(--line)' }}
+                >
                   <p className="label mb-1 text-[0.66rem]">
                     {BRANCH_LABELS[branch.kind]} · {branch.nodes.length}
                   </p>
@@ -207,7 +211,7 @@ export function Franchise({ animeId, onOpen }: { animeId: number; onOpen: (id: n
         ))}
       </ol>
 
-      <p className="mt-2 text-[0.7rem] text-faint">
+      <p className="fr-legend mt-2 text-[0.7rem] text-faint">
         Les branches viennent des relations qu’AniList déclare. Point plein : série finie. Point à demi rempli :
         commencée. Cercle vide : suivie mais pas entamée. Point gris : absente de ta bibliothèque.
       </p>

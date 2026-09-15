@@ -1,0 +1,204 @@
+/* ══════════════════════════════════════════════════ ARBRE DE LA FRANCHISE DES EXPÉRIENCES
+   Le composant Franchise pose des classes repères (fr-*) ; chaque expérience le
+   rhabille ici. Les couleurs écrites en ligne par le composant (rail, nœud,
+   numéro) sont reprises avec !important, seul moyen de passer devant un style
+   en ligne sans toucher à sa logique. */
+
+/* Streaming : noir de plateforme, rail et numéros rouges, saisons en larges rangées. */
+:root[data-theme='xp-streaming'] .fr-tree {
+  background: #181818;
+}
+:root[data-theme='xp-streaming'] .fr-head {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+:root[data-theme='xp-streaming'] .fr-head p:first-child {
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+:root[data-theme='xp-streaming'] .fr-node,
+:root[data-theme='xp-streaming'] .fr-num {
+  color: var(--accent) !important;
+}
+:root[data-theme='xp-streaming'] .fr-rail {
+  width: 2px;
+  background: var(--accent) !important;
+  opacity: 0.6;
+}
+:root[data-theme='xp-streaming'] .fr-season {
+  border-radius: 4px !important;
+  padding: 0.7rem;
+}
+:root[data-theme='xp-streaming'] .fr-season:hover {
+  background: #2a2a2a;
+}
+:root[data-theme='xp-streaming'] .fr-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+}
+
+/* Console : rail lumineux, saisons en tuiles arrondies qui prennent l'anneau de sélection. */
+:root[data-theme='xp-console'] .fr-node {
+  color: #ffffff !important;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+:root[data-theme='xp-console'] .fr-rail {
+  width: 2px;
+  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.15)) !important;
+}
+:root[data-theme='xp-console'] .fr-season {
+  border-radius: 16px !important;
+  padding: 0.7rem 0.9rem;
+  background: rgba(255, 255, 255, 0.05);
+}
+:root[data-theme='xp-console'] .fr-season:hover {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 3px #ffffff;
+}
+:root[data-theme='xp-console'] .fr-leaf {
+  border-radius: 999px !important;
+}
+:root[data-theme='xp-console'] .fr-num {
+  color: var(--accent) !important;
+}
+
+/* Magazine : papier, filets noirs, numéros en petites capitales rouges, légende en italique. */
+:root[data-theme='xp-magazine'] .fr-tree {
+  background: #f4efe6;
+}
+:root[data-theme='xp-magazine'] .fr-head {
+  padding-bottom: 0.8rem;
+  border-bottom: 3px double #1a1a1a;
+}
+:root[data-theme='xp-magazine'] .fr-head p:first-child {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+}
+:root[data-theme='xp-magazine'] .fr-node {
+  color: #1a1a1a !important;
+}
+:root[data-theme='xp-magazine'] .fr-rail {
+  background: #1a1a1a !important;
+}
+:root[data-theme='xp-magazine'] .fr-num {
+  color: var(--accent) !important;
+  font-family: 'Inter Variable', sans-serif;
+  letter-spacing: 0.12em;
+}
+:root[data-theme='xp-magazine'] .fr-title {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+:root[data-theme='xp-magazine'] .fr-season,
+:root[data-theme='xp-magazine'] .fr-leaf {
+  border-radius: 0 !important;
+}
+:root[data-theme='xp-magazine'] .fr-season:hover,
+:root[data-theme='xp-magazine'] .fr-leaf:hover {
+  background: rgba(26, 26, 26, 0.05);
+}
+:root[data-theme='xp-magazine'] .fr-branch {
+  border-left-color: rgba(26, 26, 26, 0.35) !important;
+}
+:root[data-theme='xp-magazine'] .fr-legend {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+/* Cockpit : trajectoire cyan, nœuds en balises, rangées encadrées, codes en capitales. */
+:root[data-theme='xp-hud'] .fr-tree {
+  border: 1px solid var(--line);
+  background: #030707;
+  font-family: 'JetBrains Mono Variable', monospace;
+}
+:root[data-theme='xp-hud'] .fr-head p:first-child {
+  font-family: 'Orbitron Variable', sans-serif;
+  font-size: 0.95rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+:root[data-theme='xp-hud'] .fr-node,
+:root[data-theme='xp-hud'] .fr-num {
+  color: var(--accent) !important;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+:root[data-theme='xp-hud'] .fr-rail {
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, var(--accent) 0 4px, transparent 4px 8px) !important;
+}
+:root[data-theme='xp-hud'] .fr-season {
+  border-radius: 0 !important;
+  border: 1px solid rgba(34, 211, 238, 0.14);
+}
+:root[data-theme='xp-hud'] .fr-season:hover,
+:root[data-theme='xp-hud'] .fr-leaf:hover {
+  border-color: var(--accent);
+  background: rgba(34, 211, 238, 0.08);
+}
+:root[data-theme='xp-hud'] .fr-leaf {
+  border-radius: 0 !important;
+}
+:root[data-theme='xp-hud'] .fr-title {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+:root[data-theme='xp-hud'] .fr-branch {
+  border-left: 1px dashed rgba(34, 211, 238, 0.4) !important;
+}
+
+/* Carnet : page lignée, rail en pointillés, saisons en fiches de papier posées de travers. */
+:root[data-theme='xp-carnet'] .fr-tree {
+  --color-ink: #3a2a1c;
+  --color-muted: #5b4634;
+  --color-faint: #7a6a58;
+  --line: rgba(58, 42, 28, 0.25);
+  --line-2: rgba(58, 42, 28, 0.45);
+  color: var(--color-ink);
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 31px, rgba(88, 139, 139, 0.18) 31px 32px),
+    linear-gradient(#f3e6cf, #ecdcbf);
+}
+:root[data-theme='xp-carnet'] .fr-head p:first-child {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 700;
+}
+:root[data-theme='xp-carnet'] .fr-node,
+:root[data-theme='xp-carnet'] .fr-num {
+  color: #c8553d !important;
+}
+:root[data-theme='xp-carnet'] .fr-rail {
+  width: 0;
+  border-left: 2px dashed rgba(58, 42, 28, 0.45);
+  background: none !important;
+}
+:root[data-theme='xp-carnet'] .fr-season {
+  border-radius: 3px !important;
+  background: #fffdf8;
+  box-shadow: 0 8px 14px -10px rgba(58, 42, 28, 0.8);
+}
+:root[data-theme='xp-carnet'] li:nth-child(odd) .fr-season {
+  rotate: -0.6deg;
+}
+:root[data-theme='xp-carnet'] li:nth-child(even) .fr-season {
+  rotate: 0.5deg;
+}
+:root[data-theme='xp-carnet'] .fr-title {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.15rem;
+  font-style: italic;
+  font-weight: 700;
+}
+:root[data-theme='xp-carnet'] .fr-leaf:hover {
+  background: rgba(200, 85, 61, 0.1);
+}
+:root[data-theme='xp-carnet'] .fr-legend {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+}
