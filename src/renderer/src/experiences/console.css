@@ -1,0 +1,154 @@
+/* ══════════════════════════════════════════════════ EXPÉRIENCE CONSOLE */
+:root[data-theme='xp-console'] {
+  --bg: #07102b;
+  --chrome: #0a1330;
+  --scrim: rgba(7, 16, 43, 0.85);
+  --panel: rgba(255, 255, 255, 0.06);
+  --panel-2: rgba(255, 255, 255, 0.12);
+  --line: rgba(175, 195, 232, 0.14);
+  --line-2: rgba(175, 195, 232, 0.3);
+  --inset-hi: rgba(255, 255, 255, 0.08);
+  --color-ink: #f2f6ff;
+  --color-muted: #c2d0ea;
+  --color-faint: #93a5c8;
+  --font-sans: 'Outfit Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Outfit Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 999px;
+  --blur: 24px;
+  --on-accent-ink: #ffffff;
+  --aurora: 0.6;
+  --noise: 0;
+}
+:root[data-theme='xp-console'] [class*='rounded-['] {
+  border-radius: 16px !important;
+}
+:root[data-theme='xp-console'] .btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+}
+:root[data-theme='xp-console'] .title-xl {
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.xc-nav {
+  background: linear-gradient(to bottom, rgba(4, 9, 26, 0.8), transparent);
+}
+.xc-tab {
+  color: rgba(242, 246, 255, 0.72);
+  transition: color 0.2s;
+}
+.xc-tab:hover,
+.xc-tab[aria-current='page'] {
+  color: #ffffff;
+}
+.xc-tab-on {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.xc-round,
+.xc-avatar {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+.xc-avatar {
+  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+}
+.xc-backdrop img {
+  filter: saturate(1.1);
+}
+.xc-shade {
+  background:
+    linear-gradient(90deg, rgba(7, 16, 43, 0.95) 0%, rgba(7, 16, 43, 0.55) 55%, rgba(7, 16, 43, 0.2)),
+    linear-gradient(to top, #07102b 5%, transparent 55%);
+}
+.xc-tile {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.06);
+  transition: box-shadow 0.3s;
+}
+.xc-tile[data-on='true'],
+.xc-game:hover .xc-tile,
+.xc-game:focus-visible .xc-tile {
+  box-shadow:
+    0 0 0 3px #ffffff,
+    0 20px 50px -10px color-mix(in oklab, var(--accent) 70%, transparent);
+}
+.xc-meter {
+  height: 6px;
+  max-width: 420px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+}
+.xc-meter span {
+  display: block;
+  height: 100%;
+  background: #ffffff;
+}
+.xc-primary,
+.xc-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 3.2rem;
+  padding: 0 2rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+.xc-primary {
+  background: #ffffff;
+  color: #07102b;
+}
+.xc-secondary {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+}
+.xc-primary:hover,
+.xc-secondary:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.35);
+}
+.xc-card {
+  padding: 1.25rem 1.4rem;
+  border-radius: 20px;
+  background: rgba(10, 19, 48, 0.62);
+  backdrop-filter: blur(20px);
+  box-shadow: inset 0 0 0 1px rgba(175, 195, 232, 0.14);
+}
+.xc-card-kicker {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-faint);
+}
+.xc-filter {
+  height: 2.4rem;
+  padding: 0 1.2rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 500;
+}
+.xc-filter[data-on='true'] {
+  background: #ffffff;
+  color: #07102b;
+}
+.xc-trophy {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  background: rgba(7, 16, 43, 0.8);
+  font-size: 0.72rem;
+  font-weight: 600;
+}

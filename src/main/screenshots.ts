@@ -15,7 +15,7 @@
 import { BrowserWindow, app } from 'electron'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
-import { THEMES, type ThemeId } from '@shared/types'
+import { THEMES, accentFor, type ThemeId } from '@shared/types'
 import { setPrefs } from './store'
 
 export interface ShotPlan {
@@ -199,7 +199,8 @@ export async function captureAll(
    */
   for (const id of themes) {
     const theme = THEMES.find((t) => t.id === id) ?? THEMES[0]
-    setPrefs({ theme: id })
+    // Comme un clic dans les Réglages : le thème arrive avec sa couleur.
+    setPrefs({ theme: id, accent: accentFor(id) })
     win.setBackgroundColor(theme.titlebar.color)
     const reloaded = new Promise<void>((resolve) => win.webContents.once('did-finish-load', () => resolve()))
     win.webContents.reload()

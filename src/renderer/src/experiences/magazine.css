@@ -1,0 +1,234 @@
+/* ══════════════════════════════════════════════════ EXPÉRIENCE MAGAZINE */
+:root[data-theme='xp-magazine'] {
+  --bg: #f4efe6;
+  --chrome: #f4efe6;
+  --scrim: rgba(244, 239, 230, 0.94);
+  --panel: #fbf8f2;
+  --panel-2: #ffffff;
+  --line: rgba(26, 26, 26, 0.16);
+  --line-2: #1a1a1a;
+  --inset-hi: transparent;
+  --color-ink: #1a1a1a;
+  --color-muted: #3d3a35;
+  --color-faint: #625d55;
+  --font-sans: Georgia, 'Times New Roman', serif;
+  --font-display: 'Cormorant Variable', Georgia, serif;
+  --radius-ctl: 0px;
+  --blur: 0px;
+  --num-hi: #1a1a1a;
+  --on-accent: #1a1a1a;
+  --on-accent-ink: #ffffff;
+  --aurora: 0;
+  --noise: 0.04;
+  --search-bg: rgba(26, 26, 26, 0.05);
+  --thumb: rgba(26, 26, 26, 0.25);
+  color-scheme: light;
+}
+:root[data-theme='xp-magazine'] .xp-frame {
+  flex-direction: column;
+}
+:root[data-theme='xp-magazine'] [class*='rounded-['] {
+  border-radius: 0 !important;
+}
+:root[data-theme='xp-magazine'] .glass {
+  box-shadow: none;
+  border-color: var(--line);
+}
+:root[data-theme='xp-magazine'] .btn-primary {
+  background: #1a1a1a;
+  color: #ffffff;
+  box-shadow: none;
+}
+:root[data-theme='xp-magazine'] .title-xl {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+:root[data-theme='xp-magazine'] .stat-num {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: #1a1a1a;
+}
+:root[data-theme='xp-magazine'] .field {
+  background: #ffffff;
+}
+
+.xm-rule {
+  border-bottom: 1px solid #1a1a1a;
+}
+.xm-rule-double {
+  border-top: 3px double #1a1a1a;
+  border-bottom: 1px solid #1a1a1a;
+}
+.xm-masthead {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 4.6rem;
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  padding: 0.2rem 0 0.35rem;
+}
+.xm-section {
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #3d3a35;
+}
+.xm-section[aria-current='page'] {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 2px;
+}
+.xm-kicker {
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.xm-headline {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 4.2rem;
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+}
+.xm-deck {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.45rem;
+  font-style: italic;
+  line-height: 1.3;
+  color: #3d3a35;
+}
+.xm-photo {
+  filter: grayscale(0.15) contrast(1.05);
+}
+.xm-caption {
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 0.72rem;
+  color: #625d55;
+}
+.xm-body {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  text-align: justify;
+  hyphens: auto;
+}
+.xm-dropcap::first-letter {
+  float: left;
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 4.2rem;
+  font-weight: 700;
+  line-height: 0.8;
+  padding: 0.3rem 0.5rem 0 0;
+  color: var(--accent);
+}
+.xm-cover {
+  border-right: 1px solid #1a1a1a;
+}
+.xm-column + .xm-column {
+  border-left: 1px solid rgba(26, 26, 26, 0.2);
+}
+.xm-brief {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.15);
+}
+.xm-num {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+.xm-brief-title {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+/* Heure au-dessus, titre dessous : sur une ligne, un long titre chevauchait l'heure. */
+.xm-listing {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px dotted rgba(26, 26, 26, 0.35);
+  font-size: 0.86rem;
+}
+.xm-listing .xm-leader {
+  display: none;
+}
+.xm-listing-time {
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.xm-leader {
+  flex: 1;
+  min-width: 1rem;
+  border-bottom: 1px dotted rgba(26, 26, 26, 0.45);
+  transform: translateY(-0.25rem);
+}
+.xm-stat {
+  padding-top: 1rem;
+  border-top: 3px solid #1a1a1a;
+}
+.xm-big {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 5rem;
+  font-weight: 700;
+  line-height: 0.9;
+}
+.xm-review-title {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.xm-chart {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.12);
+  font-size: 1rem;
+}
+.xm-chart-rank {
+  font-family: 'Inter Variable', sans-serif;
+  font-weight: 800;
+  color: var(--accent);
+}
+.xm-letter {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  border-bottom: 2px solid #1a1a1a;
+  margin-bottom: 0.4rem;
+}
+.xm-entry {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: baseline;
+  gap: 0 0.4rem;
+  width: 100%;
+  padding: 0.35rem 0;
+  text-align: left;
+}
+.xm-entry:hover .xm-entry-title {
+  color: var(--accent);
+}
+.xm-entry-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.xm-entry-page {
+  font-family: 'Inter Variable', sans-serif;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}

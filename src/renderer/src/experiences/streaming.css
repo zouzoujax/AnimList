@@ -1,0 +1,196 @@
+/* ══════════════════════════════════════════════════ EXPÉRIENCE STREAMING */
+:root[data-theme='xp-streaming'] {
+  --bg: #141414;
+  --chrome: #0b0b0f;
+  --scrim: rgba(20, 20, 20, 0.92);
+  --panel: #1f1f1f;
+  --panel-2: #2a2a2a;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.2);
+  --inset-hi: transparent;
+  --color-ink: #ffffff;
+  --color-muted: #d2d2d2;
+  --color-faint: #a3a3a3;
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius-ctl: 4px;
+  --blur: 0px;
+  --on-accent-ink: #ffffff;
+  --aurora: 0;
+  --noise: 0;
+  --thumb: #3a3a3a;
+}
+:root[data-theme='xp-streaming'] [class*='rounded-['] {
+  border-radius: 6px !important;
+}
+:root[data-theme='xp-streaming'] .btn-primary {
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: none;
+}
+:root[data-theme='xp-streaming'] .title-xl {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.xs-nav {
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.75), transparent);
+}
+.xs-nav[data-solid='true'] {
+  background: #141414;
+}
+.xs-logo {
+  font-family: 'Montserrat Variable', 'Segoe UI', sans-serif;
+  font-weight: 900;
+  font-size: 1.55rem;
+  letter-spacing: -0.04em;
+  color: var(--accent);
+}
+.xs-link {
+  color: #e5e5e5;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+.xs-link:hover {
+  color: #b3b3b3;
+}
+.xs-link[aria-current='page'] {
+  color: #ffffff;
+  font-weight: 700;
+}
+.xs-page {
+  min-height: 100%;
+}
+.xs-vignette {
+  background:
+    linear-gradient(77deg, rgba(0, 0, 0, 0.85) 0%, rgba(0, 0, 0, 0.35) 45%, transparent 70%),
+    linear-gradient(to top, #141414 0%, rgba(20, 20, 20, 0.6) 14%, transparent 35%);
+}
+.xs-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  color: #e5e5e5;
+}
+.xs-badge {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+.xs-outline {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+}
+.xs-play,
+.xs-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  height: 2.9rem;
+  padding: 0 1.6rem;
+  border-radius: 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+.xs-play {
+  background: #ffffff;
+  color: #000000;
+}
+.xs-more {
+  background: rgba(109, 109, 110, 0.7);
+  color: #ffffff;
+}
+.xs-play:hover,
+.xs-more:hover {
+  opacity: 0.8;
+}
+.xs-dot {
+  width: 0.9rem;
+  height: 0.2rem;
+  background: rgba(255, 255, 255, 0.35);
+  transition:
+    width 0.4s,
+    background 0.4s;
+}
+.xs-dot[data-on='true'] {
+  width: 1.8rem;
+  background: #ffffff;
+}
+.xs-row .scroll-x {
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 2.5rem;
+}
+.xs-tile {
+  scroll-snap-align: start;
+  transform-origin: center;
+}
+/* Dans la grille de « Ma liste », la vignette prend sa colonne au lieu de ses 300 px de rangée. */
+.xs-grid .xs-tile {
+  width: 100%;
+}
+.xs-tile:hover {
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.9);
+}
+.xs-progress {
+  height: 3px;
+  background: #4d4d4d;
+}
+.xs-progress span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.xs-arrow {
+  position: absolute;
+  top: 2.75rem;
+  bottom: 1.5rem;
+  z-index: 20;
+  width: 2.5rem;
+  display: grid;
+  place-items: center;
+  background: rgba(20, 20, 20, 0.55);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.group\/row:hover .xs-arrow {
+  opacity: 1;
+}
+.xs-rank {
+  position: absolute;
+  left: 0;
+  bottom: -1.2rem;
+  font-family: 'Montserrat Variable', 'Segoe UI', sans-serif;
+  font-size: 13rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  color: #141414;
+  -webkit-text-stroke: 4px #595959;
+}
+.xs-tab {
+  height: 2.2rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.xs-tab[data-on='true'] {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}

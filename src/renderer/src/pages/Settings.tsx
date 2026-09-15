@@ -310,32 +310,50 @@ export default function SettingsPage(): React.JSX.Element {
           <p className="mt-0.5 text-[0.74rem] text-faint">
             Change toute l'interface : couleurs, typographie, arrondis, effets de fond.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {THEMES.map((theme) => {
-              const active = prefs.theme === theme.id
-              return (
-                <button
-                  key={theme.id}
-                  onClick={() => setPrefs({ theme: theme.id, accent: theme.accent ?? DEFAULT_PREFS.accent })}
-                  className="rounded-[14px] border p-2.5 text-left transition"
-                  style={{
-                    borderColor: active ? 'color-mix(in oklab, var(--accent) 55%, transparent)' : 'var(--line)',
-                    background: active ? 'color-mix(in oklab, var(--accent) 12%, transparent)' : 'var(--panel)'
-                  }}
-                >
-                  <span
-                    className="mb-2 flex h-10 w-full overflow-hidden rounded-[9px]"
-                    style={{ border: '1px solid var(--line)' }}
-                  >
-                    <span className="h-full flex-1" style={{ background: theme.swatch[0] }} />
-                    <span className="h-full w-1/3" style={{ background: theme.swatch[1] }} />
-                  </span>
-                  <span className="block text-[0.8rem] font-semibold">{theme.name}</span>
-                  <span className="mt-0.5 block text-[0.68rem] leading-snug text-faint">{theme.hint}</span>
-                </button>
-              )
-            })}
-          </div>
+          {[
+            { key: 'themes', title: '', hint: '', items: THEMES.filter((t) => !t.experience) },
+            {
+              key: 'experiences',
+              title: 'Expériences',
+              hint: 'Une autre app : navigation, accueil, bibliothèque et transitions refaits',
+              items: THEMES.filter((t) => t.experience)
+            }
+          ].map((group) => (
+            <div key={group.key} className={group.title ? 'mt-5' : undefined}>
+              {group.title && (
+                <>
+                  <p className="label">{group.title}</p>
+                  <p className="mt-0.5 text-[0.7rem] text-faint">{group.hint}</p>
+                </>
+              )}
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {group.items.map((theme) => {
+                  const active = prefs.theme === theme.id
+                  return (
+                    <button
+                      key={theme.id}
+                      onClick={() => setPrefs({ theme: theme.id, accent: theme.accent ?? DEFAULT_PREFS.accent })}
+                      className="rounded-[14px] border p-2.5 text-left transition"
+                      style={{
+                        borderColor: active ? 'color-mix(in oklab, var(--accent) 55%, transparent)' : 'var(--line)',
+                        background: active ? 'color-mix(in oklab, var(--accent) 12%, transparent)' : 'var(--panel)'
+                      }}
+                    >
+                      <span
+                        className="mb-2 flex h-10 w-full overflow-hidden rounded-[9px]"
+                        style={{ border: '1px solid var(--line)' }}
+                      >
+                        <span className="h-full flex-1" style={{ background: theme.swatch[0] }} />
+                        <span className="h-full w-1/3" style={{ background: theme.swatch[1] }} />
+                      </span>
+                      <span className="block text-[0.8rem] font-semibold">{theme.name}</span>
+                      <span className="mt-0.5 block text-[0.68rem] leading-snug text-faint">{theme.hint}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         <div className="border-t py-3" style={{ borderColor: 'var(--line)' }}>

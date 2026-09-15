@@ -1,0 +1,231 @@
+/* ══════════════════════════════════════════════════ EXPÉRIENCE CARNET */
+:root[data-theme='xp-carnet'] {
+  --bg: #2b2118;
+  --chrome: #231a12;
+  --scrim: rgba(43, 33, 24, 0.9);
+  --panel: rgba(243, 230, 207, 0.07);
+  --panel-2: rgba(243, 230, 207, 0.13);
+  --line: rgba(217, 197, 167, 0.16);
+  --line-2: rgba(217, 197, 167, 0.34);
+  --inset-hi: rgba(255, 240, 210, 0.06);
+  --color-ink: #f3e6cf;
+  --color-muted: #d9c5a7;
+  --color-faint: #b29c7e;
+  --font-sans: 'Work Sans Variable', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Cormorant Variable', Georgia, serif;
+  --radius-ctl: 10px;
+  --blur: 0px;
+  --on-accent-ink: #2b2118;
+  --aurora: 0.25;
+  --noise: 0.08;
+  --thumb: rgba(217, 197, 167, 0.3);
+}
+:root[data-theme='xp-carnet'] .btn-primary {
+  background: var(--accent);
+  color: #2b2118;
+  box-shadow: none;
+}
+:root[data-theme='xp-carnet'] .title-xl {
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+/* Les onglets se collent au bord droit du carnet. */
+:root[data-theme='xp-carnet'] .xk-tabs {
+  order: 2;
+}
+
+.xk-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  min-height: 92px;
+  padding: 0.6rem 0;
+  border-radius: 10px 0 0 10px;
+  color: #fff8ec;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    -4px 4px 10px -4px rgba(0, 0, 0, 0.6);
+}
+.xk-tab-search {
+  min-height: 44px;
+  background: #3a2c20;
+}
+.xk-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.xk-page {
+  color: #3a2a1c;
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 31px, rgba(88, 139, 139, 0.18) 31px 32px),
+    linear-gradient(#f3e6cf, #ecdcbf);
+  border-radius: 6px 14px 14px 6px;
+  box-shadow:
+    0 30px 60px -30px rgba(0, 0, 0, 0.8),
+    inset 40px 0 40px -40px rgba(58, 42, 28, 0.35);
+}
+.xk-rings {
+  position: absolute;
+  top: 3rem;
+  bottom: 3rem;
+  left: 1.3rem;
+  width: 18px;
+  background: radial-gradient(circle at 50% 50%, #2b2118 5px, #b9a17d 6px, transparent 8px) 0 0 / 18px 64px repeat-y;
+}
+.xk-title {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 4rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+}
+.xk-title-light {
+  color: #f3e6cf;
+}
+.xk-heading {
+  display: inline-block;
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.9rem;
+  font-weight: 700;
+  background: linear-gradient(transparent 60%, rgba(224, 164, 88, 0.5) 60%);
+  padding: 0 0.3rem;
+}
+.xk-hand {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  font-style: italic;
+  line-height: 1.15;
+}
+.xk-note {
+  font-size: 0.78rem;
+  color: #6f5a44;
+}
+.xk-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.xk-polaroid {
+  position: relative;
+  padding: 0.55rem 0.55rem 0.8rem;
+  background: #fffdf8;
+  box-shadow: 0 12px 22px -12px rgba(58, 42, 28, 0.7);
+}
+.xk-tape {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  width: 70px;
+  height: 22px;
+  translate: -50% 0;
+  rotate: -4deg;
+  background: rgba(224, 206, 160, 0.75);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+.xk-postit {
+  position: relative;
+  width: 150px;
+  min-height: 130px;
+  padding: 0.9rem 0.8rem;
+  background: linear-gradient(170deg, #fde68a, #facc15);
+  color: #3a2a1c;
+  box-shadow: 0 14px 20px -14px rgba(58, 42, 28, 0.8);
+}
+.xk-postit-count {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.4rem;
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #c8553d;
+}
+.xk-fan {
+  display: flex;
+  justify-content: center;
+  height: 260px;
+  perspective: 1200px;
+}
+.xk-fan .xk-card {
+  margin-inline: -26px;
+  rotate: var(--fan);
+  transform-origin: bottom center;
+}
+.xk-card {
+  position: relative;
+  width: 150px;
+  height: 214px;
+  flex-shrink: 0;
+  perspective: 1000px;
+  transition:
+    rotate 0.4s,
+    translate 0.4s;
+}
+.xk-card:hover {
+  rotate: 0deg;
+  translate: 0 -18px;
+  z-index: 5;
+}
+.xk-card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.xk-card:hover .xk-card-inner {
+  transform: rotateY(180deg);
+}
+.xk-card-face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border: 6px solid #fffdf8;
+  border-radius: 10px;
+  background: #fffdf8;
+  backface-visibility: hidden;
+  box-shadow: 0 16px 26px -16px rgba(0, 0, 0, 0.8);
+}
+.xk-card-name {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 1.2rem 0.4rem 0.3rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  text-align: left;
+}
+.xk-card-back {
+  transform: rotateY(180deg);
+  padding: 0.8rem;
+  text-align: left;
+  color: #3a2a1c;
+  background: repeating-linear-gradient(45deg, #f3e6cf 0 10px, #ecdcbf 10px 20px);
+}
+.xk-stamp {
+  width: 64px;
+  height: 80px;
+  padding: 4px;
+  background: #fffdf8;
+  mask: radial-gradient(circle 4px at 4px 4px, transparent 98%, #000) -4px -4px / 12px 12px;
+  box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.6);
+}
+.xk-shelf {
+  position: relative;
+  border-bottom: 18px solid #6b4a2e;
+  box-shadow: 0 22px 22px -12px rgba(0, 0, 0, 0.7);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.3), transparent 45%);
+}

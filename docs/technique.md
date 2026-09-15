@@ -50,8 +50,8 @@ La rampe de la heatmap est une rampe ordinale validée (teinte unique, clarté m
 plus clair à ≥ 2:1 sur la surface du graphique), et les libellés portent des couleurs de texte,
 jamais celle de la série.
 
-Quinze **thèmes** et quatre **dispositions** (Classique, Rail, Barre haute, Tableau de bord)
-se combinent librement depuis les Réglages. Un thème est une réécriture complète du jeu de
+Vingt **thèmes**, dont cinq « expériences », et quatre **dispositions** (Classique, Rail,
+Barre haute, Tableau de bord) se combinent librement depuis les Réglages. Un thème est une réécriture complète du jeu de
 variables — couleurs, typographie, rayons, ombres, flou, effets de fond — pas seulement une
 teinte.
 
@@ -85,6 +85,20 @@ design-system : trois couches de jetons — primitives, rôles, composants — �
 `bridge.css`. Aucun effet de fond ni bascule 3D.
 
 Les polices de ces thèmes sont embarquées (`@fontsource`) : l'app fonctionne hors ligne.
+
+Les cinq **expériences** (`src/renderer/src/experiences/`) vont plus loin qu'un habillage :
+chacune remplace la navigation, l'accueil, la bibliothèque et la transition entre pages. Les
+pages profondes (fiche, statistiques, réglages…) restent communes et prennent les jetons du
+thème. Leurs données viennent de `experiences/data.ts`, pour que chaque mise en scène montre
+la même vérité que l'accueil classique.
+
+| Expérience | Navigation | Accueil | Bibliothèque |
+|---|---|---|---|
+| **Streaming** | Barre haute posée sur la bannière | Bannière tournante, rangées paysage, Top 10 | Grille « Ma liste » par statut |
+| **Console** | Onglets de console, horloge | Tuiles qui s'élargissent, fond repeint, flèches du clavier | Collection de tuiles carrées |
+| **Magazine** | Manchette et rubriques | Une en colonnes, brèves, programme, palmarès | Index alphabétique à points de conduite |
+| **Cockpit** | Rail de commande | Panneaux, jauge, télémétrie, bandeau défilant | Registre en tableau |
+| **Carnet** | Onglets en ruban sur le bord | Photos scotchées, post-it, cartes qui se retournent, timbres | Étagères de cartes |
 
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle

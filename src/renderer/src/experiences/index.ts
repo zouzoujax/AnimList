@@ -1,0 +1,46 @@
+import type { HTMLMotionProps } from 'motion/react'
+import { THEMES, type ExperienceId } from '@shared/types'
+import { useApp } from '@/store/app'
+import { carnet } from './Carnet'
+import { gameConsole } from './Console'
+import { hud } from './Hud'
+import { magazine } from './Magazine'
+import { streaming } from './Streaming'
+
+/**
+ * Ce qu'une expérience remplace.
+ *
+ * La navigation, l'accueil et la bibliothèque sont les trois écrans qu'on voit
+ * en premier et qui disent « c'est une autre app » ; les transitions changent la
+ * façon dont on passe de l'un à l'autre. Les pages profondes (fiche,
+ * statistiques, réglages) restent celles de l'app, habillées par les jetons du
+ * thème : les refaire cinq fois multiplierait les bugs sans rien apprendre de
+ * plus sur le goût.
+ */
+export interface Experience {
+  Nav: () => React.JSX.Element
+  Home: () => React.JSX.Element
+  Library: () => React.JSX.Element
+  motion: Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'exit' | 'transition'>
+}
+
+export const PAGE_MOTION: Experience['motion'] = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.22, ease: [0.22, 0.8, 0.24, 1] }
+}
+
+const EXPERIENCES: Partial<Record<ExperienceId, Experience>> = {
+  streaming,
+  console: gameConsole,
+  magazine,
+  hud,
+  carnet
+}
+
+export function useExperience(): Experience | null {
+  const theme = useApp((s) => s.prefs.theme)
+  const id = THEMES.find((t) => t.id === theme)?.experience
+  return id ? (EXPERIENCES[id] ?? null) : null
+}

@@ -1,0 +1,10 @@
+/*
+ * Thèmes « expérience » : chacun a son fichier de jetons et de classes, préfixées
+ * par l'initiale de l'expérience (xs- streaming, xc- console, xm- magazine,
+ * xh- cockpit, xk- carnet). Les composants sont dans les .tsx voisins.
+ */
+@import './streaming.css';
+@import './console.css';
+@import './magazine.css';
+@import './hud.css';
+@import './carnet.css';

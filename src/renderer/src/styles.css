@@ -1,6 +1,7 @@
 @import 'tailwindcss';
 @import './themes/ui-ux-pro-max.css';
 @import './themes/design-system/index.css';
+@import './experiences/index.css';
 
 @theme {
   --color-ink: #e9ecf8;

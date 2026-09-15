@@ -6,6 +6,7 @@ import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
 import { Aurora, Sidebar, TitleBar } from '@/components/Shell'
+import { PAGE_MOTION, useExperience } from '@/experiences'
 import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
 import HomePage from '@/pages/Home'
@@ -56,6 +57,9 @@ export default function App(): React.JSX.Element {
   const setPalette = useApp((s) => s.setPalette)
   const paletteOpen = useApp((s) => s.paletteOpen)
   const scrollRef = useRef<HTMLDivElement>(null)
+  // Un thème « expérience » remplace la navigation, l'accueil, la bibliothèque
+  // et les transitions ; les autres pages restent celles de l'app.
+  const xp = useExperience()
 
   useEffect(() => {
     void init()
@@ -143,26 +147,20 @@ export default function App(): React.JSX.Element {
       {!ready ? (
         <Boot />
       ) : (
-        <div className="flex min-h-0 flex-1">
+        <div className={xp ? 'xp-frame relative flex min-h-0 flex-1' : 'flex min-h-0 flex-1'}>
           {/* First thing Tab reaches, so the whole navigation can be skipped. */}
           <a href="#contenu" className="skip-link">
             Aller au contenu
           </a>
-          <Sidebar />
+          {xp ? <xp.Nav /> : <Sidebar />}
           <main id="contenu" ref={scrollRef} className="scroll-y relative flex-1" tabIndex={-1}>
             <AnimatePresence mode="wait">
-              <motion.div
-                key={routeKey}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.22, ease: [0.22, 0.8, 0.24, 1] }}
-              >
+              <motion.div key={routeKey} {...(xp?.motion ?? PAGE_MOTION)}>
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
                   <Suspense fallback={<Spinner label="Chargement de la page…" />}>
-                    {route.name === 'home' && <HomePage />}
+                    {route.name === 'home' && (xp ? <xp.Home /> : <HomePage />)}
                     {route.name === 'discover' && <DiscoverPage initialSearch={route.search} />}
-                    {route.name === 'library' && <LibraryPage initialGenre={route.genre} />}
+                    {route.name === 'library' && (xp ? <xp.Library /> : <LibraryPage initialGenre={route.genre} />)}
                     {route.name === 'studio' && <StudioPage studio={route.studio} />}
                     {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
                     {route.name === 'manga' && <MangaPage />}

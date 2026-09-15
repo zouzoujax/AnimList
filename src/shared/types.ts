@@ -23,6 +23,18 @@ export type ThemeId =
   | 'boreal'
   | 'ds-ardoise'
   | 'ds-carbon'
+  | 'xp-streaming'
+  | 'xp-console'
+  | 'xp-magazine'
+  | 'xp-hud'
+  | 'xp-carnet'
+
+/**
+ * Une « expérience » ne se contente pas d'habiller l'app : elle remplace la
+ * navigation, l'accueil, la bibliothèque et les transitions (voir
+ * renderer/src/experiences).
+ */
+export type ExperienceId = 'streaming' | 'console' | 'magazine' | 'hud' | 'carnet'
 
 export interface ThemeDef {
   id: ThemeId
@@ -35,6 +47,8 @@ export interface ThemeDef {
   light?: boolean
   /** Accent appliqué quand on choisit le thème ; sans lui, l'accent par défaut. Modifiable ensuite. */
   accent?: string
+  /** Présent : le thème refait la mise en page, pas seulement l'habillage. */
+  experience?: ExperienceId
 }
 
 export const THEMES: ThemeDef[] = [
@@ -158,6 +172,53 @@ export const THEMES: ThemeDef[] = [
     swatch: ['#161616', '#0f62fe'],
     titlebar: { color: '#161616', symbolColor: '#C6C6C6' },
     accent: '#0f62fe'
+  },
+
+  {
+    id: 'xp-streaming',
+    name: 'Streaming',
+    hint: 'Bannière plein écran, rangées qui défilent, menu en haut',
+    swatch: ['#0b0b0f', '#e50914'],
+    titlebar: { color: '#0B0B0F', symbolColor: '#B3B3B3' },
+    accent: '#e50914',
+    experience: 'streaming'
+  },
+  {
+    id: 'xp-console',
+    name: 'Console',
+    hint: 'Tuiles géantes, focus animé, menu horizontal de console',
+    swatch: ['#0a1330', '#4f8cff'],
+    titlebar: { color: '#0A1330', symbolColor: '#AFC3E8' },
+    accent: '#4f8cff',
+    experience: 'console'
+  },
+  {
+    id: 'xp-magazine',
+    name: 'Magazine',
+    hint: 'Pages en cases, gros titres, lecture comme un numéro papier',
+    swatch: ['#f4efe6', '#d7261e'],
+    titlebar: { color: '#F4EFE6', symbolColor: '#1A1A1A' },
+    light: true,
+    accent: '#d7261e',
+    experience: 'magazine'
+  },
+  {
+    id: 'xp-hud',
+    name: 'Cockpit',
+    hint: 'Panneaux, jauges et données partout, façon HUD',
+    swatch: ['#050a0a', '#22d3ee'],
+    titlebar: { color: '#050A0A', symbolColor: '#7FA9A6' },
+    accent: '#22d3ee',
+    experience: 'hud'
+  },
+  {
+    id: 'xp-carnet',
+    name: 'Carnet',
+    hint: 'Étagères de jaquettes, cartes à collectionner',
+    swatch: ['#2b2118', '#e0a458'],
+    titlebar: { color: '#2B2118', symbolColor: '#D9C5A7' },
+    accent: '#e0a458',
+    experience: 'carnet'
   }
 ]
 
