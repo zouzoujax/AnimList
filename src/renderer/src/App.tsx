@@ -165,7 +165,7 @@ export default function App(): React.JSX.Element {
                     {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
                     {route.name === 'manga' && <MangaPage />}
                     {route.name === 'calendar' && <CalendarPage />}
-                    {route.name === 'stats' && <StatsPage />}
+                    {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>

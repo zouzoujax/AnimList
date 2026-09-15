@@ -6,6 +6,7 @@ import { isUnaired, titleOf } from '@/lib/format'
 import { useBrowse } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf } from './data'
+import { WEEKDAYS, useStats } from './stats'
 import type { Experience } from '.'
 
 /*
@@ -308,10 +309,156 @@ function Library(): React.JSX.Element {
   )
 }
 
+/** Le bilan de fin d'année d'une plateforme : un chiffre énorme, puis ton palmarès. */
+function Stats(): React.JSX.Element {
+  const s = useStats()
+  const navigate = useApp((st) => st.navigate)
+  const lang = useApp((st) => st.prefs.titleLang)
+  const top = s.topSeries[0]?.media
+  const peakGenre = Math.max(1, ...s.genres.map((g) => g.minutes))
+  const peakMonth = Math.max(1, ...s.months.map((m) => m.episodes))
+  const peakDay = Math.max(1, ...s.weekdays)
+  const favDay = s.weekdays.indexOf(Math.max(...s.weekdays))
+
+  return (
+    <div className="xs-page pb-16">
+      <section className="on-art relative flex min-h-[72vh] flex-col justify-end overflow-hidden px-10 pb-20 pt-28">
+        {top && (
+          <img
+            src={top.banner ?? top.cover.xl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-45"
+          />
+        )}
+        <div className="xs-vignette absolute inset-0" />
+        <div className="relative">
+          <p className="xs-kicker">Ton année en streaming</p>
+          <motion.p
+            className="xs-mega"
+            initial={{ opacity: 0, y: 60, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {Math.round(s.minutes / 60)}
+          </motion.p>
+          <p className="text-[1.8rem] font-bold">heures devant l’écran</p>
+          <p className="mt-2 text-[1rem] text-muted">
+            {s.episodes} épisodes · {s.series} séries · record de {s.bestStreak} jours d’affilée
+          </p>
+        </div>
+      </section>
+
+      {s.topSeries.length > 0 && (
+        <Row title="Tes séries les plus regardées">
+          {s.topSeries.map(({ media, episodes }, i) => (
+            <motion.button
+              key={media.id}
+              onClick={() => navigate({ name: 'anime', id: media.id })}
+              className="relative flex h-[210px] w-[250px] shrink-0 items-end"
+              whileHover={{ scale: 1.06 }}
+              title={`${episodes} épisodes`}
+            >
+              <span className="xs-rank" aria-hidden>
+                {i + 1}
+              </span>
+              <img
+                src={media.cover.large}
+                alt=""
+                className="relative ml-auto h-full w-[140px] rounded-[4px] object-cover"
+              />
+            </motion.button>
+          ))}
+        </Row>
+      )}
+
+      <section className="mb-12 px-10">
+        <h2 className="mb-5 text-[1.3rem] font-bold">Tes genres</h2>
+        <div className="flex flex-col gap-2.5">
+          {s.genres.map((g, i) => (
+            <div key={g.name} className="grid grid-cols-[140px_1fr_80px] items-center gap-4">
+              <span className="text-[0.95rem] font-semibold">{g.name}</span>
+              <div className="xs-genre">
+                <motion.span
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(g.minutes / peakGenre) * 100}%` }}
+                  transition={{ delay: i * 0.08, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </div>
+              <span className="text-right text-[0.85rem] text-faint">{Math.round(g.minutes / 60)} h</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-12 grid grid-cols-2 gap-12 px-10">
+        <div>
+          <h2 className="mb-5 text-[1.3rem] font-bold">Mois par mois</h2>
+          <div className="flex h-[180px] items-end gap-2">
+            {s.months.map((m, i) => (
+              <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                <motion.span
+                  className="xs-col w-full"
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(2, (m.episodes / peakMonth) * 100)}%` }}
+                  transition={{ delay: i * 0.04, duration: 0.6 }}
+                  title={`${m.episodes} épisodes`}
+                />
+                <span className="text-[0.7rem] uppercase text-faint">{m.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h2 className="mb-5 text-[1.3rem] font-bold">Tes soirées</h2>
+          <div className="flex h-[180px] items-end gap-3">
+            {s.weekdays.map((n, i) => (
+              <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                <motion.span
+                  className="xs-col w-full"
+                  data-on={i === favDay}
+                  initial={{ height: 0 }}
+                  animate={{ height: `${Math.max(2, (n / peakDay) * 100)}%` }}
+                  transition={{ delay: i * 0.05, duration: 0.6 }}
+                />
+                <span className="text-[0.75rem] text-faint">{WEEKDAYS[i]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid grid-cols-4 gap-2 px-10">
+        {[
+          ['Note moyenne', s.avgScore === null ? '—' : `${s.avgScore.toFixed(1)}/10`],
+          ['Séries terminées', String(s.completed)],
+          ['Studio préféré', s.studios[0]?.name ?? '—'],
+          [
+            'Journée record',
+            s.record
+              ? `${s.record.episodes} ép. le ${new Date(s.record.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`
+              : '—'
+          ]
+        ].map(([label, value]) => (
+          <div key={label} className="xs-fact">
+            <p className="text-[0.8rem] text-faint">{label}</p>
+            <p className="clamp-2 mt-1 text-[1.5rem] font-bold">{value}</p>
+          </div>
+        ))}
+      </section>
+      {top && (
+        <p className="mt-8 px-10 text-[0.9rem] text-faint">
+          Ta série de l’année : <span className="font-bold text-white">{titleOf(top, lang)}</span>
+        </p>
+      )}
+    </div>
+  )
+}
+
 export const streaming: Experience = {
   Nav,
   Home,
   Library,
+  Stats,
   motion: {
     initial: { opacity: 0, scale: 1.015 },
     animate: { opacity: 1, scale: 1 },

@@ -249,6 +249,44 @@
 .xh-table tbody tr:hover {
   background: var(--panel-2);
 }
+.xh-value-big {
+  font-size: 1.9rem;
+  color: var(--accent);
+  text-shadow: 0 0 14px color-mix(in oklab, var(--accent) 50%, transparent);
+}
+.xh-grid-line {
+  fill: none;
+  stroke: rgba(34, 211, 238, 0.14);
+  stroke-width: 1;
+}
+.xh-radar {
+  fill: color-mix(in oklab, var(--accent) 22%, transparent);
+  stroke: var(--accent);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
+.xh-radar-label {
+  font-family: 'JetBrains Mono Variable', monospace;
+  font-size: 7px;
+  letter-spacing: 0.08em;
+  fill: var(--color-faint);
+}
+.xh-hour {
+  fill: var(--accent);
+}
+.xh-dial {
+  font-family: 'Orbitron Variable', sans-serif;
+  font-size: 26px;
+  font-weight: 700;
+  fill: var(--accent);
+}
+.xh-curve {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 6px var(--accent));
+}
 .xh-meter {
   display: block;
   width: 140px;

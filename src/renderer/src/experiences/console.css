@@ -142,6 +142,41 @@
   background: #ffffff;
   color: #07102b;
 }
+.xc-level {
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 999px;
+  font-size: 2.6rem;
+  font-weight: 700;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 45%),
+    linear-gradient(135deg, var(--accent), #8b5cf6);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.15);
+}
+.xc-cup {
+  display: inline-block;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 0.6rem 0.6rem 1.2rem 1.2rem;
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.2);
+}
+.xc-platinum {
+  background: linear-gradient(135deg, #e0f2fe, #94a3b8);
+}
+.xc-gold {
+  background: linear-gradient(135deg, #fde68a, #d97706);
+}
+.xc-silver {
+  background: linear-gradient(135deg, #f1f5f9, #64748b);
+}
+.xc-bronze {
+  background: linear-gradient(135deg, #fdba74, #9a3412);
+}
+.xc-card[data-locked='true'] .xc-cup {
+  filter: grayscale(1);
+}
 .xc-trophy {
   position: absolute;
   right: 0.5rem;

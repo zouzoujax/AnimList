@@ -223,6 +223,59 @@
   mask: radial-gradient(circle 4px at 4px 4px, transparent 98%, #000) -4px -4px / 12px 12px;
   box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.6);
 }
+.xk-scribble {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0.6rem 1rem 0.8rem;
+  border: 2px dashed rgba(58, 42, 28, 0.35);
+  border-radius: 14px 22px 16px 20px;
+}
+.xk-scribble-num {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 3.6rem;
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1;
+  color: #c8553d;
+}
+.xk-donut-label {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 700;
+  fill: #3a2a1c;
+}
+.xk-medal {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  background: #c8553d;
+  color: #fff8ec;
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-weight: 700;
+  font-style: italic;
+  box-shadow: 0 4px 8px -4px rgba(0, 0, 0, 0.6);
+}
+.xk-hatch {
+  border: 2px solid #3a2a1c;
+  border-bottom: 0;
+  background: repeating-linear-gradient(45deg, rgba(200, 85, 61, 0.55) 0 4px, transparent 4px 9px);
+}
+.xk-month-stamp {
+  padding: 0.7rem 0.8rem;
+  text-align: center;
+  background: #fffdf8;
+  outline: 2px dashed rgba(58, 42, 28, 0.3);
+  outline-offset: -6px;
+  box-shadow: 0 8px 14px -10px rgba(58, 42, 28, 0.8);
+}
 .xk-shelf {
   position: relative;
   border-bottom: 18px solid #6b4a2e;

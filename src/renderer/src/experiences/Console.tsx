@@ -17,6 +17,7 @@ import { countdown, isUnaired, minutesToHuman, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
+import { WEEKDAYS, useStats } from './stats'
 import type { Experience } from '.'
 
 /*
@@ -302,10 +303,126 @@ function Library(): React.JSX.Element {
   )
 }
 
+type Tier = 'platinum' | 'gold' | 'silver' | 'bronze'
+
+/** La salle des trophées : un niveau de joueur, des trophées à débloquer, les jeux les plus joués. */
+function Stats(): React.JSX.Element {
+  const s = useStats()
+  const navigate = useApp((st) => st.navigate)
+  const lang = useApp((st) => st.prefs.titleLang)
+  const hours = s.minutes / 60
+  // Chaque niveau demande un peu plus que le précédent, comme sur console.
+  const level = Math.floor(Math.sqrt(hours)) + 1
+  const into = (hours - (level - 1) ** 2) / (level ** 2 - (level - 1) ** 2)
+  const peakDay = Math.max(1, ...s.weekdays)
+
+  const trophies: { name: string; hint: string; tier: Tier; got: boolean }[] = [
+    { name: 'Premier pas', hint: 'Voir un épisode', tier: 'bronze', got: s.episodes >= 1 },
+    { name: 'Centurion', hint: '100 épisodes vus', tier: 'bronze', got: s.episodes >= 100 },
+    { name: 'Finisseur', hint: '10 séries terminées', tier: 'silver', got: s.completed >= 10 },
+    { name: 'Régulier', hint: '7 jours d’affilée', tier: 'silver', got: s.bestStreak >= 7 },
+    { name: 'Marathon', hint: '10 épisodes en un jour', tier: 'gold', got: (s.record?.episodes ?? 0) >= 10 },
+    { name: 'Éclectique', hint: '8 genres différents', tier: 'gold', got: s.genres.length >= 8 },
+    { name: 'Vétéran', hint: '500 heures de visionnage', tier: 'gold', got: hours >= 500 },
+    { name: 'Platine', hint: '1000 épisodes vus', tier: 'platinum', got: s.episodes >= 1000 }
+  ]
+  const count = (tier: Tier): number => trophies.filter((t) => t.tier === tier && t.got).length
+
+  return (
+    <div className="px-12 pb-16 pt-28">
+      <section className="xc-card flex items-center gap-8 !p-7">
+        <span className="xc-level">{level}</span>
+        <div className="min-w-0 flex-1">
+          <p className="xc-card-kicker">Niveau de spectateur</p>
+          <p className="title-xl mt-1 text-[2.2rem]">{Math.round(hours)} heures de jeu</p>
+          <div className="xc-meter mt-3 !max-w-none">
+            <motion.span initial={{ width: 0 }} animate={{ width: `${into * 100}%` }} transition={{ duration: 1 }} />
+          </div>
+          <p className="mt-1.5 text-[0.85rem] text-faint">
+            {Math.round(into * 100)} % vers le niveau {level + 1}
+          </p>
+        </div>
+        <div className="flex gap-5">
+          {(['platinum', 'gold', 'silver', 'bronze'] as const).map((tier) => (
+            <div key={tier} className="text-center">
+              <span className={`xc-cup xc-${tier}`} aria-hidden />
+              <p className="mt-1 text-[1.2rem] font-semibold">{count(tier)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <h2 className="title-xl mb-4 mt-10 text-[1.5rem]">Trophées</h2>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+        {trophies.map((t, i) => (
+          <motion.div
+            key={t.name}
+            className="xc-card flex items-center gap-4"
+            data-locked={!t.got}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: t.got ? 1 : 0.45, y: 0 }}
+            transition={{ delay: i * 0.05 }}
+          >
+            <span className={`xc-cup xc-${t.tier}`} aria-hidden />
+            <div>
+              <p className="font-semibold">{t.name}</p>
+              <p className="text-[0.8rem] text-faint">{t.got ? t.hint : `Verrouillé · ${t.hint}`}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      <h2 className="title-xl mb-4 mt-10 text-[1.5rem]">Les plus joués</h2>
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
+        {s.topSeries.slice(0, 6).map(({ media, episodes, minutes }) => (
+          <button
+            key={media.id}
+            className="xc-card xc-game flex items-center gap-4 text-left"
+            onClick={() => navigate({ name: 'anime', id: media.id })}
+          >
+            <span className="xc-tile block h-[72px] w-[72px] shrink-0 overflow-hidden">
+              <img src={media.cover.large} alt="" className="h-full w-full object-cover" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate font-semibold">{titleOf(media, lang)}</span>
+              <span className="block text-[0.8rem] text-faint">
+                {minutesToHuman(minutes)} · {episodes} ép.
+              </span>
+              {media.episodes && (
+                <span className="xc-meter mt-2 block">
+                  <span style={{ width: `${Math.min(100, (episodes / media.episodes) * 100)}%` }} />
+                </span>
+              )}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <section className="xc-card mt-10">
+        <p className="xc-card-kicker">Tes jours de jeu</p>
+        <div className="mt-4 flex h-[120px] items-end gap-3">
+          {s.weekdays.map((n, i) => (
+            <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+              <motion.span
+                className="w-full rounded-t-lg bg-white/80"
+                initial={{ height: 0 }}
+                animate={{ height: `${Math.max(3, (n / peakDay) * 100)}%` }}
+                transition={{ delay: i * 0.05 }}
+              />
+              <span className="text-[0.8rem] text-faint">{WEEKDAYS[i]}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export const gameConsole: Experience = {
   Nav,
   Home,
   Library,
+  Stats,
   motion: {
     initial: { opacity: 0, x: 48, filter: 'blur(6px)' },
     animate: { opacity: 1, x: 0, filter: 'blur(0px)' },

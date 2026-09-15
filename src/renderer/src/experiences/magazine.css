@@ -227,6 +227,55 @@
   font-weight: 700;
   font-size: 0.95rem;
 }
+.xm-figure {
+  padding: 1.2rem 1.5rem 1.4rem;
+  border-right: 1px solid rgba(26, 26, 26, 0.2);
+}
+.xm-figure:last-child {
+  border-right: 0;
+}
+.xm-quote {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2.6rem;
+  font-style: italic;
+  line-height: 1.15;
+  text-align: center;
+  text-wrap: balance;
+  padding: 0 6%;
+}
+.xm-quote-title {
+  font-style: normal;
+  font-weight: 700;
+  color: var(--accent);
+}
+.xm-share {
+  display: grid;
+  grid-template-columns: 5.5rem 11rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(26, 26, 26, 0.12);
+}
+.xm-share-pct {
+  font-family: 'Cormorant Variable', Georgia, serif;
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+}
+.xm-share-bar {
+  height: 0.35rem;
+  background: rgba(26, 26, 26, 0.1);
+}
+.xm-share-bar span {
+  display: block;
+  height: 100%;
+  background: #1a1a1a;
+}
+.xm-month {
+  width: 60%;
+  background: repeating-linear-gradient(0deg, #1a1a1a 0 2px, transparent 2px 5px);
+}
 .xm-entry-page {
   font-family: 'Inter Variable', sans-serif;
   font-size: 0.78rem;

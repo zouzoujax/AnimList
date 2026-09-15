@@ -6,6 +6,7 @@ import { countdown, isUnaired, minutesToHuman, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
+import { WEEKDAYS, useStats } from './stats'
 import type { Experience } from '.'
 
 /*
@@ -300,10 +301,180 @@ function Library(): React.JSX.Element {
   )
 }
 
+/** Écran de télémétrie : radar des genres, cadran des heures, courbe des mois, lectures chiffrées. */
+function Stats(): React.JSX.Element {
+  const s = useStats()
+  const navigate = useApp((st) => st.navigate)
+  const lang = useApp((st) => st.prefs.titleLang)
+  const peakGenre = Math.max(1, ...s.genres.map((g) => g.minutes))
+  const peakHour = Math.max(1, ...s.hours)
+  const peakMonth = Math.max(1, ...s.months.map((m) => m.episodes))
+  const peakDay = Math.max(1, ...s.weekdays)
+  const peakSeries = Math.max(1, ...s.topSeries.map((t) => t.minutes))
+
+  const radar = s.genres.map((g, i) => {
+    const angle = (i / Math.max(1, s.genres.length)) * Math.PI * 2 - Math.PI / 2
+    const r = 20 + 80 * (g.minutes / peakGenre)
+    return {
+      ...g,
+      x: 120 + Math.cos(angle) * r,
+      y: 120 + Math.sin(angle) * r,
+      lx: 120 + Math.cos(angle) * 112,
+      ly: 120 + Math.sin(angle) * 112
+    }
+  })
+  const curve = s.months.map((m, i) => `${(i / 11) * 600},${140 - (m.episodes / peakMonth) * 120}`).join(' ')
+
+  return (
+    <div className="xh-screen grid grid-cols-12 gap-3 p-5">
+      <div className="col-span-12 grid grid-cols-5 gap-3">
+        {[
+          ['TEMPS CUMULÉ', `${Math.round(s.minutes / 60)} H`],
+          ['ÉPISODES', String(s.episodes)],
+          ['SÉRIES', String(s.series)],
+          ['SÉRIE RECORD', `${s.bestStreak} J`],
+          ['NOTE MOY.', s.avgScore === null ? '—' : s.avgScore.toFixed(1)]
+        ].map(([k, v]) => (
+          <div key={k} className="xh-panel relative p-4">
+            <p className="xh-code">{k}</p>
+            <p className="xh-value xh-value-big mt-1">{v}</p>
+          </div>
+        ))}
+      </div>
+
+      <Panel code="T-01" title="Radar des genres" className="col-span-4">
+        {/* Marges autour du radar : à 240 px pile, les noms de genres étaient rognés sur les bords. */}
+        <svg viewBox="-44 -12 328 264" className="mx-auto w-full max-w-[340px]">
+          {[40, 70, 100].map((r) => (
+            <circle key={r} cx="120" cy="120" r={r} className="xh-grid-line" />
+          ))}
+          {radar.map((p) => (
+            <line key={p.name} x1="120" y1="120" x2={p.lx} y2={p.ly} className="xh-grid-line" />
+          ))}
+          <motion.polygon
+            points={radar.map((p) => `${p.x},${p.y}`).join(' ')}
+            className="xh-radar"
+            initial={{ opacity: 0, scale: 0.4 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{ transformOrigin: '120px 120px' }}
+            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          />
+          {radar.map((p) => (
+            <text
+              key={p.name}
+              x={p.lx}
+              y={p.ly}
+              className="xh-radar-label"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {p.name.slice(0, 10).toUpperCase()}
+            </text>
+          ))}
+        </svg>
+      </Panel>
+
+      <Panel code="T-02" title="Cadran horaire" className="col-span-4">
+        <svg viewBox="0 0 240 240" className="mx-auto w-full max-w-[300px]">
+          {s.hours.map((n, h) => (
+            <motion.rect
+              key={h}
+              x="116"
+              y="16"
+              width="8"
+              height="34"
+              transform={`rotate(${h * 15} 120 120)`}
+              className="xh-hour"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.12 + 0.88 * (n / peakHour) }}
+              transition={{ delay: h * 0.02 }}
+            />
+          ))}
+          {[0, 6, 12, 18].map((h) => (
+            <text
+              key={h}
+              x={120 + Math.sin((h / 24) * Math.PI * 2) * 60}
+              y={120 - Math.cos((h / 24) * Math.PI * 2) * 60}
+              className="xh-radar-label"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              {String(h).padStart(2, '0')}H
+            </text>
+          ))}
+          <text x="120" y="122" className="xh-dial" textAnchor="middle" dominantBaseline="middle">
+            {String(s.hours.indexOf(peakHour)).padStart(2, '0')}H
+          </text>
+        </svg>
+      </Panel>
+
+      <Panel code="T-03" title="Cycle hebdo" className="col-span-4">
+        <div className="flex flex-col gap-2.5">
+          {s.weekdays.map((n, i) => (
+            <div key={i} className="grid grid-cols-[3rem_1fr_3rem] items-center gap-3">
+              <span className="xh-code">{WEEKDAYS[i].toUpperCase()}</span>
+              <span className="xh-meter !w-full">
+                <motion.span
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(n / peakDay) * 100}%` }}
+                  transition={{ delay: i * 0.05 }}
+                />
+              </span>
+              <span className="text-right text-[0.8rem] tabular-nums">{n}</span>
+            </div>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel code="T-04" title="Trajectoire 12 mois" className="col-span-7">
+        <svg viewBox="-10 -10 620 170" className="w-full">
+          {[0, 40, 80, 120].map((y) => (
+            <line key={y} x1="0" x2="600" y1={20 + y} y2={20 + y} className="xh-grid-line" />
+          ))}
+          <motion.polyline
+            points={curve}
+            className="xh-curve"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.4, ease: 'easeInOut' }}
+          />
+          {s.months.map((m, i) => (
+            <text key={i} x={(i / 11) * 600} y="160" className="xh-radar-label" textAnchor="middle">
+              {m.label.toUpperCase()}
+            </text>
+          ))}
+        </svg>
+      </Panel>
+
+      <Panel code="T-05" title="Cibles les plus suivies" className="col-span-5">
+        <ul className="flex flex-col gap-2">
+          {s.topSeries.slice(0, 7).map(({ media, minutes }, i) => (
+            <li key={media.id}>
+              <button className="w-full text-left" onClick={() => navigate({ name: 'anime', id: media.id })}>
+                <span className="flex justify-between gap-3 text-[0.78rem]">
+                  <span className="truncate">
+                    <span className="xh-code mr-2">{String(i + 1).padStart(2, '0')}</span>
+                    {titleOf(media, lang)}
+                  </span>
+                  <span className="xh-hot shrink-0">{Math.round(minutes / 60)} H</span>
+                </span>
+                <span className="xh-meter mt-1 !w-full">
+                  <span style={{ width: `${(minutes / peakSeries) * 100}%` }} />
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+    </div>
+  )
+}
+
 export const hud: Experience = {
   Nav,
   Home,
   Library,
+  Stats,
   motion: {
     initial: { opacity: 0, clipPath: 'inset(0 0 100% 0)' },
     animate: { opacity: 1, clipPath: 'inset(0 0 0% 0)' },

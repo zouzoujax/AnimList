@@ -5,6 +5,7 @@ import { airingLabel, formatLabel, minutesToHuman, titleOf } from '@/lib/format'
 import { useBrowse } from '@/lib/hooks'
 import { nextEpisodeOf, useApp, type Route } from '@/store/app'
 import { useBehind, useContinue, useShelf, useTotals, useUpcoming } from './data'
+import { WEEKDAYS, useStats } from './stats'
 import type { Experience } from '.'
 
 /*
@@ -242,10 +243,115 @@ function Library(): React.JSX.Element {
   )
 }
 
+const DAY_NAMES = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche']
+
+/** La double page « L'année en chiffres » : gros chiffres, citation, infographies au trait. */
+function Stats(): React.JSX.Element {
+  const s = useStats()
+  const navigate = useApp((st) => st.navigate)
+  const lang = useApp((st) => st.prefs.titleLang)
+  const top = s.topSeries[0]?.media
+  const totalGenre = s.genres.reduce((sum, g) => sum + g.minutes, 0) || 1
+  const peakMonth = Math.max(1, ...s.months.map((m) => m.episodes))
+  const favDay = s.weekdays.indexOf(Math.max(...s.weekdays))
+  const favHour = s.hours.indexOf(Math.max(...s.hours))
+
+  return (
+    <div className="px-12 pb-16 pt-8">
+      <p className="xm-kicker">Dossier spécial</p>
+      <h1 className="xm-headline mt-2">L’année en chiffres</h1>
+      <p className="xm-deck mt-3">Ce que ton historique dit de toi, du premier épisode au dernier coché.</p>
+
+      <div className="xm-rule-double mt-8 grid grid-cols-4">
+        {[
+          [Math.round(s.minutes / 60), 'heures passées devant l’écran'],
+          [s.episodes, 'épisodes cochés'],
+          [s.series, 'séries commencées'],
+          [s.bestStreak, 'jours d’affilée, au mieux']
+        ].map(([value, caption]) => (
+          <div key={caption} className="xm-figure">
+            <p className="xm-big">{value}</p>
+            <p className="xm-caption mt-2">{caption}</p>
+          </div>
+        ))}
+      </div>
+
+      {top && (
+        <blockquote className="xm-quote my-12">
+          « Ta série de l’année, c’est{' '}
+          <button className="xm-quote-title" onClick={() => navigate({ name: 'anime', id: top.id })}>
+            {titleOf(top, lang)}
+          </button>{' '}
+          : {minutesToHuman(s.topSeries[0].minutes)} de ta vie. »
+        </blockquote>
+      )}
+
+      <div className="grid grid-cols-3 gap-10">
+        <section className="col-span-2">
+          <p className="xm-kicker">Les genres, en part du temps</p>
+          <ol className="mt-4">
+            {s.genres.map((g) => (
+              <li key={g.name} className="xm-share">
+                <span className="xm-share-pct">{Math.round((g.minutes / totalGenre) * 100)}%</span>
+                <span className="xm-brief-title">{g.name}</span>
+                <span className="xm-share-bar">
+                  <span style={{ width: `${(g.minutes / totalGenre) * 100}%` }} />
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
+        <aside className="xm-column pl-8">
+          <p className="xm-kicker">Le portrait</p>
+          <p className="xm-body mt-3">
+            Tu regardes surtout le <strong>{DAY_NAMES[favDay]}</strong>, vers <strong>{favHour} h</strong>.
+            {s.record &&
+              ` Ta plus grosse journée : ${s.record.episodes} épisodes, le ${new Date(s.record.at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`}
+            {s.avgScore !== null && ` Tu notes en moyenne ${s.avgScore.toFixed(1)} sur 10.`}
+          </p>
+          <p className="xm-kicker mt-6">Studios</p>
+          <ol className="mt-2">
+            {s.studios.map((st, i) => (
+              <li key={st.name} className="xm-chart">
+                <span className="xm-chart-rank">{String(i + 1).padStart(2, '0')}</span>
+                <span>{st.name}</span>
+                <span className="xm-entry-page ml-auto">{st.episodes} ép.</span>
+              </li>
+            ))}
+          </ol>
+        </aside>
+      </div>
+
+      <section className="xm-rule-double mt-12 pt-6">
+        <p className="xm-kicker">Mois par mois</p>
+        <div className="mt-4 grid grid-cols-12 gap-3">
+          {s.months.map((m, i) => (
+            <div key={i} className="flex flex-col items-center">
+              <div className="flex h-[140px] w-full items-end justify-center">
+                <span className="xm-month" style={{ height: `${Math.max(2, (m.episodes / peakMonth) * 100)}%` }} />
+              </div>
+              <span className="xm-caption mt-2 uppercase">{m.label}</span>
+              <span className="xm-entry-page">{m.episodes}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 flex justify-between">
+          {s.weekdays.map((n, i) => (
+            <span key={i} className="xm-caption">
+              {WEEKDAYS[i]} <strong className="text-[#1a1a1a]">{n}</strong>
+            </span>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
+}
+
 export const magazine: Experience = {
   Nav,
   Home,
   Library,
+  Stats,
   motion: {
     initial: { opacity: 0, rotateY: -8, x: 30, transformPerspective: 1400, originX: 0 },
     animate: { opacity: 1, rotateY: 0, x: 0 },

@@ -100,6 +100,13 @@ la même vérité que l'accueil classique.
 | **Cockpit** | Rail de commande | Panneaux, jauge, télémétrie, bandeau défilant | Registre en tableau |
 | **Carnet** | Onglets en ruban sur le bord | Photos scotchées, post-it, cartes qui se retournent, timbres | Étagères de cartes |
 
+Chaque expérience a aussi sa page **Statistiques**, calculée par `experiences/stats.ts` (heures,
+genres, mois, jours, heures de visionnage, séries les plus vues, meilleure série de jours) :
+bilan de fin d'année façon plateforme pour Streaming, salle des trophées avec niveau pour
+Console, double page « L'année en chiffres » pour Magazine, écran de télémétrie (radar des
+genres, cadran horaire, courbe sur douze mois) pour Cockpit, et « Mon bilan » manuscrit avec
+anneau des genres, podium et timbres des mois pour Carnet.
+
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle
 tenue partout est donc que l'accent teinte les fonds et les contours, et que le texte reste de

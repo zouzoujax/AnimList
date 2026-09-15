@@ -21,6 +21,7 @@ export interface Experience {
   Nav: () => React.JSX.Element
   Home: () => React.JSX.Element
   Library: () => React.JSX.Element
+  Stats?: () => React.JSX.Element
   motion: Pick<HTMLMotionProps<'div'>, 'initial' | 'animate' | 'exit' | 'transition'>
 }
 
