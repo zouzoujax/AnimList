@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.6.1 — 16 septembre 2026
+
+### Corrections
+
+- Dans les thèmes Console, Magazine et Cockpit, l'arbre de la franchise s'ouvrait en haut de la page au lieu du centre de l'écran — il fallait remonter pour le voir — et restait invisible dans Cockpit. Toutes les fenêtres de l'app s'ouvrent désormais au bon endroit, quel que soit le thème
+- Le lecteur vidéo occupe de nouveau tout l'écran dans ces mêmes thèmes
+
 ## 0.6.0 — 15 septembre 2026
 
 ### Ajouts
