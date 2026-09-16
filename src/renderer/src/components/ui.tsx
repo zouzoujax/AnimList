@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, LoaderCircle, TriangleAlert } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 export function Section({
   id,
@@ -239,7 +240,16 @@ export function Modal({
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  return (
+  /*
+   * Posée dans <body>, jamais dans la page.
+   *
+   * Une fenêtre est en `position: fixed`, donc calée sur l'écran — sauf si un
+   * ancêtre porte un `transform`, un `filter` ou un `clip-path`, qui en font un
+   * nouveau repère. Les transitions de page des expériences en posent un : la
+   * fenêtre s'ouvrait alors en haut du document, et le `clip-path` du Cockpit la
+   * découpait entièrement.
+   */
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -262,6 +272,7 @@ export function Modal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
