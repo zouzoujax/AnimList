@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import { ExternalLink, PictureInPicture2, RotateCcw, SkipBack, SkipForward, TriangleAlert, X } from 'lucide-react'
 import type { LocalEpisode } from '@shared/types'
@@ -211,7 +212,9 @@ export default function Player({
     })
   }
 
-  return (
+  // Dans <body>, comme les fenêtres modales : un `filter` ou un `clip-path`
+  // posé par la transition de page ferait du plein écran un faux plein écran.
+  return createPortal(
     <AnimatePresence>
       <motion.div
         /**
@@ -333,6 +336,7 @@ export default function Player({
           )}
         </div>
       </motion.div>
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
