@@ -819,3 +819,193 @@ textarea {
   --num-hi: #ffffff;
   color: var(--color-ink);
 }
+
+/* ══════════════════════════════════════════════════ ACCUEIL
+   La frise d'épisodes, la file « À regarder » et la semaine de diffusion.
+   `--tone` est la couleur de la série, posée en ligne par chaque composant :
+   la frise de Frieren n'a pas la teinte de celle de Chainsaw Man. */
+@layer components {
+  .ep-strip {
+    display: flex;
+    gap: 3px;
+    height: 14px;
+    align-items: stretch;
+  }
+  .ep-tick {
+    flex: 1 1 0;
+    min-width: 2px;
+    max-width: 14px;
+    border-radius: 2px;
+  }
+  .ep-tick[data-s='seen'] {
+    background: var(--tone);
+    transform-origin: bottom;
+    animation: ep-fill 0.42s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+    animation-delay: calc(var(--i) * 14ms);
+  }
+  .ep-tick[data-s='next'] {
+    box-shadow: inset 0 0 0 2px var(--tone);
+  }
+  .ep-tick[data-s='aired'] {
+    background: color-mix(in oklab, var(--tone) 28%, transparent);
+  }
+  .ep-tick[data-s='later'] {
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .home-row .ep-strip {
+    height: 6px;
+    gap: 2px;
+  }
+  .home-row .ep-tick {
+    max-width: 9px;
+    border-radius: 1px;
+  }
+  .home-row .ep-tick[data-s='next'] {
+    box-shadow: inset 0 0 0 1.5px var(--tone);
+  }
+  .home-row .ep-tick[data-s='seen'] {
+    animation: none;
+  }
+
+  .home-queue {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+    gap: 0.25rem 1.25rem;
+  }
+  /* La couleur de la série, réglée pour un fond sombre : sur un thème clair,
+     on la fonce avant de s'en servir pour du texte. */
+  .home-row {
+    --tone-ink: var(--tone);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: var(--radius-ctl);
+    padding-right: 0.5rem;
+    transition: background-color 0.18s;
+  }
+  :root[data-tone='light'] .home-row {
+    --tone-ink: color-mix(in oklab, var(--tone) 55%, var(--color-ink));
+  }
+  .home-row:hover {
+    background: var(--panel);
+  }
+  .home-row-main {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.5rem;
+    text-align: left;
+    border-radius: var(--radius-ctl);
+  }
+  .home-row-main > span > span:first-child {
+    display: -webkit-box;
+  }
+  .home-row-mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    flex-shrink: 0;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--tone-ink);
+    border: 1px solid color-mix(in oklab, var(--tone-ink) 45%, transparent);
+    transition:
+      background-color 0.18s,
+      color 0.18s;
+  }
+  .home-row-mark:hover {
+    background: var(--tone);
+    color: #07080f;
+  }
+  .home-row-when {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+    font-size: 0.74rem;
+    color: var(--color-faint);
+  }
+
+  .week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(132px, 1fr));
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+  .week-day {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    min-height: 120px;
+    padding: 0.6rem 0.45rem;
+    border-radius: 14px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+  .week-day:first-child {
+    border-color: color-mix(in oklab, var(--accent) 55%, transparent);
+  }
+  .week-day[data-empty='true'] {
+    background: transparent;
+    border-style: dashed;
+  }
+  .week-day-name {
+    padding: 0 0.3rem 0.2rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--color-muted);
+  }
+  .week-day-name::first-letter {
+    text-transform: uppercase;
+  }
+  .week-day:first-child .week-day-name {
+    color: var(--color-ink);
+  }
+  .week-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem;
+    border-radius: 9px;
+    text-align: left;
+    transition: background-color 0.18s;
+  }
+  .week-item:hover {
+    background: var(--panel-2);
+  }
+
+  .home-tab {
+    font-size: 1.32rem;
+    line-height: 1.2;
+    padding: 0 0.15rem 0.2rem;
+    color: var(--color-faint);
+    border-bottom: 2px solid transparent;
+    transition: color 0.18s;
+  }
+  .home-tab:hover {
+    color: var(--color-muted);
+  }
+  .home-tab[aria-selected='true'] {
+    color: var(--color-ink);
+    border-bottom-color: var(--accent);
+  }
+}
+
+@keyframes ep-fill {
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ep-tick[data-s='seen'] {
+    animation: none;
+  }
+}

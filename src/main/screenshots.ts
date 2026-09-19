@@ -48,6 +48,8 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
 
   const plan: ShotPlan[] = [
     { name: 'accueil', route: { name: 'home' }, settleMs: 1400 },
+    // La semaine et les tendances vivent sous la file, dont la hauteur suit la bibliothèque.
+    { name: 'accueil-bas', route: { name: 'home' }, settleMs: 1400, scrollTo: '#semaine' },
     { name: 'bibliotheque', route: { name: 'library' }, settleMs: 1200 },
     { name: 'fiche', route: { name: 'anime', id: animeId }, settleMs: 2600 },
     // The trailer only loads once asked, so the shot has to press play.
