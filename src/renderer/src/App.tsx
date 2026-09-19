@@ -5,7 +5,7 @@ import { NextUp } from '@/components/NextUp'
 import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
-import { Aurora, Sidebar, TitleBar } from '@/components/Shell'
+import { Aurora, NAV, Sidebar, TitleBar } from '@/components/Shell'
 import { PAGE_MOTION, useExperienceState } from '@/experiences'
 import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
@@ -132,6 +132,14 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         setPalette(!paletteOpen)
       }
+      // Ctrl+1 à Ctrl+7 : les pages du menu, dans son ordre.
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
+        const target = NAV[Number(e.key) - 1]
+        if (target) {
+          e.preventDefault()
+          navigate(target.route)
+        }
+      }
       if (e.altKey && e.key === 'ArrowLeft') {
         e.preventDefault()
         back()
@@ -153,7 +161,7 @@ export default function App(): React.JSX.Element {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [back, forward, setPalette, paletteOpen, runUndo])
+  }, [back, forward, navigate, setPalette, paletteOpen, runUndo])
 
   // Les boutons latéraux de la souris, comme dans un navigateur. Retenus dès
   // l'appui : Chromium y attache sa propre navigation, qui n'a rien à faire ici.

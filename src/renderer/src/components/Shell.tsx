@@ -181,7 +181,8 @@ export function TitleBar(): React.JSX.Element {
   )
 }
 
-const NAV: { route: Route; label: string; icon: typeof House }[] = [
+/** Dans l'ordre des raccourcis : Ctrl+1 pour la première, et ainsi de suite. */
+export const NAV: { route: Route; label: string; icon: typeof House }[] = [
   { route: { name: 'home' }, label: 'Accueil', icon: House },
   { route: { name: 'discover' }, label: 'Découvrir', icon: Compass },
   { route: { name: 'library' }, label: 'Bibliothèque', icon: LibraryBig },
@@ -211,13 +212,13 @@ export function Sidebar(): React.JSX.Element {
       className="nav-shell flex w-[228px] shrink-0 flex-col gap-1 border-r px-3 py-4"
       style={{ borderColor: 'var(--line)', background: 'color-mix(in oklab, var(--bg) 55%, transparent)' }}
     >
-      {NAV.map(({ route: target, label, icon: Icon }) => {
+      {NAV.map(({ route: target, label, icon: Icon }, i) => {
         const active = route.name === target.name
         return (
           <button
             key={target.name}
             onClick={() => navigate(target)}
-            title={label}
+            title={`${label} (Ctrl+${i + 1})`}
             // The rail layout hides the labels, so the accessible name has to
             // come from somewhere other than the text.
             aria-label={label}
