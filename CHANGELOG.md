@@ -9,6 +9,21 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.7.0 — 19 septembre 2026
+
+### Ajouts
+
+- Un nouveau design pour toute l'app, à essayer dans Réglages › Apparence › « Nouveau design ». Une fois allumé, chaque page a son propre interrupteur : tu gardes l'ancienne forme là où tu la préfères
+- Une frise d'épisodes, un trait par épisode : ceux que tu as vus, le suivant, ceux sortis sans toi et ceux pas encore diffusés
+- Accueil : une phrase qui dit combien d'épisodes t'attendent, une file « À regarder » avec un bouton pour cocher l'épisode suivant, et ta semaine de diffusion jour par jour
+- Bibliothèque : onglets par statut et une ligne par série avec sa frise ; les affiches restent à un clic
+- Calendrier : une grille de programmes, matin, après-midi, soirée et nuit, avec le moment présent en surbrillance
+- Découvrir : une grande barre de recherche, et chaque recommandation dit pourquoi elle t'est proposée
+- Manga : on choisit d'abord manga, manhwa ou manhua, avec ce que ça change pour la lecture
+- Statistiques : ton visionnage raconté en phrases, et les badges en liste, les plus proches d'abord
+- Fiche d'un anime : la frise dans l'en-tête, les épisodes en premier et un sommaire qui suit ta lecture
+- Studio, personnage et doubleur : ce que tu as déjà vu d'abord, avec le rôle tenu
+
 ## 0.6.2 — 19 septembre 2026
 
 ### Modifications
