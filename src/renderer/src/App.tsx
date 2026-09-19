@@ -41,6 +41,7 @@ const MangaPage = lazy(() => import('@/pages/Manga'))
 const CalendarPage = lazy(() => import('@/pages/Calendar'))
 const StatsPage = lazy(() => import('@/pages/Stats'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
+const SeasonPage = lazy(() => import('@/pages/Season'))
 const DetailPage = lazy(() => import('@/pages/Detail'))
 
 /**
@@ -243,6 +244,7 @@ export default function App(): React.JSX.Element {
                     {route.name === 'badges' &&
                       (xp?.Badges ? <xp.Badges /> : nd.stats ? <NdStatsPage focus="badges" /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
+                    {route.name === 'season' && <SeasonPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>
                 </ErrorBoundary>

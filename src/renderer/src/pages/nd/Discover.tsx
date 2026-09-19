@@ -126,6 +126,7 @@ function Schedule({ items }: { items: Media[] }): React.JSX.Element {
 
 export default function NdDiscoverPage({ initialSearch }: { initialSearch?: string }): React.JSX.Element {
   const entries = useApp((s) => s.entries)
+  const navigate = useApp((s) => s.navigate)
   const [tab, setTab] = useState<BrowseKind>('trending')
   const [typed, setTyped] = useState({ from: initialSearch ?? '', text: initialSearch ?? '' })
   const [genre, setGenre] = useState<string | null>(null)
@@ -288,7 +289,20 @@ export default function NdDiscoverPage({ initialSearch }: { initialSearch?: stri
       ) : (
         <div className="mb-3.5">
           <NdTabs label="Catalogue" tabs={TABS} value={tab} onChange={setTab} />
-          <p className="mt-1.5 px-1 text-[0.8rem] text-muted">{TAB_LINES[tab]}</p>
+          <p className="mt-1.5 px-1 text-[0.8rem] text-muted">
+            {TAB_LINES[tab]}
+            {tab === 'season' && (
+              <>
+                {' '}
+                <button
+                  className="font-medium underline underline-offset-2"
+                  onClick={() => navigate({ name: 'season' })}
+                >
+                  Faire le tri de la saison
+                </button>
+              </>
+            )}
+          </p>
         </div>
       )}
 

@@ -1,4 +1,16 @@
-import { CalendarClock, Flame, Rocket, ScanSearch, Search, Sparkles, Star, TrendingUp, X } from 'lucide-react'
+import {
+  ArrowRight,
+  CalendarClock,
+  Flame,
+  ListChecks,
+  Rocket,
+  ScanSearch,
+  Search,
+  Sparkles,
+  Star,
+  TrendingUp,
+  X
+} from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -96,6 +108,7 @@ function UpcomingSchedule({ items }: { items: Media[] }): React.JSX.Element {
 
 export default function DiscoverPage({ initialSearch }: { initialSearch?: string }): React.JSX.Element {
   const entries = useApp((s) => s.entries)
+  const navigate = useApp((s) => s.navigate)
   const [tab, setTab] = useState<BrowseKind>('trending')
   // La saisie appartient à la recherche qui a ouvert la page. Arriver avec une
   // autre — depuis la palette, par exemple — rend la précédente caduque sans
@@ -266,6 +279,20 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
 
       {stale && (
         <p className="mb-4 text-[0.76rem] text-amber-300/80">Hors ligne — affichage de la dernière version en cache.</p>
+      )}
+
+      {!searching && tab === 'season' && (
+        <button
+          className="glass mb-6 flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-white/5"
+          onClick={() => navigate({ name: 'season' })}
+        >
+          <ListChecks size={18} className="shrink-0 text-[var(--accent-2)]" />
+          <span className="flex-1 text-[0.85rem]">
+            <span className="font-semibold">Faire le tri de la saison</span>
+            <span className="text-muted"> : ce que tu suis, ce que tu prévois, ce que tu écartes.</span>
+          </span>
+          <ArrowRight size={16} className="shrink-0 text-faint" />
+        </button>
       )}
 
       {/* Avant le catalogue : ce qui vient de ta bibliothèque passe devant ce

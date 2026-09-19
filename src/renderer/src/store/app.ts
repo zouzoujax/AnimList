@@ -23,6 +23,7 @@ export type Route =
   | { name: 'library'; genre?: string }
   | { name: 'manga' }
   | { name: 'calendar' }
+  | { name: 'season' }
   | { name: 'stats' }
   | { name: 'badges' }
   | { name: 'settings'; section?: string }

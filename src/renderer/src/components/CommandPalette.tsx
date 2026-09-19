@@ -33,6 +33,7 @@ const NAV_COMMANDS: { label: string; icon: typeof House; route: Route }[] = [
   { label: 'Bibliothèque', icon: LibraryBig, route: { name: 'library' } },
   { label: 'Manga', icon: BookOpen, route: { name: 'manga' } },
   { label: 'Calendrier', icon: CalendarDays, route: { name: 'calendar' } },
+  { label: 'Saison en cours', icon: CalendarDays, route: { name: 'season' } },
   { label: 'Statistiques', icon: ChartColumn, route: { name: 'stats' } },
   { label: 'Réglages', icon: Settings, route: { name: 'settings' } }
 ]

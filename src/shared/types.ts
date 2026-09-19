@@ -483,6 +483,8 @@ export interface Prefs {
   showAdult: boolean
   weekStart: 0 | 1
   lastAiringCheck: number
+  /** Les séries de la saison écartées d'un « Pas pour moi », hors bibliothèque. */
+  seasonSkipped: number[]
   /**
    * Télécharge une nouvelle version dès qu'elle paraît, et l'installe à la
    * fermeture de l'app. Coupé, tout reste manuel depuis les Réglages.
@@ -967,6 +969,7 @@ export const DEFAULT_PREFS: Prefs = {
   showAdult: false,
   weekStart: 1,
   lastAiringCheck: 0,
+  seasonSkipped: [],
   autoUpdate: true,
   skipHint: true,
   autoSkip: false,
