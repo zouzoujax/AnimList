@@ -15,6 +15,7 @@ import {
 } from '@shared/types'
 import { secondaryFor } from '@/lib/color'
 import { rememberScroll } from '@/lib/scroll'
+import { airingLabel, titleOf } from '@/lib/format'
 
 export type Route =
   | { name: 'home' }
@@ -178,6 +179,24 @@ function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' |
     events: snapshot.history,
     lists: snapshot.lists ?? []
   }
+}
+
+/**
+ * « À jour » : la coche vient de rattraper la diffusion.
+ *
+ * Le moment où l'on se demande « et le prochain, c'est quand ? ». La réponse
+ * est dans la fiche, mais on n'y est pas forcément : une carte de l'accueil,
+ * la grille du calendrier. Dit une fois, à la coche qui rattrape, pas à
+ * chacune.
+ */
+function caughtUpNotice(state: AppState, animeId: number, media: Media | undefined): string | null {
+  const next = media?.nextAiring
+  if (!media || !next || next.episode <= 1) return null
+  const seen = state.watched.get(animeId)
+  for (let ep = 1; ep < next.episode; ep += 1) if (!seen?.has(ep)) return null
+  const when = airingLabel(next.airingAt)
+  const warned = state.prefs.notifications && state.entries.get(animeId)?.notify !== false
+  return `À jour sur ${titleOf(media, state.prefs.titleLang)}. Épisode ${next.episode} ${when.charAt(0).toLowerCase()}${when.slice(1)}${warned ? ' : tu seras prévenu.' : '.'}`
 }
 
 let toastSeq = 0
@@ -360,6 +379,12 @@ export const useApp = create<AppState>((set, get) => ({
     // bibliothèque décide du statut, et il lui faut le total pour ça.
     if (next && media && !get().media.has(animeId)) await window.api.library.setEntry(animeId, {}, media)
     await window.api.library.setWatched(animeId, episode, next)
+    // Seulement à la coche qui rattrape : l'épisode juste avant celui à venir.
+    const known = media ?? get().media.get(animeId)
+    if (next && known?.nextAiring?.episode === episode + 1) {
+      const notice = caughtUpNotice(get(), animeId, known)
+      if (notice) get().toast(notice, 'info')
+    }
   },
 
   markUpTo: async (animeId, episode, media) => {
@@ -385,6 +410,11 @@ export const useApp = create<AppState>((set, get) => ({
     if (added.length > 1) get().offerUndo(label.charAt(0).toUpperCase() + label.slice(1), held)
     if (media && !get().media.has(animeId)) await window.api.library.setEntry(animeId, {}, media)
     await window.api.library.setWatchedUpTo(animeId, episode)
+    const known = media ?? get().media.get(animeId)
+    if (known?.nextAiring?.episode === episode + 1) {
+      const notice = caughtUpNotice(get(), animeId, known)
+      if (notice) get().toast(notice, 'info')
+    }
   },
 
   clearProgress: async (animeId) => {
