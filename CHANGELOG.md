@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.6.2 — 19 septembre 2026
+
+### Modifications
+
+- L'app s'ouvre plus vite : les expériences (Streaming, Console, Magazine, Cockpit, Carnet) ne se chargent plus qu'au moment où tu en choisis une, et les polices sont plus légères
+- Composants de l'app mis à jour, dont un correctif de sécurité
+
 ## 0.6.1 — 16 septembre 2026
 
 ### Corrections
