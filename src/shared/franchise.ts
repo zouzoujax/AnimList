@@ -51,7 +51,9 @@ export interface Edge {
  * Mois et jour inconnus valent zéro — une sortie connue à l'année près se range
  * en tête de son année, ce qui vaut mieux que de disparaître du tri.
  */
-export function dateKey(d: { year: number | null; month?: number | null; day?: number | null } | null | undefined): number | null {
+export function dateKey(
+  d: { year: number | null; month?: number | null; day?: number | null } | null | undefined
+): number | null {
   if (!d?.year) return null
   return d.year * 10000 + (d.month ?? 0) * 100 + (d.day ?? 0)
 }

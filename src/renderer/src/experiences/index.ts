@@ -1,12 +1,8 @@
 import type { HTMLMotionProps } from 'motion/react'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import { THEMES, type Entry, type ExperienceId, type LibraryStatus, type Media } from '@shared/types'
 import { useApp } from '@/store/app'
-import { carnet } from './Carnet'
-import { gameConsole } from './Console'
-import { hud } from './Hud'
-import { magazine } from './Magazine'
-import { streaming } from './Streaming'
 
 /**
  * Ce qu'une expérience remplace.
@@ -81,16 +77,51 @@ export const PAGE_MOTION: Experience['motion'] = {
   transition: { duration: 0.22, ease: [0.22, 0.8, 0.24, 1] }
 }
 
-const EXPERIENCES: Partial<Record<ExperienceId, Experience>> = {
-  streaming,
-  console: gameConsole,
-  magazine,
-  hud,
-  carnet
+/*
+ * Chargées à la demande.
+ *
+ * Les cinq expériences pèsent plusieurs centaines de kilo-octets et la plupart
+ * des lancements n'en utilisent aucune : les embarquer dans le paquet de départ
+ * alourdissait l'ouverture pour tout le monde. Chacune vit dans son propre
+ * morceau, chargé la première fois qu'on la choisit, puis gardé en mémoire.
+ */
+const LOADERS: Record<ExperienceId, () => Promise<Experience>> = {
+  streaming: () => import('./Streaming').then((m) => m.streaming),
+  console: () => import('./Console').then((m) => m.gameConsole),
+  magazine: () => import('./Magazine').then((m) => m.magazine),
+  hud: () => import('./Hud').then((m) => m.hud),
+  carnet: () => import('./Carnet').then((m) => m.carnet)
+}
+
+const loaded = new Map<ExperienceId, Experience>()
+
+/**
+ * L'expérience du thème actif, et si elle est encore en route.
+ *
+ * `pending` permet à l'app de garder l'écran d'ouverture le temps du chargement,
+ * plutôt que de montrer une fraction de seconde la mise en page classique.
+ */
+export function useExperienceState(): { xp: Experience | null; pending: boolean } {
+  const theme = useApp((s) => s.prefs.theme)
+  const id = THEMES.find((t) => t.id === theme)?.experience
+  const [, setVersion] = useState(0)
+
+  useEffect(() => {
+    if (!id || loaded.has(id)) return
+    let alive = true
+    void LOADERS[id]().then((xp) => {
+      loaded.set(id, xp)
+      if (alive) setVersion((v) => v + 1)
+    })
+    return () => {
+      alive = false
+    }
+  }, [id])
+
+  const xp = id ? (loaded.get(id) ?? null) : null
+  return { xp, pending: !!id && !xp }
 }
 
 export function useExperience(): Experience | null {
-  const theme = useApp((s) => s.prefs.theme)
-  const id = THEMES.find((t) => t.id === theme)?.experience
-  return id ? (EXPERIENCES[id] ?? null) : null
+  return useExperienceState().xp
 }

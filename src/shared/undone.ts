@@ -35,8 +35,7 @@ export const MAX_UNDONE = 500
 export const MAX_UNDONE_AGE_DAYS = 365
 
 /** La passe fait partie de la clé : deux visionnages ne se confondent pas. */
-export const undoneKey = (animeId: number, episode: number, pass: number): string =>
-  `${animeId}:${episode}:${pass}`
+export const undoneKey = (animeId: number, episode: number, pass: number): string => `${animeId}:${episode}:${pass}`
 
 export function pruneUndone(
   memo: Record<string, Undone>,

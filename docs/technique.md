@@ -84,7 +84,7 @@ design-system : trois couches de jetons — primitives, rôles, composants — �
 `tokens/`, converties en CSS par son script `generate-tokens.cjs`, puis branchées sur l'app par
 `bridge.css`. Aucun effet de fond ni bascule 3D.
 
-Les polices de ces thèmes sont embarquées (`@fontsource`) : l'app fonctionne hors ligne.
+Les polices de ces thèmes sont embarquées (`@fontsource`) : l'app fonctionne hors ligne. Seuls leurs alphabets latin et latin étendu sont chargés (`themes/fonts.ts`, généré depuis les feuilles de Fontsource), et chaque expérience vit dans son propre morceau de code, chargé la première fois qu'on la choisit : le paquet de départ n'en porte aucune.
 
 Les cinq **expériences** (`src/renderer/src/experiences/`) vont plus loin qu'un habillage :
 chacune remplace la navigation, l'accueil, la bibliothèque et la transition entre pages. Les

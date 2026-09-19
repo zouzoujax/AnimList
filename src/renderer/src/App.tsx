@@ -6,7 +6,7 @@ import { CommandPalette } from '@/components/CommandPalette'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Shortcuts, { useShortcutsKey } from '@/components/Shortcuts'
 import { Aurora, Sidebar, TitleBar } from '@/components/Shell'
-import { PAGE_MOTION, useExperience } from '@/experiences'
+import { PAGE_MOTION, useExperienceState } from '@/experiences'
 import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
 import HomePage from '@/pages/Home'
@@ -59,7 +59,7 @@ export default function App(): React.JSX.Element {
   const scrollRef = useRef<HTMLDivElement>(null)
   // Un thème « expérience » remplace la navigation, l'accueil, la bibliothèque
   // et les transitions ; les autres pages restent celles de l'app.
-  const xp = useExperience()
+  const { xp, pending: xpPending } = useExperienceState()
 
   useEffect(() => {
     void init()
@@ -144,7 +144,7 @@ export default function App(): React.JSX.Element {
       <Aurora />
       <TitleBar />
 
-      {!ready ? (
+      {!ready || xpPending ? (
         <Boot />
       ) : (
         <div className={xp ? 'xp-frame relative flex min-h-0 flex-1' : 'flex min-h-0 flex-1'}>
