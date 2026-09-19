@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { Suspense, lazy, useCallback, useEffect, useRef } from 'react'
+import { Suspense, lazy, useCallback, useEffect } from 'react'
 import { Intro } from '@/components/Intro'
 import { NextUp } from '@/components/NextUp'
 import { CommandPalette } from '@/components/CommandPalette'
@@ -11,7 +11,8 @@ import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
 import HomePage from '@/pages/Home'
 import { useNewDesign } from '@/lib/nd'
-import { useApp } from '@/store/app'
+import { restoreScroll } from '@/lib/scroll'
+import { routeKeyOf, useApp } from '@/store/app'
 
 /**
  * Only the home page is in the entry bundle — it is what the window opens on.
@@ -42,6 +43,15 @@ const StatsPage = lazy(() => import('@/pages/Stats'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
 const DetailPage = lazy(() => import('@/pages/Detail'))
 
+/**
+ * Monté avec la page, donc après la sortie de la précédente : la ramener à sa
+ * position plus tôt ferait défiler l'ancienne pendant qu'elle s'efface.
+ */
+function ScrollOnArrival({ routeKey }: { routeKey: string }): null {
+  useEffect(() => restoreScroll(routeKey, useApp.getState().returning), [routeKey])
+  return null
+}
+
 function Boot(): React.JSX.Element {
   return (
     <div className="grid h-full place-items-center">
@@ -65,6 +75,7 @@ export default function App(): React.JSX.Element {
   const route = useApp((s) => s.route)
   const init = useApp((s) => s.init)
   const back = useApp((s) => s.back)
+  const forward = useApp((s) => s.forward)
   const navigate = useApp((s) => s.navigate)
   const toast = useApp((s) => s.toast)
   const setPalette = useApp((s) => s.setPalette)
@@ -79,7 +90,6 @@ export default function App(): React.JSX.Element {
     studio: useNewDesign('studio'),
     person: useNewDesign('person')
   }
-  const scrollRef = useRef<HTMLDivElement>(null)
   // Un thème « expérience » remplace la navigation, l'accueil, la bibliothèque
   // et les transitions ; les autres pages restent celles de l'app.
   const { xp, pending: xpPending } = useExperienceState()
@@ -126,6 +136,10 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         back()
       }
+      if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault()
+        forward()
+      }
       // Ctrl+Z sur la progression, jamais dans un champ : on y attend l'annulation
       // de la frappe, pas celle d'un épisode coché il y a dix minutes.
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
@@ -139,22 +153,29 @@ export default function App(): React.JSX.Element {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [back, setPalette, paletteOpen, runUndo])
+  }, [back, forward, setPalette, paletteOpen, runUndo])
 
-  const routeKey =
-    route.name === 'person'
-      ? `person-${route.kind}-${route.id}`
-      : route.name === 'anime'
-        ? `anime-${route.id}`
-        : route.name === 'studio'
-          ? `studio-${route.studio}`
-          : route.name === 'library'
-            ? `library-${route.genre ?? ''}`
-            : route.name
-
+  // Les boutons latéraux de la souris, comme dans un navigateur. Retenus dès
+  // l'appui : Chromium y attache sa propre navigation, qui n'a rien à faire ici.
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: 0 })
-  }, [routeKey])
+    const swallow = (e: MouseEvent): void => {
+      if (e.button === 3 || e.button === 4) e.preventDefault()
+    }
+    const onUp = (e: MouseEvent): void => {
+      if (e.button === 3) back()
+      else if (e.button === 4) forward()
+      else return
+      e.preventDefault()
+    }
+    window.addEventListener('mousedown', swallow)
+    window.addEventListener('mouseup', onUp)
+    return () => {
+      window.removeEventListener('mousedown', swallow)
+      window.removeEventListener('mouseup', onUp)
+    }
+  }, [back, forward])
+
+  const routeKey = routeKeyOf(route)
 
   return (
     <div className="flex h-full flex-col">
@@ -176,9 +197,10 @@ export default function App(): React.JSX.Element {
             Aller au contenu
           </a>
           {xp ? <xp.Nav /> : <Sidebar />}
-          <main id="contenu" ref={scrollRef} className="scroll-y relative flex-1" tabIndex={-1}>
+          <main id="contenu" className="scroll-y relative flex-1" tabIndex={-1}>
             <AnimatePresence mode="wait">
               <motion.div key={routeKey} {...(xp?.motion ?? PAGE_MOTION)}>
+                <ScrollOnArrival routeKey={routeKey} />
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
                   <Suspense fallback={<Spinner label="Chargement de la page…" />}>
                     {route.name === 'home' && (xp ? <xp.Home /> : nd.home ? <NdHomePage /> : <HomePage />)}

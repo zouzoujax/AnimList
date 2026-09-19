@@ -3,6 +3,7 @@ import {
   CalendarDays,
   ChartColumn,
   ChevronLeft,
+  ChevronRight,
   Compass,
   House,
   LibraryBig,
@@ -125,7 +126,7 @@ function TopNav(): React.JSX.Element {
 }
 
 export function TitleBar(): React.JSX.Element {
-  const { stack, back, setPalette } = useApp()
+  const { stack, forwardStack, back, forward, setPalette } = useApp()
 
   return (
     <header
@@ -136,9 +137,19 @@ export function TitleBar(): React.JSX.Element {
         onClick={back}
         disabled={!stack.length}
         aria-label="Retour"
+        title="Retour (Alt+←)"
         className="no-drag icon-btn !h-7 !w-7 disabled:opacity-25"
       >
         <ChevronLeft size={17} />
+      </button>
+      <button
+        onClick={forward}
+        disabled={!forwardStack.length}
+        aria-label="Suivant"
+        title="Suivant (Alt+→)"
+        className="no-drag icon-btn -ml-1.5 !h-7 !w-7 disabled:opacity-25"
+      >
+        <ChevronRight size={17} />
       </button>
 
       <div className="flex select-none items-center gap-2 pl-0.5">

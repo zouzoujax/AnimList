@@ -26,7 +26,8 @@ const GROUPS: { title: string; rows: Shortcut[] }[] = [
     title: 'Partout',
     rows: [
       { keys: ['Ctrl', 'K'], label: 'Ouvrir la recherche', hint: 'Ta bibliothèque, AniList et la navigation' },
-      { keys: ['Alt', '←'], label: 'Revenir en arrière' },
+      { keys: ['Alt', '←'], label: 'Revenir en arrière', hint: 'Ou le bouton « précédent » de la souris' },
+      { keys: ['Alt', '→'], label: 'Revenir en avant', hint: 'Ou le bouton « suivant » de la souris' },
       { keys: ['Ctrl', 'Z'], label: 'Annuler la dernière coche', hint: 'Cocher, cocher jusque-là, réinitialiser' },
       { keys: ['?'], label: 'Cette fenêtre' },
       { keys: ['Échap'], label: 'Fermer ce qui est ouvert' }

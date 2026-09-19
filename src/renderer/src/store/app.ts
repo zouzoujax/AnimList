@@ -14,6 +14,7 @@ import {
   type WatchEventRef
 } from '@shared/types'
 import { secondaryFor } from '@/lib/color'
+import { rememberScroll } from '@/lib/scroll'
 
 export type Route =
   | { name: 'home' }
@@ -28,6 +29,22 @@ export type Route =
   | { name: 'studio'; studio: string }
   | { name: 'person'; kind: 'character' | 'staff'; id: number }
 
+/** L'identité d'une page : deux routes de même clé montrent la même chose. */
+export function routeKeyOf(route: Route): string {
+  switch (route.name) {
+    case 'person':
+      return `person-${route.kind}-${route.id}`
+    case 'anime':
+      return `anime-${route.id}`
+    case 'studio':
+      return `studio-${route.studio}`
+    case 'library':
+      return `library-${route.genre ?? ''}`
+    default:
+      return route.name
+  }
+}
+
 export interface Toast {
   id: number
   message: string
@@ -38,6 +55,10 @@ interface AppState {
   ready: boolean
   route: Route
   stack: Route[]
+  /** Les pages quittées par « Retour », que « Suivant » rouvre. */
+  forwardStack: Route[]
+  /** Arrivé par « Retour » ou « Suivant » : la page reprend sa position. */
+  returning: boolean
   prefs: Prefs
   entries: Map<number, Entry>
   media: Map<number, Media>
@@ -68,6 +89,7 @@ interface AppState {
   init: () => Promise<void>
   navigate: (route: Route) => void
   back: () => void
+  forward: () => void
   setPrefs: (patch: Partial<Prefs>) => Promise<void>
   setPalette: (open: boolean) => void
   setHelp: (open: boolean) => void
@@ -155,6 +177,8 @@ export const useApp = create<AppState>((set, get) => ({
   ready: false,
   route: { name: 'home' },
   stack: [],
+  forwardStack: [],
+  returning: false,
   prefs: DEFAULT_PREFS,
   entries: new Map(),
   media: new Map(),
@@ -214,13 +238,42 @@ export const useApp = create<AppState>((set, get) => ({
   navigate: (route) => {
     const current = get().route
     if (current.name === route.name && JSON.stringify(current) === JSON.stringify(route)) return
-    set({ route, stack: [...get().stack, current].slice(-30), paletteOpen: false })
+    rememberScroll(routeKeyOf(current))
+    set({
+      route,
+      stack: [...get().stack, current].slice(-30),
+      // Comme un navigateur : un nouveau chemin efface l'avenir de l'ancien.
+      forwardStack: [],
+      returning: false,
+      paletteOpen: false
+    })
   },
 
   back: () => {
-    const stack = get().stack
-    if (!stack.length) return set({ route: { name: 'home' } })
-    set({ route: stack[stack.length - 1], stack: stack.slice(0, -1) })
+    const { stack, route: current } = get()
+    rememberScroll(routeKeyOf(current))
+    if (!stack.length) {
+      if (current.name === 'home') return
+      return set({ route: { name: 'home' }, forwardStack: [current, ...get().forwardStack], returning: false })
+    }
+    set({
+      route: stack[stack.length - 1],
+      stack: stack.slice(0, -1),
+      forwardStack: [current, ...get().forwardStack].slice(0, 30),
+      returning: true
+    })
+  },
+
+  forward: () => {
+    const { forwardStack, route: current } = get()
+    if (!forwardStack.length) return
+    rememberScroll(routeKeyOf(current))
+    set({
+      route: forwardStack[0],
+      forwardStack: forwardStack.slice(1),
+      stack: [...get().stack, current].slice(-30),
+      returning: true
+    })
   },
 
   setPrefs: async (patch) => {
