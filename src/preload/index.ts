@@ -5,6 +5,7 @@ import type { Tree } from '@shared/franchise'
 import type { Lang } from '@shared/langs'
 
 import type {
+  ApiStatus,
   AiringEntry,
   AiringItem,
   BrowseQuery,
@@ -193,6 +194,16 @@ const api = {
     /** Efface les visionnages dont la série n'existe plus. Renvoie le nombre. */
     cleanOrphans: (): Promise<number> => ipcRenderer.invoke('health:clean-orphans'),
     removeStray: (name: string): Promise<boolean> => ipcRenderer.invoke('health:remove-stray', name)
+  },
+
+  anilist: {
+    /** L'état du catalogue, pour le témoin de la barre de titre. */
+    status: (): Promise<ApiStatus> => ipcRenderer.invoke('anilist:status'),
+    onStatus: (cb: (status: ApiStatus) => void): (() => void) => {
+      const handler = (_e: unknown, status: ApiStatus): void => cb(status)
+      ipcRenderer.on('anilist:status', handler)
+      return () => ipcRenderer.off('anilist:status', handler)
+    }
   },
 
   cache: {

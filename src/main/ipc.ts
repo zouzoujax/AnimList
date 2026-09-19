@@ -240,6 +240,7 @@ export function registerIpc(): void {
 
   // ---- caches disque ---------------------------------------------------
   ipcMain.handle('cache:stats', () => anilist.cacheStats())
+  ipcMain.handle('anilist:status', () => anilist.apiStatus())
   ipcMain.handle('cache:purge', () => anilist.purgeCache())
 
   // ---- fichiers locaux ------------------------------------------------

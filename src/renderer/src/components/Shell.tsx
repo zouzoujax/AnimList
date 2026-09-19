@@ -15,6 +15,7 @@ import { useMemo } from 'react'
 import { minutesToHuman } from '@/lib/format'
 import { useNow } from '@/lib/hooks'
 import { useApp, type Route } from '@/store/app'
+import { ApiStatusBadge } from './ApiStatus'
 import { ThemeFx } from './ThemeFx'
 
 const NOISE =
@@ -177,6 +178,8 @@ export function TitleBar(): React.JSX.Element {
           </kbd>
         </button>
       </div>
+
+      <ApiStatusBadge />
     </header>
   )
 }

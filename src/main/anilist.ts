@@ -1,6 +1,6 @@
 import { failureOf } from '@shared/api-outage'
 import { dateKey, type Edge } from '@shared/franchise'
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
@@ -11,6 +11,7 @@ import { matchStreamEpisodes } from '@shared/stream-episodes'
 import { createQueue, gapForLimit, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
+  ApiStatus,
   AiringEntry,
   AiringItem,
   BrowseQuery,
@@ -281,6 +282,29 @@ const gate = createQueue({ minGapMs: MIN_GAP_MS })
 let mutedUntil = 0
 let mutedWhy = ''
 
+/**
+ * L'état du catalogue, montré en permanence dans la barre de titre.
+ *
+ * Avant, une panne ne se lisait que page par page, dans un message d'erreur —
+ * ou pas du tout quand la limite de débit faisait simplement patienter une
+ * page sur son chargement.
+ */
+let status: ApiStatus = { state: 'ok' }
+
+function setStatus(next: ApiStatus): void {
+  if (next.state === status.state && next.until === status.until) return
+  status = next
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('anilist:status', status)
+  }
+}
+
+export function apiStatus(): ApiStatus {
+  // Le délai écoulé, la pause n'en est plus une, même sans requête pour le dire.
+  if (status.until && status.until < Date.now() && status.state !== 'offline') return { state: 'ok' }
+  return status
+}
+
 /** Le message qu'AniList joint à son refus, quand il en joint un. */
 async function apiMessage(res: Response): Promise<string | null> {
   try {
@@ -296,18 +320,25 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
   if (Date.now() < mutedUntil) throw new Error(mutedWhy)
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const res = await fetch(ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ query, variables })
-    })
+    let res: Response
+    try {
+      res = await fetch(ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ query, variables })
+      })
+    } catch (err) {
+      setStatus({ state: 'offline' })
+      throw err
+    }
     // AniList annonce sa limite du moment à chaque réponse, 429 compris.
     const limit = res.headers.get('x-ratelimit-limit')
     if (limit) gate.setGap(gapForLimit(Number(limit), MIN_GAP_MS))
 
     if (res.status === 429) {
-      const wait = Number(res.headers.get('retry-after') ?? 5) * 1000
-      await new Promise((r) => setTimeout(r, Math.min(wait, 60_000)))
+      const wait = Math.min(Number(res.headers.get('retry-after') ?? 5) * 1000, 60_000)
+      setStatus({ state: 'throttled', until: Date.now() + wait })
+      await new Promise((r) => setTimeout(r, wait))
       continue
     }
     if (!res.ok) {
@@ -317,6 +348,7 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
       if (failure.pauseMs > 0) {
         mutedUntil = Date.now() + failure.pauseMs
         mutedWhy = failure.message
+        setStatus({ state: 'paused', until: mutedUntil, message: failure.message })
       }
       throw new Error(failure.message)
     }
@@ -326,6 +358,7 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
     if (!body.data) throw new Error('Réponse AniList vide')
     // Une réponse complète prouve que le service est revenu.
     mutedUntil = 0
+    setStatus({ state: 'ok' })
     return body.data
   }
   throw new Error('AniList : trop de requêtes, réessaie dans une minute')

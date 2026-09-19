@@ -351,6 +351,19 @@ export interface MediaDetail extends Media {
   episodeMeta: EpisodeMeta[]
 }
 
+/**
+ * Où en est le catalogue AniList, vu du processus principal.
+ *
+ * `paused` : panne déclarée, on se tait jusqu'à `until`. `throttled` : trop de
+ * requêtes, AniList a demandé d'attendre jusqu'à `until`. `offline` : le
+ * réseau lui-même ne répond pas.
+ */
+export interface ApiStatus {
+  state: 'ok' | 'paused' | 'throttled' | 'offline'
+  until?: number
+  message?: string
+}
+
 export interface Entry {
   animeId: number
   status: LibraryStatus
