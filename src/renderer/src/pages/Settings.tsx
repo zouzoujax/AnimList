@@ -27,6 +27,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import {
   DEFAULT_PREFS,
   LAYOUTS,
+  NEW_DESIGN_PAGES,
   THEMES,
   accentFor,
   type Follow,
@@ -433,11 +434,24 @@ export default function SettingsPage(): React.JSX.Element {
         </Row>
 
         <Row
-          label="Nouvel accueil"
-          hint="Frise d'épisodes, file « À regarder » et semaine de diffusion. Éteint, l'ancien accueil en rangées de cartes revient. Sans effet dans les expériences, qui ont leur propre accueil."
+          label="Nouveau design"
+          hint="Frise d'épisodes, phrases plutôt qu'étiquettes, une ligne par série. Allumé, tu choisis ci-dessous les pages qui changent. Sans effet dans les expériences, qui ont leurs propres pages."
         >
-          <Toggle on={prefs.newHome} onChange={(newHome) => setPrefs({ newHome })} />
+          <Toggle on={prefs.newDesign} onChange={(newDesign) => setPrefs({ newDesign })} />
         </Row>
+
+        {prefs.newDesign && (
+          <div className="mb-1 ml-1 border-l-2 pl-4" style={{ borderColor: 'var(--accent)' }}>
+            {NEW_DESIGN_PAGES.map((page) => (
+              <Row key={page.id} label={page.label} hint={page.hint}>
+                <Toggle
+                  on={prefs.newDesignPages?.[page.id] !== false}
+                  onChange={(on) => setPrefs({ newDesignPages: { ...prefs.newDesignPages, [page.id]: on } })}
+                />
+              </Row>
+            ))}
+          </div>
+        )}
       </Card>
 
       <Card title="Affichage" icon={<Languages size={17} />}>

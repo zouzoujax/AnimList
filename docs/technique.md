@@ -125,6 +125,17 @@ page dans chaque expérience (onglet « Badges », « Trophées », « Palmarès
 Le calcul est sorti dans `lib/badges.ts` (`useBadgeWall`) : la page Statistiques classique et les
 cinq expériences montrent ainsi les mêmes badges et les mêmes progressions.
 
+Le **nouveau design** (Réglages › Apparence, éteint par défaut) refait les pages classiques sans
+toucher aux thèmes : une phrase en tête de page plutôt qu'un titre et des étiquettes en
+capitales, la couleur de chaque série plutôt que l'accent partout, et une frise d'épisodes (un
+trait par épisode : vu, suivant, sorti sans toi, pas encore diffusé). Allumé, il propose un
+interrupteur par page (`newDesignPages`) : accueil, bibliothèque, Découvrir, calendrier, manga,
+statistiques, fiche, studio, personne. Les pages vivent dans `pages/nd/`, chacune dans son
+morceau de code ; leurs pièces communes dans `components/nd.tsx` et `nd.css`, et
+`lib/nd.ts` (`useNewDesign`) dit si une page le prend. La fiche passe par le même contrat que
+les expériences (`DetailHero`, `DetailBody`) ; une expérience garde toujours la main sur ses
+propres pages.
+
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle
 tenue partout est donc que l'accent teinte les fonds et les contours, et que le texte reste de

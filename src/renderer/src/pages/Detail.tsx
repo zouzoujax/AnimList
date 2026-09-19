@@ -48,6 +48,8 @@ import { useAnimeSama, useDetail, useFiller, useFranchiseFilms, useSeasons, useT
 import { WATCH_BADGE, isWatchDisabled, otherPlatforms, watchLinks } from '@/lib/watch'
 import { nextEpisodeOf, useApp } from '@/store/app'
 import { useExperience, type DetailHeroProps, type DetailParts } from '@/experiences'
+import { useNewDesign } from '@/lib/nd'
+import { NdDetailBody, NdDetailHero } from '@/pages/nd/detail'
 
 const STATUS_ORDER: LibraryStatus[] = ['watching', 'planned', 'completed', 'paused', 'dropped']
 
@@ -591,6 +593,10 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   // Une expérience peut remplacer l'en-tête ; le corps de la fiche reste commun.
   const xp = useExperience()
+  // Une expérience garde la main sur sa fiche ; sinon, le nouveau design s'il est allumé.
+  const nd = useNewDesign('detail')
+  const Hero = xp?.DetailHero ?? (nd ? NdDetailHero : null)
+  const Body = xp?.DetailBody ?? (nd ? NdDetailBody : null)
 
   const media: Media | MediaDetail | undefined = data ?? cached
   /**
@@ -1214,8 +1220,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   return (
     <div className="pb-14">
       {/* ---------------------------------------------------------------- hero */}
-      {xp?.DetailHero ? (
-        <xp.DetailHero {...heroProps} />
+      {Hero ? (
+        <Hero {...heroProps} />
       ) : (
         <div className="relative">
           {/*
@@ -1385,8 +1391,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
       )}
 
       {/* ---------------------------------------------------------------- body */}
-      {xp?.DetailBody ? (
-        <xp.DetailBody media={media} parts={parts} />
+      {Body ? (
+        <Body media={media} parts={parts} />
       ) : (
         <div className="mx-auto mt-9 grid max-w-[1400px] gap-7 px-7 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div>

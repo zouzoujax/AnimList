@@ -427,6 +427,22 @@ export interface WatchEventRef {
 
 export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note' | 'emotions' | 'pinned'>>
 
+/** Les pages que le nouveau design sait refaire, chacune activable à part. */
+export type NewDesignPage =
+  'home' | 'library' | 'discover' | 'calendar' | 'manga' | 'stats' | 'detail' | 'studio' | 'person'
+
+export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string }[] = [
+  { id: 'home', label: 'Accueil', hint: 'Frise d’épisodes, file « À regarder », semaine de diffusion' },
+  { id: 'library', label: 'Bibliothèque', hint: 'Onglets par statut, une ligne par série avec sa frise' },
+  { id: 'discover', label: 'Découvrir', hint: 'Grande recherche, recommandations expliquées' },
+  { id: 'calendar', label: 'Calendrier', hint: 'Grille de programme : matin, après-midi, soirée, nuit' },
+  { id: 'manga', label: 'Manga', hint: 'Origine et sens de lecture en tête, étagères' },
+  { id: 'stats', label: 'Statistiques', hint: 'Ton visionnage raconté en phrases, badges en liste' },
+  { id: 'detail', label: 'Fiche d’un anime', hint: 'Frise dans l’en-tête, sommaire qui suit la lecture' },
+  { id: 'studio', label: 'Studio', hint: 'Ce que tu as vu en lignes, le reste en affiches' },
+  { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' }
+]
+
 export interface Prefs {
   titleLang: TitleLang
   theme: ThemeId
@@ -443,8 +459,13 @@ export interface Prefs {
   /** Minutes between airing checks. Lower means fresher and more requests. */
   notifyEveryMinutes: number
   reduceMotion: boolean
-  /** L'accueil à frise d'épisodes ; éteint, l'ancien accueil en rangées de cartes revient. */
-  newHome: boolean
+  /**
+   * Le nouveau design (frise d'épisodes, phrases plutôt qu'étiquettes, lignes
+   * par série). Éteint, toutes les pages gardent leur forme d'origine ; allumé,
+   * `newDesignPages` dit lesquelles changent.
+   */
+  newDesign: boolean
+  newDesignPages: Record<NewDesignPage, boolean>
   defaultRuntime: number
   showAdult: boolean
   weekStart: 0 | 1
@@ -917,7 +938,18 @@ export const DEFAULT_PREFS: Prefs = {
   notifyLeadMinutes: 0,
   notifyEveryMinutes: 15,
   reduceMotion: false,
-  newHome: false,
+  newDesign: false,
+  newDesignPages: {
+    home: true,
+    library: true,
+    discover: true,
+    calendar: true,
+    manga: true,
+    stats: true,
+    detail: true,
+    studio: true,
+    person: true
+  },
   defaultRuntime: 24,
   showAdult: false,
   weekStart: 1,

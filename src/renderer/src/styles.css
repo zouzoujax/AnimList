@@ -2,6 +2,7 @@
 @import './themes/ui-ux-pro-max.css';
 @import './themes/design-system/index.css';
 @import './experiences/index.css';
+@import './nd.css';
 
 @theme {
   --color-ink: #e9ecf8;

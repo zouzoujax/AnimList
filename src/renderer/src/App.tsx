@@ -10,6 +10,7 @@ import { PAGE_MOTION, useExperienceState } from '@/experiences'
 import { Toasts } from '@/components/Toasts'
 import { Spinner } from '@/components/ui'
 import HomePage from '@/pages/Home'
+import { useNewDesign } from '@/lib/nd'
 import { useApp } from '@/store/app'
 
 /**
@@ -19,7 +20,18 @@ import { useApp } from '@/store/app'
  * Stats pulls in the whole charting layer and Detail the trailer and cast views,
  * neither of which most sessions ever open.
  */
-const HomeClassicPage = lazy(() => import('@/pages/HomeClassic'))
+/*
+ * Le nouveau design, page par page (Réglages › Apparence). Chaque page vit
+ * dans son propre morceau : qui ne l'allume pas ne le télécharge jamais.
+ */
+const NdHomePage = lazy(() => import('@/pages/nd/Home'))
+const NdLibraryPage = lazy(() => import('@/pages/nd/Library'))
+const NdDiscoverPage = lazy(() => import('@/pages/nd/Discover'))
+const NdCalendarPage = lazy(() => import('@/pages/nd/Calendar'))
+const NdMangaPage = lazy(() => import('@/pages/nd/Manga'))
+const NdStatsPage = lazy(() => import('@/pages/nd/Stats'))
+const NdStudioPage = lazy(() => import('@/pages/nd/Studio'))
+const NdPersonPage = lazy(() => import('@/pages/nd/Person'))
 const DiscoverPage = lazy(() => import('@/pages/Discover'))
 const LibraryPage = lazy(() => import('@/pages/Library'))
 const StudioPage = lazy(() => import('@/pages/Studio'))
@@ -57,7 +69,16 @@ export default function App(): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   const setPalette = useApp((s) => s.setPalette)
   const paletteOpen = useApp((s) => s.paletteOpen)
-  const newHome = useApp((s) => s.prefs.newHome)
+  const nd = {
+    home: useNewDesign('home'),
+    library: useNewDesign('library'),
+    discover: useNewDesign('discover'),
+    calendar: useNewDesign('calendar'),
+    manga: useNewDesign('manga'),
+    stats: useNewDesign('stats'),
+    studio: useNewDesign('studio'),
+    person: useNewDesign('person')
+  }
   const scrollRef = useRef<HTMLDivElement>(null)
   // Un thème « expérience » remplace la navigation, l'accueil, la bibliothèque
   // et les transitions ; les autres pages restent celles de l'app.
@@ -160,20 +181,37 @@ export default function App(): React.JSX.Element {
               <motion.div key={routeKey} {...(xp?.motion ?? PAGE_MOTION)}>
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
                   <Suspense fallback={<Spinner label="Chargement de la page…" />}>
-                    {route.name === 'home' && (xp ? <xp.Home /> : newHome ? <HomePage /> : <HomeClassicPage />)}
+                    {route.name === 'home' && (xp ? <xp.Home /> : nd.home ? <NdHomePage /> : <HomePage />)}
                     {route.name === 'discover' &&
                       (xp?.Discover ? (
                         <xp.Discover initialSearch={route.search} />
+                      ) : nd.discover ? (
+                        <NdDiscoverPage initialSearch={route.search} />
                       ) : (
                         <DiscoverPage initialSearch={route.search} />
                       ))}
-                    {route.name === 'library' && (xp ? <xp.Library /> : <LibraryPage initialGenre={route.genre} />)}
-                    {route.name === 'studio' && <StudioPage studio={route.studio} />}
-                    {route.name === 'person' && <PersonPage kind={route.kind} id={route.id} />}
-                    {route.name === 'manga' && (xp?.Manga ? <xp.Manga /> : <MangaPage />)}
-                    {route.name === 'calendar' && (xp?.Calendar ? <xp.Calendar /> : <CalendarPage />)}
-                    {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : <StatsPage />)}
-                    {route.name === 'badges' && (xp?.Badges ? <xp.Badges /> : <StatsPage />)}
+                    {route.name === 'library' &&
+                      (xp ? (
+                        <xp.Library />
+                      ) : nd.library ? (
+                        <NdLibraryPage initialGenre={route.genre} />
+                      ) : (
+                        <LibraryPage initialGenre={route.genre} />
+                      ))}
+                    {route.name === 'studio' &&
+                      (nd.studio ? <NdStudioPage studio={route.studio} /> : <StudioPage studio={route.studio} />)}
+                    {route.name === 'person' &&
+                      (nd.person ? (
+                        <NdPersonPage kind={route.kind} id={route.id} />
+                      ) : (
+                        <PersonPage kind={route.kind} id={route.id} />
+                      ))}
+                    {route.name === 'manga' && (xp?.Manga ? <xp.Manga /> : nd.manga ? <NdMangaPage /> : <MangaPage />)}
+                    {route.name === 'calendar' &&
+                      (xp?.Calendar ? <xp.Calendar /> : nd.calendar ? <NdCalendarPage /> : <CalendarPage />)}
+                    {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : nd.stats ? <NdStatsPage /> : <StatsPage />)}
+                    {route.name === 'badges' &&
+                      (xp?.Badges ? <xp.Badges /> : nd.stats ? <NdStatsPage focus="badges" /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>

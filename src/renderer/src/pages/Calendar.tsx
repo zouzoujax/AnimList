@@ -12,7 +12,7 @@ import { useApp } from '@/store/app'
 const DAY_MS = 86_400_000
 type Scope = 'library' | 'all'
 
-function startOfWeek(ts: number, weekStart: 0 | 1): number {
+export function startOfWeek(ts: number, weekStart: 0 | 1): number {
   const d = new Date(ts)
   d.setHours(0, 0, 0, 0)
   const shift = (d.getDay() - weekStart + 7) % 7
@@ -23,7 +23,7 @@ const dayMonth = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'shor
 const monthYear = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
 
 /** "27 juil. – 2 août" for the week starting at `from`. */
-function weekRange(from: number): string {
+export function weekRange(from: number): string {
   return `${dayMonth.format(from)} – ${dayMonth.format(from + 6 * DAY_MS)}`
 }
 
@@ -38,7 +38,7 @@ function weeksOfMonth(monthStart: number, weekStart: 0 | 1): number[] {
   return out
 }
 
-function WeekPicker({
+export function WeekPicker({
   open,
   onClose,
   current,

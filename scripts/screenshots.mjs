@@ -26,7 +26,8 @@ const ENDPOINT = 'https://graphql.anilist.co'
  * Le thème et le sous-ensemble servent à juger un thème à l'écran : ces
  * captures-là vont dans un dossier ignoré par git, pas dans docs/.
  * `--themes=` prend des thèmes ou `all`, tous photographiés dans le même
- * lancement, un dossier par thème.
+ * lancement, un dossier par thème. `--new-design` allume le nouveau design sur
+ * toutes les pages qu'il sait refaire.
  */
 const ARGS = process.argv.slice(2)
 const flag = (name) => ARGS.find((a) => a.startsWith(`--${name}=`))?.split('=')[1]
@@ -34,6 +35,7 @@ const OUT_DIR = ARGS.find((a) => !a.startsWith('--')) ?? 'docs/screenshots'
 const THEME = flag('theme') ?? 'nebula'
 const THEMES = flag('themes')
 const ONLY = flag('only')
+const NEW_DESIGN = ARGS.includes('--new-design')
 
 /**
  * A fixed cast, so a re-run produces the same pages.
@@ -385,7 +387,14 @@ async function main() {
       entries: Object.fromEntries(entries.map((e) => [String(e.animeId), e])),
       history: [],
       lists,
-      prefs: { titleLang: 'romaji', theme: THEME, layout: 'classic', accent: '#7c5cff', mica: false }
+      prefs: {
+        titleLang: 'romaji',
+        theme: THEME,
+        layout: 'classic',
+        accent: '#7c5cff',
+        mica: false,
+        newDesign: NEW_DESIGN
+      }
     }),
     'utf8'
   )

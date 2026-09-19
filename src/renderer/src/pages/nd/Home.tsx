@@ -1,12 +1,13 @@
-import { ArrowUpRight, Check, Clock, Compass, Dices, Play, Sparkles } from 'lucide-react'
+import { ArrowUpRight, Check, Compass, Dices } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FollowNews, Media } from '@shared/types'
-import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
+import { AnimeCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
+import { EpisodeStrip, SeriesRow, plural } from '@/components/nd'
 import { Soiree } from '@/components/Soiree'
 import { rgba, toneAccent } from '@/lib/color'
-import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
+import { airingLabel, formatTime, isUnaired, startOfDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
 import { setLume } from '@/lib/lume'
 import { nextEpisodeOf, useApp } from '@/store/app'
@@ -25,6 +26,7 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
   const reduceMotion = useApp((s) => s.prefs.reduceMotion)
   const toggleEpisode = useApp((s) => s.toggleEpisode)
   const toast = useApp((s) => s.toast)
+  const seenCount = useApp((s) => s.watched.get(media.id)?.size ?? 0)
   const glow = toneAccent(media.cover.color)
   const frame = useRef<HTMLDivElement>(null)
 
@@ -84,45 +86,27 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
         </div>
 
         <div className="sp-plane sp-mid min-w-0 flex-1 pb-1">
-          <p className="label mb-2" style={{ color: rgba(glow, 1) }}>
-            {resumeAt ? (pending ? 'En attente' : 'Reprendre') : 'À la une'}
-          </p>
-          <h1 className="title-xl clamp-2 max-w-2xl text-[2.1rem] leading-[1.08]">{titleOf(media, lang)}</h1>
+          <h1 className="title-xl clamp-2 max-w-2xl text-[2.3rem] leading-[1.05]">{titleOf(media, lang)}</h1>
 
-          <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[0.76rem] text-muted">
-            {[
-              media.averageScore !== null ? (
-                <span className="font-semibold" style={{ color: rgba(glow, 1) }}>
-                  {media.averageScore}% d'appréciation
-                </span>
-              ) : null,
-              media.studios[0] ? <span>{media.studios[0]}</span> : null,
-              media.episodes ? <span>{media.episodes} épisodes</span> : null,
-              media.seasonYear ? <span>{media.seasonYear}</span> : null
-            ]
-              .filter((node): node is React.JSX.Element => node !== null)
-              .map((node, i) => (
-                <span key={i} className="flex items-center gap-2">
-                  {i > 0 && <span className="text-faint">·</span>}
-                  {node}
-                </span>
-              ))}
-          </div>
-
-          {media.description && (
-            <p className="clamp-2 mt-3 max-w-2xl text-[0.85rem] leading-relaxed text-muted">{media.description}</p>
+          {resumeAt !== null ? (
+            <>
+              <p className="mt-3 text-[0.86rem] text-muted">
+                {pending && media.nextAiring
+                  ? `Tu es à jour. L'épisode ${resumeAt} sort ${airingLabel(media.nextAiring.airingAt).toLowerCase()}.`
+                  : `${plural(seenCount, 'épisode')} vu${seenCount > 1 ? 's' : ''}${media.episodes ? ` sur ${media.episodes}` : ''}. Le suivant est l'épisode ${resumeAt}.`}
+              </p>
+              <div className="mt-3 max-w-2xl">
+                <EpisodeStrip media={media} next={resumeAt} size="lg" />
+              </div>
+            </>
+          ) : (
+            media.description && (
+              <p className="clamp-3 mt-3 max-w-[62ch] text-[0.86rem] leading-relaxed text-muted">{media.description}</p>
+            )
           )}
 
           <div className="mt-5 flex flex-wrap gap-2.5">
-            {pending && media.nextAiring ? (
-              <span
-                className="btn !cursor-default"
-                style={{ background: rgba(glow, 0.16), borderColor: rgba(glow, 0.4), color: rgba(glow, 1) }}
-              >
-                <Clock size={14} />
-                Prochain épisode {media.nextAiring.episode} · {airingLabel(media.nextAiring.airingAt)}
-              </span>
-            ) : resumeAt ? (
+            {resumeAt !== null && !pending && (
               <button
                 className="btn btn-primary"
                 onClick={async () => {
@@ -130,18 +114,15 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
                   toast(`Épisode ${resumeAt} coché · ${titleOf(media, lang)}`)
                 }}
               >
-                <Play size={14} fill="currentColor" strokeWidth={0} />
-                Marquer l'épisode {resumeAt}
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => navigate({ name: 'anime', id: media.id })}>
-                <Sparkles size={14} />
-                Découvrir
+                <Check size={15} />
+                Cocher l'épisode {resumeAt}
               </button>
             )}
-            <button className="btn" onClick={() => navigate({ name: 'anime', id: media.id })}>
+            <button
+              className={resumeAt === null ? 'btn btn-primary' : 'btn'}
+              onClick={() => navigate({ name: 'anime', id: media.id })}
+            >
               Voir la fiche
-              <ArrowUpRight size={14} />
             </button>
           </div>
         </div>
@@ -152,50 +133,76 @@ function Spotlight({ media, resumeAt }: { media: Media; resumeAt: number | null 
   )
 }
 
-function UpcomingCard({
-  media,
-  index,
+/**
+ * La semaine de diffusion, jour par jour.
+ *
+ * Une rangée de cartes rangées par date se lisait comme n'importe quelle liste ;
+ * sept colonnes montrent d'un coup d'œil les soirs chargés et les soirs vides,
+ * ce qui est la vraie question quand on prévoit sa semaine.
+ */
+function WeekGrid({
+  upcoming,
+  now,
   onHover
 }: {
-  media: Media
-  index: number
+  upcoming: Media[]
+  now: number
   onHover: (media: Media | null) => void
 }): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const lang = useApp((s) => s.prefs.titleLang)
-  const glow = toneAccent(media.cover.color)
-  const airing = media.nextAiring!
+  const today = startOfDay(now)
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today)
+    d.setDate(d.getDate() + i)
+    return d.getTime()
+  })
 
   return (
-    <motion.button
-      onClick={() => navigate({ name: 'anime', id: media.id })}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.04 }}
-      whileHover={{ y: -4 }}
-      onMouseEnter={() => onHover(media)}
-      onMouseLeave={() => onHover(null)}
-      className="glass flex w-[268px] shrink-0 items-center gap-3 rounded-[16px] p-2.5 text-left"
-    >
-      <Poster src={media.cover.large} alt="" className="h-[68px] w-[46px] shrink-0" rounded="rounded-[10px]" />
-      <div className="min-w-0 flex-1">
-        <p className="label !text-[0.62rem]" style={{ color: rgba(glow, 1) }}>
-          {relativeDay(airing.airingAt * 1000)}
-        </p>
-        <p className="clamp-2 mt-0.5 text-[0.79rem] font-semibold leading-snug">{titleOf(media, lang)}</p>
-        <p className="mt-1 text-[0.7rem] text-faint">
-          Épisode {airing.episode} · {countdown(airing.airingAt)}
-        </p>
-      </div>
-    </motion.button>
+    <div className="week-grid">
+      {days.map((day, i) => {
+        const end = days[i + 1] ?? day + 86_400_000
+        const items = upcoming.filter((m) => {
+          const at = m.nextAiring!.airingAt * 1000
+          return at >= day && at < end
+        })
+        const label =
+          i === 0
+            ? "Aujourd'hui"
+            : i === 1
+              ? 'Demain'
+              : new Date(day).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })
+        return (
+          <div key={day} className="week-day" data-empty={items.length === 0}>
+            <p className="week-day-name">{label}</p>
+            {items.map((media) => (
+              <button
+                key={media.id}
+                className="week-item"
+                onClick={() => navigate({ name: 'anime', id: media.id })}
+                onMouseEnter={() => onHover(media)}
+                onMouseLeave={() => onHover(null)}
+              >
+                <Poster src={media.cover.large} alt="" className="h-[52px] w-[36px] shrink-0" rounded="rounded-[7px]" />
+                <span className="min-w-0">
+                  <span className="clamp-2 text-[0.76rem] font-semibold leading-snug">{titleOf(media, lang)}</span>
+                  <span className="mt-0.5 block text-[0.7rem] text-faint">
+                    Ép. {media.nextAiring!.episode}, {formatTime(media.nextAiring!.airingAt * 1000)}
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
-/**
- * L'accueil d'avant la frise d'épisodes, gardé pour qui le préfère : rangées
- * de cartes « À rattraper », « Continuer », « Bientôt ». Réglages › Apparence.
- */
-export default function HomeClassicPage(): React.JSX.Element {
+/** Au-delà, la file se replie : la page doit rester un accueil, pas la bibliothèque. */
+const QUEUE_FOLD = 8
+
+export default function HomePage(): React.JSX.Element {
   const navigate = useApp((s) => s.navigate)
   const entries = useApp((s) => s.entries)
   const mediaMap = useApp((s) => s.media)
@@ -205,6 +212,8 @@ export default function HomeClassicPage(): React.JSX.Element {
   const state = useApp()
   const refreshed = useRef(false)
   const now = useNow()
+  const [discoverTab, setDiscoverTab] = useState<'trending' | 'season'>('trending')
+  const [queueOpen, setQueueOpen] = useState(false)
 
   const trending = useBrowse({ kind: 'trending', perPage: 20 })
   const season = useBrowse({ kind: 'season', perPage: 20 })
@@ -230,32 +239,25 @@ export default function HomeClassicPage(): React.JSX.Element {
   /**
    * Ce qui t'attend vraiment.
    *
-   * « Bientôt » annonce les épisodes à venir, « Continuer » range les séries en
-   * cours par date de dernière séance — mais aucune des deux ne répond à la
-   * question qu'on se pose en ouvrant l'app : qu'est-ce qui est sorti et que je
-   * n'ai pas vu ?
-   *
    * Le retard se compte sur les épisodes **diffusés** : un épisode programmé
-   * pour jeudi n'est pas un retard. Les séries encore en diffusion passent
-   * devant, ce sont elles qui accumulent pendant qu'on regarde ailleurs.
+   * pour jeudi n'est pas un retard.
    */
-  const behindList = useMemo(() => {
-    const out: { media: Media; behind: number; airing: boolean }[] = []
+  const behindOf = useMemo(() => {
+    const map = new Map<number, number>()
     for (const entry of entries.values()) {
       if (entry.status !== 'watching') continue
       const media = mediaMap.get(entry.animeId)
       if (!media) continue
       const aired = media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
-      if (aired <= 0) continue
       const seen = watchedMap.get(media.id)
       let behind = 0
       for (let n = 1; n <= aired; n += 1) if (!seen?.has(n)) behind += 1
-      if (behind > 0) out.push({ media, behind, airing: media.nextAiring !== null })
+      map.set(media.id, behind)
     }
-    return out.sort((a, b) => Number(b.airing) - Number(a.airing) || b.behind - a.behind).slice(0, 12)
+    return map
   }, [entries, mediaMap, watchedMap])
 
-  const behindTotal = behindList.reduce((sum, row) => sum + row.behind, 0)
+  const behindTotal = [...behindOf.values()].reduce((sum, n) => sum + n, 0)
 
   /**
    * Les épisodes mis de côté pour y revenir.
@@ -275,6 +277,11 @@ export default function HomeClassicPage(): React.JSX.Element {
     [events, mediaMap]
   )
 
+  /*
+   * « À rattraper » et « Continuer » montraient les mêmes séries deux fois, triées
+   * autrement. Une seule file, dans l'ordre où tu les regardes ; le retard de
+   * chacune est écrit sur sa ligne.
+   */
   const continueList = useMemo(() => {
     return [...entries.values()]
       .filter((e) => e.status === 'watching')
@@ -284,17 +291,18 @@ export default function HomeClassicPage(): React.JSX.Element {
   }, [entries, mediaMap, lastWatchAt])
 
   const upcoming = useMemo(() => {
-    const horizon = now / 1000 + 8 * 86_400
+    const horizon = startOfDay(now) + 7 * 86_400_000
     return [...entries.values()]
       .filter((e) => e.status === 'watching' || e.status === 'planned')
       .map((e) => mediaMap.get(e.animeId))
-      .filter((m): m is Media => !!m?.nextAiring && m.nextAiring.airingAt < horizon)
+      .filter((m): m is Media => !!m?.nextAiring && m.nextAiring.airingAt * 1000 < horizon)
       .sort((a, b) => a.nextAiring!.airingAt - b.nextAiring!.airingAt)
-      .slice(0, 12)
   }, [entries, mediaMap, now])
 
   const heroMedia = continueList[0] ?? trending.items[0]
   const heroResume = heroMedia && continueList[0] ? nextEpisodeOf(state, heroMedia.id, heroMedia.episodes) : null
+  const queue = continueList.slice(1)
+  const shownQueue = queueOpen ? queue : queue.slice(0, QUEUE_FOLD)
   const empty = entries.size === 0
 
   /*
@@ -333,11 +341,20 @@ export default function HomeClassicPage(): React.JSX.Element {
   }, [])
   const newsTotal = news.reduce((n, row) => n + row.media.length, 0)
 
+  const headline = empty
+    ? `${greeting()}.`
+    : behindTotal > 0
+      ? `${greeting()}, ${plural(behindTotal, 'épisode')} ${behindTotal > 1 ? "t'attendent" : "t'attend"}.`
+      : continueList.length > 0
+        ? `${greeting()}, tu es à jour.`
+        : `${greeting()}.`
+
+  const behindSeries = continueList.filter((m) => (behindOf.get(m.id) ?? 0) > 0)
+  const shelf = discoverTab === 'trending' ? trending : season
+
   return (
     <div className="page">
-      <p className="label mb-1.5">
-        {greeting()} · {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
-      </p>
+      <p className="title-xl mb-4 px-1 text-[1.45rem] leading-tight">{headline}</p>
 
       <div className="page-flow">
         {heroMedia ? (
@@ -345,8 +362,6 @@ export default function HomeClassicPage(): React.JSX.Element {
         ) : (
           <div className="skeleton span-all mb-9 h-[300px] rounded-[26px]" />
         )}
-
-        {!empty && <Soiree />}
 
         {empty && (
           <div className="span-all mb-9">
@@ -367,6 +382,58 @@ export default function HomeClassicPage(): React.JSX.Element {
             />
           </div>
         )}
+
+        {queue.length > 0 && (
+          <Section
+            title="À regarder"
+            subtitle={`Tes autres séries en cours, de la plus récente à la plus ancienne`}
+            action={
+              behindSeries.length > 1 ? (
+                <button
+                  className="chip shrink-0"
+                  title="Ouvre une série au hasard parmi celles où des épisodes t'attendent"
+                  onClick={() => {
+                    // Choisir est un travail aussi : trente-trois séries en
+                    // retard, ce sont trente-trois décisions avant de regarder.
+                    const pick = behindSeries[Math.floor(Math.random() * behindSeries.length)]
+                    navigate({ name: 'anime', id: pick.id })
+                  }}
+                >
+                  <Dices size={13} />
+                  Au hasard
+                </button>
+              ) : undefined
+            }
+          >
+            <ul className="home-queue">
+              {shownQueue.map((media) => (
+                <SeriesRow key={media.id} media={media} behind={behindOf.get(media.id) ?? 0} onHover={lightUp} />
+              ))}
+            </ul>
+            {queue.length > QUEUE_FOLD && (
+              <button className="btn btn-ghost mt-2" onClick={() => setQueueOpen((open) => !open)}>
+                {queueOpen ? 'Replier la liste' : `Afficher les ${queue.length - QUEUE_FOLD} autres`}
+              </button>
+            )}
+          </Section>
+        )}
+
+        {upcoming.length > 0 && (
+          <section id="semaine" className="span-all mb-9">
+            <header className="mb-3.5 flex items-end justify-between gap-4 px-1">
+              <div>
+                <h2 className="title-xl text-[1.32rem] leading-tight">Cette semaine</h2>
+                <p className="mt-0.5 text-[0.8rem] text-muted">Les prochains épisodes de tes séries, jour par jour</p>
+              </div>
+              <button className="btn btn-ghost" onClick={() => navigate({ name: 'calendar' })}>
+                Calendrier <ArrowUpRight size={14} />
+              </button>
+            </header>
+            <WeekGrid upcoming={upcoming} now={now} onHover={lightUp} />
+          </section>
+        )}
+
+        {!empty && <Soiree />}
 
         {news.length > 0 && (
           <Section
@@ -409,42 +476,6 @@ export default function HomeClassicPage(): React.JSX.Element {
           </Section>
         )}
 
-        {behindList.length > 0 && (
-          <Section
-            title="À rattraper"
-            subtitle={`${behindTotal} épisode${behindTotal > 1 ? 's' : ''} déjà sorti${behindTotal > 1 ? 's' : ''} que tu n'as pas vu${behindTotal > 1 ? 's' : ''}`}
-            action={
-              behindList.length > 1 ? (
-                <button
-                  className="chip shrink-0"
-                  title="Ouvre une série au hasard parmi celles-ci"
-                  onClick={() => {
-                    // Choisir est un travail aussi : trente-trois séries en
-                    // retard, ce sont trente-trois décisions avant de regarder.
-                    const pick = behindList[Math.floor(Math.random() * behindList.length)]
-                    navigate({ name: 'anime', id: pick.media.id })
-                  }}
-                >
-                  <Dices size={13} />
-                  Au hasard
-                </button>
-              ) : undefined
-            }
-          >
-            <RowScroller>
-              {behindList.map((row, i) => (
-                <ContinueCard
-                  key={row.media.id}
-                  media={row.media}
-                  index={i}
-                  note={`${row.behind} en retard`}
-                  onHover={lightUp}
-                />
-              ))}
-            </RowScroller>
-          </Section>
-        )}
-
         {pinned.length > 0 && (
           <Section title="À revoir" subtitle="Les épisodes que tu as mis de côté">
             <RowScroller>
@@ -462,69 +493,42 @@ export default function HomeClassicPage(): React.JSX.Element {
           </Section>
         )}
 
-        {continueList.length > 0 && (
-          <Section title="Continuer" subtitle={`${continueList.length} séries en cours`}>
-            <RowScroller>
-              {continueList.map((media, i) => (
-                <ContinueCard key={media.id} media={media} index={i} onHover={lightUp} />
-              ))}
-            </RowScroller>
-          </Section>
-        )}
-
-        {upcoming.length > 0 && (
-          <Section
-            title="Bientôt"
-            subtitle="Les prochains épisodes de tes séries"
-            action={
-              <button className="btn btn-ghost" onClick={() => navigate({ name: 'calendar' })}>
-                Calendrier <ArrowUpRight size={14} />
+        <section className="span-all mb-9">
+          <header className="mb-3.5 flex flex-wrap items-end justify-between gap-3 px-1">
+            <div className="flex items-center gap-2" role="tablist" aria-label="Que montrer">
+              <button
+                role="tab"
+                aria-selected={discoverTab === 'trending'}
+                className="home-tab title-xl"
+                onClick={() => setDiscoverTab('trending')}
+              >
+                Tendances
               </button>
-            }
-          >
-            <RowScroller>
-              {upcoming.map((media, i) => (
-                <UpcomingCard key={media.id} media={media} index={i} onHover={lightUp} />
-              ))}
-            </RowScroller>
-          </Section>
-        )}
-
-        <Section
-          title="Tendances"
-          subtitle="Ce que tout le monde regarde en ce moment"
-          action={
+              <button
+                role="tab"
+                aria-selected={discoverTab === 'season'}
+                className="home-tab title-xl"
+                onClick={() => setDiscoverTab('season')}
+              >
+                Cette saison
+              </button>
+            </div>
             <button className="btn btn-ghost" onClick={() => navigate({ name: 'discover' })}>
               Tout voir <ArrowUpRight size={14} />
             </button>
-          }
-        >
-          {trending.loading ? (
+          </header>
+          {shelf.loading ? (
             <PosterSkeletons />
-          ) : trending.error ? (
-            <ErrorBox message={trending.error} onRetry={trending.retry} />
+          ) : shelf.error ? (
+            <ErrorBox message={shelf.error} onRetry={shelf.retry} />
           ) : (
-            <RowScroller>
-              {trending.items.map((media, i) => (
+            <RowScroller key={discoverTab}>
+              {shelf.items.map((media, i) => (
                 <AnimeCard key={media.id} media={media} index={i} onHover={lightUp} />
               ))}
             </RowScroller>
           )}
-        </Section>
-
-        <Section title="La saison en cours" subtitle="Les sorties du moment">
-          {season.loading ? (
-            <PosterSkeletons />
-          ) : season.error ? (
-            <ErrorBox message={season.error} onRetry={season.retry} />
-          ) : (
-            <RowScroller>
-              {season.items.map((media, i) => (
-                <AnimeCard key={media.id} media={media} index={i} onHover={lightUp} />
-              ))}
-            </RowScroller>
-          )}
-        </Section>
+        </section>
       </div>
     </div>
   )
