@@ -23,6 +23,7 @@ import ListPicker from '@/components/ListPicker'
 import { EmptyState, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { isUnaired, titleOf } from '@/lib/format'
+import { useSessionState } from '@/lib/hooks'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
 type Filter = LibraryStatus | 'all' | 'favorites'
@@ -178,15 +179,21 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
   const lang = useApp((s) => s.prefs.titleLang)
   const navigate = useApp((s) => s.navigate)
 
-  const [filter, setFilter] = useState<Filter>('all')
-  const [sort, setSort] = useState<Sort>('recent')
-  const [search, setSearch] = useState('')
-  const [genre, setGenre] = useState<string | null>(initialGenre ?? null)
-  const [view, setView] = useState<'grid' | 'list'>('grid')
-  const [listId, setListId] = useState<string | null>(null)
+  const [filter, setFilter] = useSessionState<Filter>('library.filter', 'all')
+  const [sort, setSort] = useSessionState<Sort>('library.sort', 'recent')
+  const [search, setSearch] = useSessionState<string>('library.search', '')
+  // Un genre passé par la route l'emporte : on arrive d'un clic sur ce genre.
+  const [savedGenre, saveGenre] = useSessionState<string | null>('library.genre', null)
+  const [genre, keepGenre] = useState<string | null>(initialGenre ?? savedGenre)
+  const setGenre = (next: string | null): void => {
+    keepGenre(next)
+    saveGenre(next)
+  }
+  const [view, setView] = useSessionState<'grid' | 'list'>('library.view', 'grid')
+  const [listId, setListId] = useSessionState<string | null>('library.listId', null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [showSequels, setShowSequels] = useState(false)
+  const [showSequels, setShowSequels] = useSessionState<boolean>('library.showSequels', false)
   const [managing, setManaging] = useState(false)
   const sequelOf = useApp((s) => s.prefs.sequelOf)
 
@@ -406,7 +413,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
             <button
               data-on={showSequels}
               className="chip"
-              onClick={() => setShowSequels((v) => !v)}
+              onClick={() => setShowSequels(!showSequels)}
               title={
                 showSequels
                   ? 'Replier les saisons suivantes pas encore commencées'

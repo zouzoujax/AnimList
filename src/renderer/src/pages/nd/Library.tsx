@@ -8,6 +8,7 @@ import ListPicker from '@/components/ListPicker'
 import { NdHeader, NdTabs, SeriesRow, behindOf, plural } from '@/components/nd'
 import { EmptyState, Poster } from '@/components/ui'
 import { titleOf } from '@/lib/format'
+import { useSessionState } from '@/lib/hooks'
 import { useApp } from '@/store/app'
 
 type Filter = LibraryStatus | 'all' | 'favorites'
@@ -59,15 +60,21 @@ export default function NdLibraryPage({ initialGenre }: { initialGenre?: string 
   const lists = useApp((s) => s.lists)
   const setListMembership = useApp((s) => s.setListMembership)
 
-  const [filter, setFilter] = useState<Filter>('all')
-  const [sort, setSort] = useState<Sort>('recent')
-  const [search, setSearch] = useState('')
-  const [genre, setGenre] = useState<string | null>(initialGenre ?? null)
-  const [view, setView] = useState<'rows' | 'posters'>('rows')
-  const [listId, setListId] = useState<string | null>(null)
+  const [filter, setFilter] = useSessionState<Filter>('nd-library.filter', 'all')
+  const [sort, setSort] = useSessionState<Sort>('nd-library.sort', 'recent')
+  const [search, setSearch] = useSessionState<string>('nd-library.search', '')
+  // Un genre passé par la route l'emporte : on arrive d'un clic sur ce genre.
+  const [savedGenre, saveGenre] = useSessionState<string | null>('nd-library.genre', null)
+  const [genre, keepGenre] = useState<string | null>(initialGenre ?? savedGenre)
+  const setGenre = (next: string | null): void => {
+    keepGenre(next)
+    saveGenre(next)
+  }
+  const [view, setView] = useSessionState<'rows' | 'posters'>('nd-library.view', 'rows')
+  const [listId, setListId] = useSessionState<string | null>('nd-library.listId', null)
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
-  const [showSequels, setShowSequels] = useState(false)
+  const [showSequels, setShowSequels] = useSessionState<boolean>('nd-library.showSequels', false)
   const [managing, setManaging] = useState(false)
 
   const toggleSelected = (animeId: number): void => {
@@ -300,7 +307,7 @@ export default function NdLibraryPage({ initialGenre }: { initialGenre?: string 
           <button
             className="chip"
             data-on={showSequels}
-            onClick={() => setShowSequels((v) => !v)}
+            onClick={() => setShowSequels(!showSequels)}
             title="Les saisons suivantes que tu n'as pas commencées sont rangées sous la première"
           >
             {showSequels ? 'Replier' : 'Montrer'} {plural(folded.size, 'saison suivante', 'saisons suivantes')}
