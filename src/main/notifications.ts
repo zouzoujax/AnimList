@@ -17,6 +17,7 @@
 import { BrowserWindow, Notification } from 'electron'
 import type { Media, Prefs } from '@shared/types'
 import { airing } from './anilist'
+import { quickTick } from './quick-tick'
 import { getPrefs, setPrefs, snapshot } from './store'
 
 const MAX_TOASTS = 4
@@ -37,10 +38,22 @@ function titleFor(media: Media, lang: Prefs['titleLang']): string {
   return media.title.romaji
 }
 
-/** Shows one toast, clicking it opens the series. */
-function toast(win: BrowserWindow, animeId: number, title: string, body: string): void {
+/**
+ * Shows one toast, clicking it opens the series.
+ *
+ * `tick` : l'épisode est sorti, la notification porte « Marquer vu ». Vu
+ * ailleurs — sur le téléphone, chez une plateforme —, il se coche sans ouvrir
+ * l'app. Pas pour un rappel en avance : l'épisode n'existe pas encore.
+ */
+function toast(win: BrowserWindow, animeId: number, title: string, body: string, tick?: number): void {
   if (!Notification.isSupported()) return
-  const note = new Notification({ title, body, silent: false })
+  const note = new Notification({
+    title,
+    body,
+    silent: false,
+    actions: tick ? [{ type: 'button', text: 'Marquer vu' }] : []
+  })
+  if (tick) note.on('action', () => quickTick(animeId, tick))
   note.on('click', () => {
     if (win.isDestroyed()) return
     if (win.isMinimized()) win.restore()
@@ -80,7 +93,7 @@ async function sweep(win: BrowserWindow): Promise<void> {
   for (const item of fresh.slice(0, MAX_TOASTS)) {
     const media = byId.get(item.mediaId)
     if (!media) continue
-    toast(win, item.mediaId, `Épisode ${item.episode} disponible`, titleFor(media, prefs.titleLang))
+    toast(win, item.mediaId, `Épisode ${item.episode} disponible`, titleFor(media, prefs.titleLang), item.episode)
   }
 
   if (fresh.length > MAX_TOASTS) {
@@ -136,7 +149,13 @@ export function planUpcoming(win: BrowserWindow): void {
         planned.delete(k)
         const title = titleFor(media, getPrefs().titleLang)
         const body = lead > 0 ? `${title} — épisode ${episode} dans ${prefs.notifyLeadMinutes} min` : title
-        toast(win, media.id, lead > 0 ? 'Bientôt' : `Épisode ${episode} disponible`, body)
+        toast(
+          win,
+          media.id,
+          lead > 0 ? 'Bientôt' : `Épisode ${episode} disponible`,
+          body,
+          lead > 0 ? undefined : episode
+        )
       }, delay)
     )
   }

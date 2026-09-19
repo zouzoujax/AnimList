@@ -13,6 +13,7 @@ import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { startFollowWatcher } from './follows'
 import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
+import { quickTick, tickTargetFrom } from './quick-tick'
 import { startUpdateWatcher } from './updater'
 import { startBinge } from './binge'
 import { useDevProfile } from './profile'
@@ -198,6 +199,11 @@ void app.whenReady().then(() => {
 
   // Lancée depuis un raccourci de la barre des tâches : on attend que la
   // fenêtre soit prête, sinon le message part dans le vide.
+  // Lancée par un « Vu : … » alors qu'elle était fermée : on coche, et l'app
+  // s'ouvre normalement derrière.
+  const tickOnLaunch = tickTargetFrom(process.argv)
+  if (tickOnLaunch) quickTick(tickOnLaunch.animeId, tickOnLaunch.episode)
+
   const launched = openTargetFrom(process.argv)
   if (launched !== null) {
     mainWindow.webContents.once('did-finish-load', () => {
@@ -221,6 +227,15 @@ void app.whenReady().then(() => {
 
 app.on('second-instance', (_event, argv) => {
   if (!mainWindow || mainWindow.isDestroyed()) return
+
+  // « Vu : … » depuis la barre des tâches : cocher suffit, sans voler le
+  // premier plan à ce qu'on était en train de faire.
+  const tick = tickTargetFrom(argv)
+  if (tick) {
+    quickTick(tick.animeId, tick.episode)
+    return
+  }
+
   if (mainWindow.isMinimized()) mainWindow.restore()
   mainWindow.focus()
 

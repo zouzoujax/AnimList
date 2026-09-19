@@ -19,13 +19,17 @@
  */
 
 import { app, BrowserWindow, globalShortcut } from 'electron'
+import { canTick } from '@shared/airing'
 import { resumeTargets, shortcutLabel } from '@shared/resume'
+import { TICK_ARG } from './quick-tick'
 import { snapshot } from './store'
 
 const isWindows = process.platform === 'win32'
 
 /** Windows n'affiche qu'une poignée d'entrées : au-delà, elles disparaissent. */
 const MAX_SHORTCUTS = 5
+/** Les « Vu : … », pris parmi les premières : ce qu'on regarde en ce moment. */
+const MAX_TICKS = 3
 
 /** L'argument qui porte la série à ouvrir, quand un raccourci relance l'app. */
 export const OPEN_ARG = '--animelist-open='
@@ -51,8 +55,8 @@ export function openTargetFrom(argv: string[]): number | null {
  * En développement, l'exécutable est Electron lui-même : sans le chemin du
  * projet il s'ouvrirait sur rien du tout.
  */
-function argsFor(animeId: number): string {
-  const target = `${OPEN_ARG}${animeId}`
+function argsFor(animeId: number, episode?: number): string {
+  const target = episode ? `${TICK_ARG}${animeId}:${episode}` : `${OPEN_ARG}${animeId}`
   return app.isPackaged ? target : `"${app.getAppPath()}" ${target}`
 }
 
@@ -75,6 +79,14 @@ export function refreshJumpList(): void {
   }
 
   const targets = resumeTargets(data.entries, media, seen, MAX_SHORTCUTS)
+  // Seulement ce qui est déjà diffusé : la même garde que partout ailleurs.
+  const full = new Map(data.media.map((m) => [m.id, m]))
+  const tickable = targets
+    .filter((target) => {
+      const found = full.get(target.animeId)
+      return found && canTick(found, target.episode, false)
+    })
+    .slice(0, MAX_TICKS)
 
   try {
     if (!targets.length) {
@@ -93,7 +105,22 @@ export function refreshJumpList(): void {
           program: process.execPath,
           args: argsFor(target.animeId)
         }))
-      }
+      },
+      ...(tickable.length
+        ? [
+            {
+              type: 'custom' as const,
+              name: 'Marquer vu',
+              items: tickable.map((target) => ({
+                type: 'task' as const,
+                title: `Vu : ${shortcutLabel(target, 44)}`,
+                description: `Cocher l'épisode ${target.episode} de ${target.title} sans ouvrir l'app`,
+                program: process.execPath,
+                args: argsFor(target.animeId, target.episode)
+              }))
+            }
+          ]
+        : [])
     ])
   } catch (err) {
     // Une liste refusée — catégorie masquée par l'utilisateur, application non
