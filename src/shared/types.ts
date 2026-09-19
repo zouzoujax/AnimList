@@ -917,7 +917,7 @@ export const DEFAULT_PREFS: Prefs = {
   notifyLeadMinutes: 0,
   notifyEveryMinutes: 15,
   reduceMotion: false,
-  newHome: true,
+  newHome: false,
   defaultRuntime: 24,
   showAdult: false,
   weekStart: 1,
