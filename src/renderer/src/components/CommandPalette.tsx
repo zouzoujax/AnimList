@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   CalendarDays,
   ChartColumn,
   Compass,
@@ -13,6 +14,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Media } from '@shared/types'
 import { titleMatches } from '@shared/titles'
 import { useBrowse, useDebounced } from '@/lib/hooks'
+import { SETTINGS_SECTIONS, fold } from '@/lib/settings-sections'
 import { formatLabel, titleOf } from '@/lib/format'
 import { useApp, type Route } from '@/store/app'
 import { Modal } from './ui'
@@ -29,6 +31,7 @@ const NAV_COMMANDS: { label: string; icon: typeof House; route: Route }[] = [
   { label: 'Accueil', icon: House, route: { name: 'home' } },
   { label: 'Découvrir', icon: Compass, route: { name: 'discover' } },
   { label: 'Bibliothèque', icon: LibraryBig, route: { name: 'library' } },
+  { label: 'Manga', icon: BookOpen, route: { name: 'manga' } },
   { label: 'Calendrier', icon: CalendarDays, route: { name: 'calendar' } },
   { label: 'Statistiques', icon: ChartColumn, route: { name: 'stats' } },
   { label: 'Réglages', icon: Settings, route: { name: 'settings' } }
@@ -96,6 +99,20 @@ function Palette(): React.JSX.Element {
       run: () => navigate(c.route)
     }))
 
+    // Les réglages eux-mêmes : « discord » mène à sa carte, pas à la page entière.
+    const folded = fold(needle)
+    const settings =
+      folded.length >= 2
+        ? SETTINGS_SECTIONS.filter((section) => fold(`${section.title} ${section.keywords}`).includes(folded)).map(
+            (section) => ({
+              key: `settings-${section.id}`,
+              label: section.title,
+              sub: 'Réglages',
+              run: () => navigate({ name: 'settings', section: section.id })
+            })
+          )
+        : []
+
     const localIds = new Set(local.map((m) => m.id))
     const toItem = (media: Media, sub: string): Item => ({
       key: `a-${media.id}`,
@@ -108,6 +125,7 @@ function Palette(): React.JSX.Element {
     return [
       ...local.map((m) => toItem(m, 'Ma bibliothèque')),
       ...nav,
+      ...settings,
       ...remote.items.filter((m) => !localIds.has(m.id)).map((m) => toItem(m, formatLabel(m.format)))
     ]
   }, [local, remote.items, query, lang, navigate])

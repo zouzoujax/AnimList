@@ -24,7 +24,7 @@ export type Route =
   | { name: 'calendar' }
   | { name: 'stats' }
   | { name: 'badges' }
-  | { name: 'settings' }
+  | { name: 'settings'; section?: string }
   | { name: 'anime'; id: number }
   | { name: 'studio'; studio: string }
   | { name: 'person'; kind: 'character' | 'staff'; id: number }
