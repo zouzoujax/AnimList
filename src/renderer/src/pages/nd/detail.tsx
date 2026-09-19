@@ -9,7 +9,7 @@
  */
 
 import { ArrowLeft, Check, FolderPlus, Heart, Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { STATUS_LABELS, type LibraryStatus } from '@shared/types'
 import type { DetailHeroProps, DetailPartKey, DetailParts } from '@/experiences'
 import { EpisodeStrip, plural } from '@/components/nd'
@@ -150,25 +150,36 @@ export function NdDetailBody({ parts }: { parts: DetailParts }): React.JSX.Eleme
   const [active, setActive] = useState<DetailPartKey | null>(present[0]?.key ?? null)
   const keys = present.map((p) => p.key).join(',')
 
-  // Le sommaire suit la lecture : le bloc le plus haut encore visible est surligné.
+  // Un clic dans le sommaire fait défiler en douceur : pendant ce temps, le
+  // défilement ne doit pas reprendre la main sur le bloc qu'on vient de choisir.
+  const clickedAt = useRef(0)
+
+  /*
+   * Le sommaire suit la lecture : le dernier bloc dont le haut a passé le
+   * premier tiers de l'écran est surligné. Arrivé tout en bas, c'est le dernier
+   * bloc : les blocs courts de la fin ne peuvent jamais monter jusque-là, et
+   * « Recommandations » ne s'allumait jamais.
+   */
   useEffect(() => {
     const root = document.getElementById('contenu')
-    const nodes = keys
-      .split(',')
-      .map((key) => document.getElementById(`nd-part-${key}`))
-      .filter((n): n is HTMLElement => !!n)
-    if (!nodes.length) return
-    const observer = new IntersectionObserver(
-      (records) => {
-        const top = records
-          .filter((r) => r.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-        if (top) setActive(top.target.id.replace('nd-part-', '') as DetailPartKey)
-      },
-      { root, rootMargin: '0px 0px -60% 0px' }
-    )
-    nodes.forEach((n) => observer.observe(n))
-    return () => observer.disconnect()
+    if (!root) return
+    const list = keys ? keys.split(',') : []
+    const onScroll = (): void => {
+      if (Date.now() - clickedAt.current < 900 || !list.length) return
+      if (root.scrollTop + root.clientHeight >= root.scrollHeight - 4) {
+        setActive(list[list.length - 1] as DetailPartKey)
+        return
+      }
+      const line = root.getBoundingClientRect().top + root.clientHeight / 3
+      let current = list[0]
+      for (const key of list) {
+        const node = document.getElementById(`nd-part-${key}`)
+        if (node && node.getBoundingClientRect().top <= line) current = key
+      }
+      setActive(current as DetailPartKey)
+    }
+    root.addEventListener('scroll', onScroll, { passive: true })
+    return () => root.removeEventListener('scroll', onScroll)
   }, [keys])
 
   return (
@@ -178,9 +189,11 @@ export function NdDetailBody({ parts }: { parts: DetailParts }): React.JSX.Eleme
           <button
             key={p.key}
             aria-current={active === p.key ? 'true' : undefined}
-            onClick={() =>
+            onClick={() => {
+              clickedAt.current = Date.now()
+              setActive(p.key)
               document.getElementById(`nd-part-${p.key}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }
+            }}
           >
             {p.label}
           </button>
