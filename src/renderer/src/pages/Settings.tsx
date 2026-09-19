@@ -431,6 +431,13 @@ export default function SettingsPage(): React.JSX.Element {
         <Row label="Réduire les animations" hint="Coupe les transitions et le fond animé.">
           <Toggle on={prefs.reduceMotion} onChange={(reduceMotion) => setPrefs({ reduceMotion })} />
         </Row>
+
+        <Row
+          label="Nouvel accueil"
+          hint="Frise d'épisodes, file « À regarder » et semaine de diffusion. Éteint, l'ancien accueil en rangées de cartes revient. Sans effet dans les expériences, qui ont leur propre accueil."
+        >
+          <Toggle on={prefs.newHome} onChange={(newHome) => setPrefs({ newHome })} />
+        </Row>
       </Card>
 
       <Card title="Affichage" icon={<Languages size={17} />}>

@@ -19,6 +19,7 @@ import { useApp } from '@/store/app'
  * Stats pulls in the whole charting layer and Detail the trailer and cast views,
  * neither of which most sessions ever open.
  */
+const HomeClassicPage = lazy(() => import('@/pages/HomeClassic'))
 const DiscoverPage = lazy(() => import('@/pages/Discover'))
 const LibraryPage = lazy(() => import('@/pages/Library'))
 const StudioPage = lazy(() => import('@/pages/Studio'))
@@ -56,6 +57,7 @@ export default function App(): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   const setPalette = useApp((s) => s.setPalette)
   const paletteOpen = useApp((s) => s.paletteOpen)
+  const newHome = useApp((s) => s.prefs.newHome)
   const scrollRef = useRef<HTMLDivElement>(null)
   // Un thème « expérience » remplace la navigation, l'accueil, la bibliothèque
   // et les transitions ; les autres pages restent celles de l'app.
@@ -158,7 +160,7 @@ export default function App(): React.JSX.Element {
               <motion.div key={routeKey} {...(xp?.motion ?? PAGE_MOTION)}>
                 <ErrorBoundary resetKey={routeKey} onGoHome={() => navigate({ name: 'home' })}>
                   <Suspense fallback={<Spinner label="Chargement de la page…" />}>
-                    {route.name === 'home' && (xp ? <xp.Home /> : <HomePage />)}
+                    {route.name === 'home' && (xp ? <xp.Home /> : newHome ? <HomePage /> : <HomeClassicPage />)}
                     {route.name === 'discover' &&
                       (xp?.Discover ? (
                         <xp.Discover initialSearch={route.search} />

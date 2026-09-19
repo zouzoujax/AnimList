@@ -443,6 +443,8 @@ export interface Prefs {
   /** Minutes between airing checks. Lower means fresher and more requests. */
   notifyEveryMinutes: number
   reduceMotion: boolean
+  /** L'accueil à frise d'épisodes ; éteint, l'ancien accueil en rangées de cartes revient. */
+  newHome: boolean
   defaultRuntime: number
   showAdult: boolean
   weekStart: 0 | 1
@@ -915,6 +917,7 @@ export const DEFAULT_PREFS: Prefs = {
   notifyLeadMinutes: 0,
   notifyEveryMinutes: 15,
   reduceMotion: false,
+  newHome: true,
   defaultRuntime: 24,
   showAdult: false,
   weekStart: 1,
