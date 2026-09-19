@@ -43,6 +43,17 @@ export function Toasts(): React.JSX.Element {
             >
               <Icon size={17} style={{ color: TINTS[toast.kind] }} className="mt-0.5 shrink-0" />
               <p className="flex-1 text-[0.82rem] leading-snug">{toast.message}</p>
+              {toast.action && (
+                <button
+                  className="btn !h-7 shrink-0 !px-2.5 text-[0.76rem]"
+                  onClick={() => {
+                    toast.action?.run()
+                    dismiss(toast.id)
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
               <button className="icon-btn !h-6 !w-6" onClick={() => dismiss(toast.id)} aria-label="Fermer">
                 <X size={13} />
               </button>

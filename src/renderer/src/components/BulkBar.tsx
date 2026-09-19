@@ -27,6 +27,7 @@ export default function BulkBar({
   const bulkRemove = useApp((s) => s.bulkRemove)
   const bulkMarkWatched = useApp((s) => s.bulkMarkWatched)
   const toast = useApp((s) => s.toast)
+  const offerUndo = useApp((s) => s.offerUndo)
 
   const [picking, setPicking] = useState(false)
   const [confirmRemove, setConfirmRemove] = useState(false)
@@ -41,8 +42,13 @@ export default function BulkBar({
   const allFavorite = ids.every((id) => entries.get(id)?.favorite)
 
   const apply = async (label: string, action: () => Promise<number>): Promise<void> => {
+    const before = useApp.getState().undoable
     const n = await action()
-    toast(`${label} — ${n} modifié${n > 1 ? 's' : ''}`, 'ok')
+    const message = `${label} — ${n} modifié${n > 1 ? 's' : ''}`
+    // L'action a laissé de quoi se défaire : on le propose tout de suite.
+    const held = useApp.getState().undoable
+    if (held && held !== before) offerUndo(message, held)
+    else toast(message, 'ok')
     onClear()
   }
 

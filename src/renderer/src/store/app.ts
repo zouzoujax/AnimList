@@ -49,7 +49,11 @@ export interface Toast {
   id: number
   message: string
   kind: 'ok' | 'error' | 'info'
+  /** Un bouton dans la notification, « Annuler » le plus souvent. */
+  action?: { label: string; run: () => void }
 }
+
+type Undoable = { label: string; run: () => Promise<void> }
 
 interface AppState {
   ready: boolean
@@ -93,7 +97,13 @@ interface AppState {
   setPrefs: (patch: Partial<Prefs>) => Promise<void>
   setPalette: (open: boolean) => void
   setHelp: (open: boolean) => void
-  toast: (message: string, kind?: Toast['kind']) => void
+  toast: (message: string, kind?: Toast['kind'], action?: Toast['action']) => void
+  /**
+   * Annonce un geste qu'on peut défaire, avec « Annuler » à portée de clic.
+   * `Ctrl+Z` existait déjà, mais un raccourci qu'on ne voit nulle part ne
+   * rattrape pas le clic de travers de quelqu'un qui ne le connaît pas.
+   */
+  offerUndo: (message: string, held: Undoable) => void
   dismissToast: (id: number) => void
   dismissFinished: () => void
 
@@ -105,7 +115,7 @@ interface AppState {
    * de travers rend coûteux, et l'historique est ce que ce projet promet de ne
    * jamais perdre.
    */
-  undoable: { label: string; run: () => Promise<void> } | null
+  undoable: Undoable | null
   runUndo: () => Promise<void>
 
   saveEntry: (animeId: number, patch: EntryPatch, media?: Media) => Promise<void>
@@ -285,10 +295,23 @@ export const useApp = create<AppState>((set, get) => ({
   setPalette: (paletteOpen) => set({ paletteOpen }),
   setHelp: (helpOpen) => set({ helpOpen }),
 
-  toast: (message, kind = 'ok') => {
+  toast: (message, kind = 'ok', action) => {
     const id = (toastSeq += 1)
-    set({ toasts: [...get().toasts, { id, message, kind }] })
-    setTimeout(() => get().dismissToast(id), 4200)
+    set({ toasts: [...get().toasts, { id, message, kind, action }] })
+    // Plus longtemps quand il y a un bouton : le temps de lire, puis de viser.
+    setTimeout(() => get().dismissToast(id), action ? 8000 : 4200)
+  },
+
+  offerUndo: (message, held) => {
+    set({ undoable: held })
+    get().toast(message, 'ok', {
+      label: 'Annuler',
+      run: () => {
+        // Un geste plus récent a pris la place : ce bouton ne défait plus rien.
+        if (get().undoable !== held) return get().toast('Plus rien à annuler ici.', 'info')
+        void get().runUndo()
+      }
+    })
   },
 
   dismissToast: (id) => set({ toasts: get().toasts.filter((t) => t.id !== id) }),
@@ -349,18 +372,17 @@ export const useApp = create<AppState>((set, get) => ({
       set0.add(ep)
     }
     watched.set(animeId, set0)
-    set({
-      watched,
-      undoable: added.length
-        ? {
-            label: `${added.length} épisode${added.length > 1 ? 's' : ''} coché${added.length > 1 ? 's' : ''}`,
-            run: async () => {
-              for (const ep of added) await window.api.library.setWatched(animeId, ep, false)
-              set({ undoable: null })
-            }
-          }
-        : null
-    })
+    const label = `${added.length} épisode${added.length > 1 ? 's' : ''} coché${added.length > 1 ? 's' : ''}`
+    const held: Undoable = {
+      label,
+      run: async () => {
+        for (const ep of added) await window.api.library.setWatched(animeId, ep, false)
+        set({ undoable: null })
+      }
+    }
+    set({ watched, undoable: added.length ? held : null })
+    // Un seul épisode se voit et se décoche d'un clic ; plusieurs, non.
+    if (added.length > 1) get().offerUndo(label.charAt(0).toUpperCase() + label.slice(1), held)
     if (media && !get().media.has(animeId)) await window.api.library.setEntry(animeId, {}, media)
     await window.api.library.setWatchedUpTo(animeId, episode)
   },
@@ -371,18 +393,16 @@ export const useApp = create<AppState>((set, get) => ({
     // la connaît déjà plus.
     const lost = [...(watched.get(animeId) ?? [])]
     watched.set(animeId, new Set())
-    set({
-      watched,
-      undoable: lost.length
-        ? {
-            label: `progression effacée (${lost.length} épisode${lost.length > 1 ? 's' : ''})`,
-            run: async () => {
-              for (const ep of lost) await window.api.library.setWatched(animeId, ep, true)
-              set({ undoable: null })
-            }
-          }
-        : null
-    })
+    const held: Undoable = {
+      label: `progression effacée (${lost.length} épisode${lost.length > 1 ? 's' : ''})`,
+      run: async () => {
+        for (const ep of lost) await window.api.library.setWatched(animeId, ep, true)
+        set({ undoable: null })
+      }
+    }
+    set({ watched })
+    if (lost.length) get().offerUndo(`Progression effacée (${lost.length} épisode${lost.length > 1 ? 's' : ''})`, held)
+    else set({ undoable: null })
     await window.api.library.clearWatched(animeId)
   },
 
@@ -420,9 +440,45 @@ export const useApp = create<AppState>((set, get) => ({
     await window.api.lists.membership(id, animeIds, member)
   },
 
-  bulkPatch: (animeIds, patch) => window.api.library.setEntries(animeIds, patch),
+  bulkPatch: async (animeIds, patch) => {
+    // Les seuls champs touchés, tels qu'ils étaient, série par série.
+    const keys = Object.keys(patch) as (keyof EntryPatch)[]
+    const before = animeIds.map((id) => {
+      const entry = get().entries.get(id)
+      return { id, values: Object.fromEntries(keys.map((k) => [k, entry?.[k]])) }
+    })
+    const n = await window.api.library.setEntries(animeIds, patch)
+    set({
+      undoable: {
+        label: `modification de ${n} série${n > 1 ? 's' : ''}`,
+        run: async () => {
+          for (const { id, values } of before) await window.api.library.setEntry(id, values)
+          set({ undoable: null })
+        }
+      }
+    })
+    return n
+  },
   bulkRemove: (animeIds) => window.api.library.removeEntries(animeIds),
-  bulkMarkWatched: (animeIds) => window.api.library.markAllWatched(animeIds)
+  bulkMarkWatched: async (animeIds) => {
+    const before = new Map(animeIds.map((id) => [id, new Set(get().watched.get(id) ?? [])]))
+    const n = await window.api.library.markAllWatched(animeIds)
+    set({
+      undoable: {
+        label: `épisodes cochés sur ${n} série${n > 1 ? 's' : ''}`,
+        // Lu au moment d'annuler : l'écho de l'écriture a eu le temps d'arriver.
+        run: async () => {
+          for (const [id, had] of before) {
+            for (const ep of get().watched.get(id) ?? []) {
+              if (!had.has(ep)) await window.api.library.setWatched(id, ep, false)
+            }
+          }
+          set({ undoable: null })
+        }
+      }
+    })
+    return n
+  }
 }))
 
 // ---------------------------------------------------------------- selectors
