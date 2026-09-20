@@ -322,6 +322,7 @@ const SCRIPT = `
     film: 'M4 4h16v16H4zM4 9h16M4 15h16M9 4v16M15 4v16',
     info: 'M12 8h.01M11 12h1v4h1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
     pause: 'M7 4h3v16H7zM14 4h3v16h-3z',
+    skip: 'M5 4l10 8-10 8zM19 5v14',
     expand: 'M8 3H3v5M16 3h5v5M16 21h5v-5M8 21H3v-5',
     shrink: 'M3 8h5V3M21 8h-5V3M21 16h-5v5M3 16h5v5',
     close: 'M18 6 6 18M6 6l12 12',
@@ -396,48 +397,18 @@ const SCRIPT = `
     var sub = p.episode ? '<div class="note">Épisode ' + p.episode + '</div>' : ''
     // Un lecteur hors d'atteinte le dit, plutôt que d'afficher des boutons muets.
     // Tant qu'aucune vidéo n'a été trouvée dans la page, il n'y a rien à
-    // piloter — le lecteur charge encore, ou la page n'en contient pas.
+    // piloter : le lecteur charge encore, ou la page n'en contient pas.
     var limit = p.canSeek
       ? ''
       : '<div class="note">Lecteur pas encore prêt : les commandes apparaîtront dès que la vidéo démarre.</div>'
 
-    var seek = p.canSeek && p.duration > 0
-      ? '<div class="seekline">' +
-          '<span class="time">' + mmss(p.position) + '</span>' +
-          '<input type="range" id="seek" min="0" max="' + Math.floor(p.duration) + '" ' +
-          'value="' + Math.floor(p.position) + '" aria-label="Position">' +
-          '<span class="time right">' + mmss(p.duration) + '</span>' +
-        '</div>' +
-        '<div class="volline">' + icon('volume') +
-          '<input type="range" id="vol" min="0" max="100" value="' + Math.round(p.volume) + '" aria-label="Volume">' +
-        '</div>'
+    // Leur lecteur propose de passer le générique : le bouton se pose ici, à
+    // portée de pouce, et s'en va avec lui. Le libellé est le leur — c'est ce
+    // qui est écrit sur l'écran d'en face, et deux formulations pour un même
+    // bouton feraient douter de ce qu'on presse.
+    var skip = p.skip
+      ? '<div class="acts"><button data-act="skip">' + icon('skip') + esc(p.skip) + '</button></div>'
       : ''
-
-    playerEl.innerHTML = ''
-    countEl.textContent = ''
-    appEl.innerHTML =
-      '<div class="err">' + esc(message) + '</div>' +
-      '<form id="f"><input type="text" id="t" placeholder="mot de passe" autocapitalize="off" ' +
-      'autocomplete="off" spellcheck="false"><button>Entrer</button></form>'
-    document.getElementById('f').onsubmit = function (e) {
-      e.preventDefault()
-      token = document.getElementById('t').value.trim()
-      localStorage.setItem(KEY, token)
-      load()
-    }
-  }
-
-  function renderPlayer(p) {
-    if (!p) { playerEl.innerHTML = ''; return }
-    if (dragging) return
-
-    var cover = p.cover ? '<img src="' + esc(p.cover) + '" alt="">' : ''
-    var label = p.kind === 'trailer' ? 'Bande-annonce' : 'Anime-Sama'
-    var sub = p.episode ? '<div class="note">Épisode ' + p.episode + '</div>' : ''
-    // Un lecteur hors d'atteinte le dit, plutôt que d'afficher des boutons muets.
-    var limit = p.canSeek
-      ? ''
-      : '<div class="note">Leur lecteur vit dans un cadre d’un autre site : seule la fenêtre se pilote d’ici.</div>'
 
     var seek = p.canSeek && p.duration > 0
       ? '<div class="seekline">' +
@@ -460,7 +431,7 @@ const SCRIPT = `
             '<div class="name">' + esc(p.title) + '</div>' + sub +
           '</div>' +
         '</div>' +
-        limit + seek +
+        limit + seek + skip +
         '<div class="acts">' +
           (p.canSeek
             ? btn('data-act="' + (p.playing ? 'pause' : 'play') + '"', p.playing ? 'Pause' : 'Lecture',
@@ -820,7 +791,7 @@ const SCRIPT = `
     return send(action, { value: value })
   }
 
-  var CONTROLS = ['play', 'pause', 'fullscreen', 'windowed', 'close']
+  var CONTROLS = ['play', 'pause', 'fullscreen', 'windowed', 'close', 'skip']
 
   // Un seul écouteur pour toute la page : les boutons portent leur intention
   // en attributs, et rien n'a besoin d'exister dans l'espace global.

@@ -32,7 +32,7 @@
  */
 
 import type { BrowserWindow } from 'electron'
-import { enterCinema, leaveCinema, videoFrame, videoScript, type VideoState } from './video-frame'
+import { enterCinema, leaveCinema, pressSkip, skipLabel, videoFrame, videoScript, type VideoState } from './video-frame'
 import { closeTrailerWindow, trailerWindow } from './trailer'
 import { closeWatchWindow, watchWindow } from './watch-window'
 
@@ -50,9 +50,15 @@ export interface PlayerState {
   fullscreen: boolean
   /** Faux pour un lecteur qu'on ne peut pas atteindre : la barre est masquée. */
   canSeek: boolean
+  /**
+   * Le libellé du bouton « Passer l'intro » proposé en ce moment par leur
+   * lecteur, sinon rien. Il va et vient au fil de l'épisode : la télécommande
+   * le montre tant qu'il est là, comme l'écran du PC.
+   */
+  skip: string | null
 }
 
-export type PlayerAction = 'play' | 'pause' | 'seek' | 'volume' | 'fullscreen' | 'windowed' | 'close'
+export type PlayerAction = 'play' | 'pause' | 'seek' | 'volume' | 'fullscreen' | 'windowed' | 'close' | 'skip'
 
 /** Ce qu'une commande transporte. Tout est facultatif : `close` n'a besoin de rien. */
 export interface PlayerParams {
@@ -92,7 +98,8 @@ export async function playerState(): Promise<PlayerState | null> {
     volume: 100,
     playing: true,
     fullscreen: found.win.isFullScreen(),
-    canSeek: found.kind === 'trailer'
+    canSeek: found.kind === 'trailer',
+    skip: null
   }
 
   if (found.kind !== 'trailer') {
@@ -100,6 +107,9 @@ export async function playerState(): Promise<PlayerState | null> {
     if (!video) return base
     return {
       ...base,
+      // Dans le cadre du lecteur, là où la vidéo a été trouvée : le bouton est
+      // posé par-dessus l'image, il vit donc dans le même document qu'elle.
+      skip: await skipLabel(video.frame),
       position: video.state.position ?? 0,
       duration: video.state.duration ?? 0,
       volume: video.state.volume ?? 100,
@@ -177,6 +187,10 @@ export async function playerCommand(action: PlayerAction, params: PlayerParams =
     const video = await videoFrame(found.win)
     if (!video) return false
 
+    // Presser leur bouton, pas avancer la vidéo à notre idée : la durée d'un
+    // générique n'est pas une constante, et eux savent où il finit.
+    if (action === 'skip') return await pressSkip(video.frame)
+
     const arg = Number.isFinite(params.value) ? Number(params.value) : 0
     const body =
       action === 'play'
@@ -193,6 +207,9 @@ export async function playerCommand(action: PlayerAction, params: PlayerParams =
     const done: unknown = await video.frame.executeJavaScript(videoScript(body), true).catch(() => false)
     return done === true
   }
+
+  // La bande-annonce n'a pas de générique à passer : rien à presser chez elle.
+  if (action === 'skip') return false
 
   const arg = Number.isFinite(params.value) ? Number(params.value) : 0
   return (await found.win.webContents

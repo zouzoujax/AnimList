@@ -313,7 +313,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   if (route === 'control') {
     const action = String(body.action ?? '') as PlayerAction
-    const allowed: PlayerAction[] = ['play', 'pause', 'seek', 'volume', 'fullscreen', 'windowed', 'close']
+    const allowed: PlayerAction[] = ['play', 'pause', 'seek', 'volume', 'fullscreen', 'windowed', 'close', 'skip']
     if (!allowed.includes(action)) return json(res, 400, { error: 'Commande inconnue.' })
 
     const done = await playerCommand(action, { value: Number(body.value) })

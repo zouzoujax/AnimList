@@ -59,6 +59,74 @@ export const PROBE = videoScript(`
 `)
 
 /**
+ * Le bouton « Passer l'intro » que leur lecteur propose parfois.
+ *
+ * Il apparaît chez eux, dans leur cadre, et disparaît de lui-même. Depuis le
+ * canapé, avec le téléphone en main, il est hors d'atteinte : c'est tout le
+ * problème qu'on règle ici — le retrouver pour le montrer sur la télécommande,
+ * et le presser pour de vrai quand on y touche.
+ *
+ * On ne devine rien, on constate. Le bouton doit se nommer lui-même : un texte
+ * court qui parle de passer quelque chose, et ce quelque chose doit être un
+ * générique. Il doit aussi occuper une place visible à l'écran — un bouton
+ * posé dans le document mais replié n'est pas encore proposé à qui regarde, et
+ * le relayer avancerait une offre que l'écran ne fait pas.
+ *
+ * **Ce qui parle de publicité est écarté.** C'est la même forme — un bouton
+ * qui saute un passage — et ce n'est pas la même chose : on relaie ce que leur
+ * lecteur offre de lui-même, on ne fabrique pas de quoi éviter ce qu'il impose.
+ */
+function skipScript(click: boolean): string {
+  return `(function () {
+    var WANT = /(passer|sauter|skip|ignorer)/i
+    var WHAT = /(intro|opening|\\bop\\b|g[ée]n[ée]rique|outro|ending|recap|r[ée]sum[ée])/i
+    var NOPE = /(pub|publicit|annonce|sponsor|\\bads?\\b|premium|abonn)/i
+    var els = document.querySelectorAll('button, a, [role="button"], [onclick], [class*="skip" i], [id*="skip" i]')
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i]
+      var text = ((el.textContent || '').trim() || (el.getAttribute('aria-label') || '').trim() ||
+        (el.getAttribute('title') || '').trim())
+      // Un libellé long est le texte d'un conteneur, pas celui d'un bouton.
+      if (!text || text.length > 48) continue
+      if (NOPE.test(text) || !WANT.test(text)) continue
+      // « Passer » tout court suffit quand l'élément, lui, s'appelle « skip ».
+      var named = /skip/i.test((el.getAttribute('class') || '') + ' ' + (el.id || ''))
+      if (!WHAT.test(text) && !named) continue
+      var box = el.getBoundingClientRect()
+      if (box.width < 8 || box.height < 8) continue
+      if (box.bottom < 0 || box.right < 0 || box.top > innerHeight || box.left > innerWidth) continue
+      var style = getComputedStyle(el)
+      if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) < 0.05) continue
+      ${click ? 'el.click(); return true' : 'return text'}
+    }
+    return ${click ? 'false' : 'null'}
+  })()`
+}
+
+/** Exportés pour le test : ce sont des règles, et elles s'éprouvent hors du navigateur. */
+export const SKIP_PROBE = skipScript(false)
+export const SKIP_CLICK = skipScript(true)
+
+/** Le libellé du bouton proposé en ce moment, ou rien s'il n'y en a pas. */
+export async function skipLabel(frame: WebFrameMain): Promise<string | null> {
+  const found: unknown = await frame.executeJavaScript(SKIP_PROBE, true).catch(() => null)
+  return typeof found === 'string' && found.length > 0 ? found : null
+}
+
+/**
+ * Presse ce bouton.
+ *
+ * Il est retrouvé au moment du clic, pas à celui de l'affichage : entre les
+ * deux, le générique a pu passer tout seul et le bouton s'effacer. Faux dit
+ * alors qu'il n'y avait plus rien à presser, ce qui vaut mieux que de cliquer
+ * sur ce qui a pris sa place.
+ */
+export async function pressSkip(frame: WebFrameMain): Promise<boolean> {
+  const done: unknown = await frame.executeJavaScript(SKIP_CLICK, true).catch(() => false)
+  return done === true
+}
+
+/**
  * De quoi reconnaître un lecteur d'un autre.
  *
  * Le cadre et le fichier joué : deux épisodes ne partagent pas la seconde, et
