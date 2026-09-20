@@ -7,6 +7,7 @@ import {
   Compass,
   House,
   LibraryBig,
+  NotebookPen,
   Search,
   Settings
 } from 'lucide-react'
@@ -192,6 +193,7 @@ export const NAV: { route: Route; label: string; icon: typeof House }[] = [
   { route: { name: 'manga' }, label: 'Manga', icon: BookOpen },
   { route: { name: 'calendar' }, label: 'Calendrier', icon: CalendarDays },
   { route: { name: 'stats' }, label: 'Statistiques', icon: ChartColumn },
+  { route: { name: 'journal' }, label: 'Journal', icon: NotebookPen },
   { route: { name: 'settings' }, label: 'Réglages', icon: Settings }
 ]
 

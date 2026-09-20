@@ -27,9 +27,9 @@ const GROUPS: { title: string; rows: Shortcut[] }[] = [
     rows: [
       { keys: ['Ctrl', 'K'], label: 'Ouvrir la recherche', hint: 'Ta bibliothèque, AniList et la navigation' },
       {
-        keys: ['Ctrl', '1…7'],
+        keys: ['Ctrl', '1…8'],
         label: 'Aller à une page du menu',
-        hint: 'Accueil, Découvrir, Bibliothèque, Manga, Calendrier, Statistiques, Réglages'
+        hint: 'Accueil, Découvrir, Bibliothèque, Manga, Calendrier, Statistiques, Journal, Réglages'
       },
       { keys: ['Alt', '←'], label: 'Revenir en arrière', hint: 'Ou le bouton « précédent » de la souris' },
       { keys: ['Alt', '→'], label: 'Revenir en avant', hint: 'Ou le bouton « suivant » de la souris' },

@@ -7,6 +7,7 @@ import {
   House,
   LibraryBig,
   LoaderCircle,
+  NotebookPen,
   Search,
   Settings
 } from 'lucide-react'
@@ -34,6 +35,7 @@ const NAV_COMMANDS: { label: string; icon: typeof House; route: Route }[] = [
   { label: 'Manga', icon: BookOpen, route: { name: 'manga' } },
   { label: 'Calendrier', icon: CalendarDays, route: { name: 'calendar' } },
   { label: 'Saison en cours', icon: CalendarDays, route: { name: 'season' } },
+  { label: 'Journal', icon: NotebookPen, route: { name: 'journal' } },
   { label: 'Statistiques', icon: ChartColumn, route: { name: 'stats' } },
   { label: 'Réglages', icon: Settings, route: { name: 'settings' } }
 ]

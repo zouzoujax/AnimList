@@ -42,6 +42,7 @@ const CalendarPage = lazy(() => import('@/pages/Calendar'))
 const StatsPage = lazy(() => import('@/pages/Stats'))
 const SettingsPage = lazy(() => import('@/pages/Settings'))
 const SeasonPage = lazy(() => import('@/pages/Season'))
+const JournalPage = lazy(() => import('@/pages/Journal'))
 const DetailPage = lazy(() => import('@/pages/Detail'))
 
 /**
@@ -133,7 +134,7 @@ export default function App(): React.JSX.Element {
         e.preventDefault()
         setPalette(!paletteOpen)
       }
-      // Ctrl+1 à Ctrl+7 : les pages du menu, dans son ordre.
+      // Ctrl+1 à Ctrl+8 : les pages du menu, dans son ordre.
       if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && /^[1-9]$/.test(e.key)) {
         const target = NAV[Number(e.key) - 1]
         if (target) {
@@ -245,6 +246,7 @@ export default function App(): React.JSX.Element {
                       (xp?.Badges ? <xp.Badges /> : nd.stats ? <NdStatsPage focus="badges" /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'season' && <SeasonPage />}
+                    {route.name === 'journal' && <JournalPage />}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>
                 </ErrorBoundary>

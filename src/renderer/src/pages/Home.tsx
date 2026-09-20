@@ -442,7 +442,19 @@ export default function HomePage(): React.JSX.Element {
         )}
 
         {pinned.length > 0 && (
-          <Section title="À revoir" subtitle="Les épisodes que tu as mis de côté">
+          <Section
+            title="À revoir"
+            subtitle="Les épisodes que tu as mis de côté"
+            action={
+              <button
+                className="chip shrink-0"
+                title="Tout ce que tu as regardé, avec tes notes"
+                onClick={() => navigate({ name: 'journal' })}
+              >
+                Le journal
+              </button>
+            }
+          >
             <RowScroller>
               {pinned.map((row, i) => (
                 <MiniCard

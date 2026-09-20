@@ -24,6 +24,7 @@ export type Route =
   | { name: 'manga' }
   | { name: 'calendar' }
   | { name: 'season' }
+  | { name: 'journal' }
   | { name: 'stats' }
   | { name: 'badges' }
   | { name: 'settings'; section?: string }

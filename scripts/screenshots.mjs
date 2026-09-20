@@ -225,6 +225,42 @@ function inventHistory(media, rng) {
     { status: 'completed', share: 1, endsAt: 332 }
   ]
 
+  /**
+   * Ce qu'on écrit sur un épisode, posé sur une partie d'entre eux seulement.
+   *
+   * Les trous comptent autant que le reste : personne n'annote tout, et un
+   * journal dont chaque ligne porte un texte ne ressemble au journal de
+   * personne. Sans ces marques, la page Journal et la rangée « À revoir » de
+   * l'accueil se photographieraient vides.
+   */
+  const marks = [
+    null,
+    null,
+    null,
+    { emotions: ['hype'] },
+    null,
+    null,
+    { emotions: ['cry'], note: "La scène du quai. Je ne l'ai pas vue venir." },
+    null,
+    null,
+    null,
+    null,
+    { emotions: ['mind'], pinned: true, note: 'À revoir en connaissant la fin.' },
+    null,
+    null,
+    { emotions: ['laugh'] },
+    null,
+    null,
+    null,
+    { pinned: true },
+    null,
+    null,
+    { emotions: ['love', 'chill'], note: "Le plus bel épisode de la saison, et il ne s'y passe presque rien." },
+    null,
+    null,
+    null
+  ]
+
   media.forEach((m, i) => {
     const slot = plan[i % plan.length]
     const total = m.episodes ?? 12
@@ -246,7 +282,8 @@ function inventHistory(media, rng) {
     stamps.sort((a, b) => a - b)
 
     stamps.forEach((at, index) => {
-      history.push({ animeId: m.id, episode: index + 1, at, minutes: runtime })
+      const mark = marks[(i * 7 + index) % marks.length]
+      history.push({ animeId: m.id, episode: index + 1, at, minutes: runtime, ...mark })
     })
 
     const firstAt = stamps[0] ?? null

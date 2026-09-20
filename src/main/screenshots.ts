@@ -73,6 +73,8 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
     // The badge wall sits under every chart, so its offset moves with the data.
     { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },
+    // Pas de réseau : la page ne lit que l'historique local, elle est prête tout de suite.
+    { name: 'journal', route: { name: 'journal' }, settleMs: 900 },
     { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 }
   ]
 
