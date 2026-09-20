@@ -9,6 +9,18 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.8.1 — 20 septembre 2026
+
+### Ajouts
+
+- Une page « Journal », dans le menu et sous `Ctrl+7` : tout ce que tu as regardé, à sa date, groupé par journée. Les ressentis et les notes que tu écrivais depuis la fiche d'une série s'y relisent enfin sans avoir à se souvenir de quelle série il s'agissait. La recherche porte sur le texte de tes notes autant que sur les titres, on filtre sur les seuls épisodes annotés ou mis de côté, et un clic sur une ligne rouvre l'épisode pour corriger sa date, sa durée ou ce qu'on en avait dit
+- Le journal a sa version du nouveau design : journées annoncées en toutes lettres, visionnages en lignes plutôt qu'en cartes
+
+### Modifications
+
+- Le journal laisse les lignes importées en dehors : elles portent la date du pointage dans l'app d'origine, pas celle du visionnage, et les ranger par journée inventait des soirées de plusieurs centaines d'épisodes. Les statistiques par jour les ignorent déjà pour la même raison. Une phrase le dit quand il y en a, et corriger la date d'une ligne depuis sa fiche la fait entrer dans le journal
+- Réglages passe de `Ctrl+7` à `Ctrl+8`, le journal prenant sa place dans le menu
+
 ## 0.8.0 — 20 septembre 2026
 
 ### Ajouts
