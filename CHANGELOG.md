@@ -9,6 +9,26 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.8.0 — 20 septembre 2026
+
+### Ajouts
+
+- Un bouton « Suivant » dans la barre de titre, et `Alt+→` : après un « Retour », on retrouve la page qu'on venait de quitter. Les boutons latéraux de la souris font précédent et suivant, comme dans un navigateur
+- `Ctrl+1` à `Ctrl+7` pour aller droit à une page du menu. Le raccourci est rappelé dans l'infobulle de chaque entrée et dans l'aide des raccourcis
+- Les notifications proposent « Annuler » : cocher plusieurs épisodes d'un coup, effacer une progression, ou changer le statut, les favoris et les épisodes de toute une sélection se défont d'un clic. C'est ce que faisait déjà `Ctrl+Z`, mais sans avoir à le connaître
+- Un champ de recherche en tête des Réglages, et un sommaire à gauche qui suit la lecture. `Ctrl+K` trouve aussi les sections des réglages : tape « discord » ou « sauvegarde » et tu arrives sur la bonne carte
+- La notification « Épisode N disponible » porte un bouton « Marquer vu » : un épisode regardé ailleurs se coche sans ouvrir l'app
+- Un clic droit sur l'icône de la barre des tâches propose « Vu : Série — ép. N » pour les séries en cours dont l'épisode est sorti. Comme partout, un épisode pas encore diffusé ne se coche pas
+- Quand une coche rattrape la diffusion, l'app dit quand arrive le prochain épisode et si elle préviendra
+- La fenêtre de fin de série propose de la noter, tant que l'avis est frais. Elle s'ouvre désormais pour ça même quand il n'y a aucune suite à proposer, et reste muette quand la série est déjà notée
+- Un témoin dans la barre de titre quand le catalogue ne suit pas : « Hors ligne », « AniList en pause » ou « AniList ralentit », avec le temps restant. Invisible le reste du temps, et son infobulle rappelle que la bibliothèque, les épisodes et les statistiques restent là
+- Une page « Saison en cours » pour faire le tri en début de saison : chaque série a sa case — à trier, suivie, prévue, écartée. « Je regarde » et « Plus tard » l'ajoutent à la bibliothèque, « Pas pour moi » l'écarte sans rien y mettre. Depuis l'onglet « Cette saison » de Découvrir, ou depuis `Ctrl+K`
+
+### Modifications
+
+- Revenir sur une page la retrouve là où on l'avait laissée, au lieu de repartir du haut
+- L'onglet, le tri, la recherche et le genre de la bibliothèque survivent à un aller-retour vers une fiche. Ils repartent à zéro au prochain lancement
+
 ## 0.7.0 — 19 septembre 2026
 
 ### Ajouts
