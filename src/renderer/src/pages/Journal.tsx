@@ -6,42 +6,25 @@
  * se relisaient que série par série, à condition de se souvenir de laquelle il
  * s'agissait. Ici elles reviennent toutes, à leur date, et un clic rouvre
  * l'épisode pour les corriger.
+ *
+ * Ce qui est montré se décide dans `lib/journal` : le nouveau design en donne
+ * une autre forme, pas un autre contenu.
  */
 
 import { NotebookPen, Pencil, Search, Star, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
-import { EMOTIONS, type EmotionId, type Media, type WatchEvent } from '@shared/types'
+import { useState } from 'react'
+import { EMOTIONS, type EmotionId } from '@shared/types'
 import EpisodeEditor from '@/components/EpisodeEditor'
 import { EmptyState, Poster } from '@/components/ui'
-import { formatTime, minutesToHuman, pluralize, relativeDay, startOfDay, titleOf } from '@/lib/format'
-import { useSessionState } from '@/lib/hooks'
+import { formatTime, minutesToHuman, pluralize, relativeDay, titleOf } from '@/lib/format'
+import { JOURNAL_FILTERS, emotionOf, passLabel, useJournal } from '@/lib/journal'
 import { useApp } from '@/store/app'
-
-type Filter = 'all' | 'notes' | 'pinned'
-
-const FILTERS: { id: Filter; label: string; hint: string }[] = [
-  { id: 'all', label: 'Tout', hint: 'Chaque épisode coché, du plus récent au plus ancien.' },
-  { id: 'notes', label: 'Avec une note', hint: 'Les épisodes dont tu as écrit quelque chose.' },
-  { id: 'pinned', label: 'À revoir', hint: 'Les épisodes que tu as mis de côté.' }
-]
-
-/** Un pas de lecture : assez pour remplir l'écran, assez peu pour rester vif. */
-const PAGE = 120
-
-const EMOTION_BY_ID = new Map(EMOTIONS.map((e) => [e.id, e]))
-
-const passLabel = (pass: number): string => (pass === 1 ? '2ᵉ visionnage' : `${pass + 1}ᵉ visionnage`)
-
-interface Row {
-  event: WatchEvent
-  media: Media
-}
 
 function Emotions({ ids }: { ids: EmotionId[] }): React.JSX.Element {
   return (
     <span className="flex shrink-0 items-center gap-1">
       {ids.map((id) => {
-        const emotion = EMOTION_BY_ID.get(id)
+        const emotion = emotionOf(id)
         if (!emotion) return null
         return (
           <span key={id} title={emotion.label} className="text-[0.85rem] leading-none">
@@ -55,89 +38,29 @@ function Emotions({ ids }: { ids: EmotionId[] }): React.JSX.Element {
 }
 
 export default function JournalPage(): React.JSX.Element {
-  const events = useApp((s) => s.events)
-  const media = useApp((s) => s.media)
   const lang = useApp((s) => s.prefs.titleLang)
-
-  const [filter, setFilter] = useSessionState<Filter>('journal.filter', 'all')
-  const [emotion, setEmotion] = useSessionState<EmotionId | null>('journal.emotion', null)
-  const [search, setSearch] = useSessionState<string>('journal.search', '')
-  const [shown, setShown] = useState(PAGE)
+  const j = useJournal()
   const [editing, setEditing] = useState<{ animeId: number; episode: number } | null>(null)
-
-  // Le journal entier, une fois : c'est lui qu'on filtre ensuite, et le tri
-  // d'un historique de plusieurs milliers de lignes n'a pas à recommencer à
-  // chaque frappe dans la recherche.
-  const all = useMemo(
-    () =>
-      events
-        .map((event) => ({ event, media: media.get(event.animeId) }))
-        .filter((row): row is Row => !!row.media)
-        .sort((a, b) => b.event.at - a.event.at),
-    [events, media]
-  )
-
-  const rows = useMemo(() => {
-    const needle = search.trim().toLowerCase()
-    return all.filter(({ event, media: m }) => {
-      if (filter === 'notes' && !event.note?.trim()) return false
-      if (filter === 'pinned' && !event.pinned) return false
-      if (emotion && !event.emotions?.includes(emotion)) return false
-      if (!needle) return true
-      // La recherche porte sur ce qu'on a écrit autant que sur le titre : on
-      // cherche « ce passage du train » sans savoir de quelle série il venait.
-      return titleOf(m, lang).toLowerCase().includes(needle) || (event.note?.toLowerCase().includes(needle) ?? false)
-    })
-  }, [all, filter, emotion, search, lang])
-
-  // Les émotions jamais posées ne servent à rien comme filtre : elles ne
-  // donneraient qu'une page vide. Seules celles du journal sont proposées.
-  const emotionCounts = useMemo(() => {
-    const tally = new Map<EmotionId, number>()
-    for (const { event } of all) for (const id of event.emotions ?? []) tally.set(id, (tally.get(id) ?? 0) + 1)
-    return tally
-  }, [all])
-
-  const visible = rows.slice(0, shown)
-
-  /** Découpé en journées : c'est l'unité dans laquelle on se souvient. */
-  const days = useMemo(() => {
-    const out: { day: number; rows: Row[] }[] = []
-    for (const row of visible) {
-      const day = startOfDay(row.event.at)
-      const last = out[out.length - 1]
-      if (last && last.day === day) last.rows.push(row)
-      else out.push({ day, rows: [row] })
-    }
-    return out
-  }, [visible])
-
-  const noted = useMemo(() => all.filter(({ event }) => event.note?.trim()).length, [all])
-  const pinnedCount = useMemo(() => all.filter(({ event }) => event.pinned).length, [all])
-
-  const reset = (): void => {
-    setFilter('all')
-    setEmotion(null)
-    setSearch('')
-    setShown(PAGE)
-  }
-
-  const change = <T,>(set: (value: T) => void, value: T): void => {
-    set(value)
-    setShown(PAGE)
-  }
 
   return (
     <div className="mx-auto max-w-[900px] px-7 py-7">
       <h1 className="title-xl mb-1 text-[1.85rem]">Journal</h1>
-      <p className="mb-6 text-[0.88rem] text-muted">
-        {all.length === 0
+      <p className="mb-1 text-[0.88rem] text-muted">
+        {j.total === 0
           ? 'Chaque épisode coché viendra se poser ici, à sa date.'
-          : `${pluralize(all.length, 'épisode regardé', 'épisodes regardés')}, dont ${pluralize(noted, 'porte une note', 'portent une note')}${pinnedCount > 0 ? ` et ${pluralize(pinnedCount, 'est à revoir', 'sont à revoir')}` : ''}.`}
+          : `${pluralize(j.total, 'épisode regardé', 'épisodes regardés')}, dont ${pluralize(j.noted, 'porte une note', 'portent une note')}${j.pinned > 0 ? ` et ${pluralize(j.pinned, 'est à revoir', 'sont à revoir')}` : ''}.`}
       </p>
+      {/* Dit une fois, sans y revenir : sans cette phrase, quelqu'un qui a
+          importé sa liste croirait à des épisodes perdus. */}
+      {j.imported > 0 && (
+        <p className="mb-6 text-[0.78rem] text-faint">
+          {pluralize(j.imported, 'ligne importée reste', 'lignes importées restent')} en dehors : leur date est celle du
+          pointage dans l'app d'origine, pas celle d'une soirée. La corriger depuis sa fiche la fait entrer ici.
+        </p>
+      )}
 
-      {all.length > 0 && (
-        <div className="mb-6 flex flex-col gap-3">
+      {j.total > 0 && (
+        <div className="mb-6 mt-5 flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[16rem] flex-1">
               <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint" />
@@ -145,39 +68,39 @@ export default function JournalPage(): React.JSX.Element {
                 type="search"
                 className="field w-full !pl-9"
                 placeholder="Chercher dans tes notes et tes séries…"
-                value={search}
-                onChange={(e) => change(setSearch, e.target.value)}
+                value={j.search}
+                onChange={(e) => j.setSearch(e.target.value)}
               />
             </div>
-            {FILTERS.map((f) => (
+            {JOURNAL_FILTERS.map((f) => (
               <button
                 key={f.id}
-                data-on={filter === f.id}
+                data-on={j.filter === f.id}
                 className="chip"
                 title={f.hint}
-                onClick={() => change(setFilter, f.id)}
+                onClick={() => j.setFilter(f.id)}
               >
-                {f.id === 'pinned' && <Star size={12} fill={filter === 'pinned' ? 'currentColor' : 'none'} />}
+                {f.id === 'pinned' && <Star size={12} fill={j.filter === 'pinned' ? 'currentColor' : 'none'} />}
                 {f.label}
               </button>
             ))}
           </div>
 
-          {emotionCounts.size > 0 && (
+          {j.emotionCounts.size > 0 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="label mr-1">Ressenti</span>
-              {EMOTIONS.filter((e) => emotionCounts.has(e.id)).map((e) => (
+              {EMOTIONS.filter((e) => j.emotionCounts.has(e.id)).map((e) => (
                 <button
                   key={e.id}
-                  data-on={emotion === e.id}
+                  data-on={j.emotion === e.id}
                   className="chip !h-7 text-[0.72rem]"
                   // Recliquer sur le filtre actif l'enlève : sans ça, il
                   // faudrait chercher un bouton « tous » qui n'existe pas.
-                  onClick={() => change(setEmotion, emotion === e.id ? null : e.id)}
+                  onClick={() => j.setEmotion(j.emotion === e.id ? null : e.id)}
                 >
                   <span aria-hidden>{e.emoji}</span>
                   {e.label}
-                  <span className="ml-0.5 tabular-nums text-faint">{emotionCounts.get(e.id)}</span>
+                  <span className="ml-0.5 tabular-nums text-faint">{j.emotionCounts.get(e.id)}</span>
                 </button>
               ))}
             </div>
@@ -185,19 +108,23 @@ export default function JournalPage(): React.JSX.Element {
         </div>
       )}
 
-      {all.length === 0 ? (
+      {j.total === 0 ? (
         <EmptyState
           icon={<NotebookPen size={22} />}
-          title="Ton journal est vide"
-          hint="Coche un épisode et il apparaîtra ici. Depuis sa fiche, tu peux lui ajouter un ressenti et quelques lignes — c'est ce que cette page te redonne, des mois plus tard."
+          title={j.imported > 0 ? 'Rien de daté pour l’instant' : 'Ton journal est vide'}
+          hint={
+            j.imported > 0
+              ? "Tout ton historique vient d'un import, et ces dates sont celles du pointage, pas du visionnage. Le prochain épisode que tu coches ici ouvrira le journal."
+              : "Coche un épisode et il apparaîtra ici. Depuis sa fiche, tu peux lui ajouter un ressenti et quelques lignes — c'est ce que cette page te redonne, des mois plus tard."
+          }
         />
-      ) : rows.length === 0 ? (
+      ) : j.rows.length === 0 ? (
         <EmptyState
           icon={<Search size={22} />}
           title="Rien ne correspond"
-          hint={FILTERS.find((f) => f.id === filter)?.hint}
+          hint={JOURNAL_FILTERS.find((f) => f.id === j.filter)?.hint}
           action={
-            <button className="btn mt-1" onClick={reset}>
+            <button className="btn mt-1" onClick={j.reset}>
               <X size={13} />
               Tout afficher
             </button>
@@ -205,7 +132,7 @@ export default function JournalPage(): React.JSX.Element {
         />
       ) : (
         <>
-          {days.map(({ day, rows: dayRows }) => {
+          {j.days.map(({ day, rows: dayRows }) => {
             const minutes = dayRows.reduce((sum, r) => sum + r.event.minutes, 0)
             return (
               <section key={day} className="mb-7">
@@ -243,10 +170,7 @@ export default function JournalPage(): React.JSX.Element {
                             <div className="flex items-baseline gap-2">
                               <span className="truncate text-[0.86rem] font-semibold">{titleOf(m, lang)}</span>
                               <span className="ml-auto shrink-0 text-[0.72rem] tabular-nums text-faint">
-                                {/* Une ligne importée porte la date du pointage
-                                    dans l'app d'origine, pas une heure vécue :
-                                    l'afficher donnerait une fausse précision. */}
-                                {event.imported ? 'importé' : formatTime(event.at)}
+                                {formatTime(event.at)}
                               </span>
                             </div>
                             <p className="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-muted">
@@ -285,10 +209,10 @@ export default function JournalPage(): React.JSX.Element {
             )
           })}
 
-          {rows.length > visible.length && (
+          {j.remaining > 0 && (
             <div className="flex justify-center py-2">
-              <button className="btn" onClick={() => setShown(shown + PAGE)}>
-                Afficher plus ({rows.length - visible.length} restants)
+              <button className="btn" onClick={j.more}>
+                Afficher plus ({j.remaining} restants)
               </button>
             </div>
           )}

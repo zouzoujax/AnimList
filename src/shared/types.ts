@@ -442,7 +442,7 @@ export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note'
 
 /** Les pages que le nouveau design sait refaire, chacune activable à part. */
 export type NewDesignPage =
-  'home' | 'library' | 'discover' | 'calendar' | 'manga' | 'stats' | 'detail' | 'studio' | 'person'
+  'home' | 'library' | 'discover' | 'calendar' | 'manga' | 'stats' | 'journal' | 'detail' | 'studio' | 'person'
 
 export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string }[] = [
   { id: 'home', label: 'Accueil', hint: 'Frise d’épisodes, file « À regarder », semaine de diffusion' },
@@ -451,6 +451,7 @@ export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string 
   { id: 'calendar', label: 'Calendrier', hint: 'Grille de programme : matin, après-midi, soirée, nuit' },
   { id: 'manga', label: 'Manga', hint: 'Origine et sens de lecture en tête, étagères' },
   { id: 'stats', label: 'Statistiques', hint: 'Ton visionnage raconté en phrases, badges en liste' },
+  { id: 'journal', label: 'Journal', hint: 'Journées annoncées en toutes lettres, visionnages en lignes' },
   { id: 'detail', label: 'Fiche d’un anime', hint: 'Frise dans l’en-tête, sommaire qui suit la lecture' },
   { id: 'studio', label: 'Studio', hint: 'Ce que tu as vu en lignes, le reste en affiches' },
   { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' }
@@ -961,6 +962,7 @@ export const DEFAULT_PREFS: Prefs = {
     calendar: true,
     manga: true,
     stats: true,
+    journal: true,
     detail: true,
     studio: true,
     person: true

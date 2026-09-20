@@ -31,6 +31,7 @@ const NdDiscoverPage = lazy(() => import('@/pages/nd/Discover'))
 const NdCalendarPage = lazy(() => import('@/pages/nd/Calendar'))
 const NdMangaPage = lazy(() => import('@/pages/nd/Manga'))
 const NdStatsPage = lazy(() => import('@/pages/nd/Stats'))
+const NdJournalPage = lazy(() => import('@/pages/nd/Journal'))
 const NdStudioPage = lazy(() => import('@/pages/nd/Studio'))
 const NdPersonPage = lazy(() => import('@/pages/nd/Person'))
 const DiscoverPage = lazy(() => import('@/pages/Discover'))
@@ -89,6 +90,7 @@ export default function App(): React.JSX.Element {
     calendar: useNewDesign('calendar'),
     manga: useNewDesign('manga'),
     stats: useNewDesign('stats'),
+    journal: useNewDesign('journal'),
     studio: useNewDesign('studio'),
     person: useNewDesign('person')
   }
@@ -246,7 +248,7 @@ export default function App(): React.JSX.Element {
                       (xp?.Badges ? <xp.Badges /> : nd.stats ? <NdStatsPage focus="badges" /> : <StatsPage />)}
                     {route.name === 'settings' && <SettingsPage />}
                     {route.name === 'season' && <SeasonPage />}
-                    {route.name === 'journal' && <JournalPage />}
+                    {route.name === 'journal' && (nd.journal ? <NdJournalPage /> : <JournalPage />)}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>
                 </ErrorBoundary>
