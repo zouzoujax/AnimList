@@ -9,6 +9,14 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.8.2 — 20 septembre 2026
+
+### Ajouts
+
+- La télécommande relaie le bouton « Passer l'intro » du lecteur : quand il apparaît sur l'écran du PC, il apparaît sur le téléphone, avec le texte exact qui est écrit dessus. Le presser depuis le canapé presse le vrai bouton. Rien n'est relayé de ce qui saute une publicité
+- Un bouton « Épisode 7 » sur le téléphone quand l'épisode en cours arrive à 92 % : le générique de fin est engagé, la suite part d'un pouce. C'est une proposition, pas l'enchaînement automatique des réglages — rien ne se lance sans le clic, et rien n'est proposé après le dernier épisode d'une série
+- Le mot de passe de la télécommande peut être choisi, dans Réglages → Télécommande. Laissé vide, il reste tiré au hasard à chaque allumage, ce qui est le plus sûr mais oblige à rescanner le QR code ; rempli, le lien ne change plus et se met en favori sur le téléphone. Huit caractères au moins, et seulement ce qu'une adresse transporte tel quel
+
 ## 0.8.1 — 20 septembre 2026
 
 ### Ajouts
