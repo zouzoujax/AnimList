@@ -40,6 +40,23 @@ export const SEEN_RATIO = 0.9
 /** Le temps restant en dessous duquel l'épisode est fini. */
 export const OVER_LEFT_S = 20
 
+/**
+ * À partir d'où on *propose* le suivant, sans le lancer.
+ *
+ * Un troisième seuil, parce que c'est une troisième question. Cocher affirme
+ * quelque chose sur ce qui a été vu ; enchaîner tout seul décide à la place de
+ * quelqu'un. Proposer ne fait ni l'un ni l'autre : c'est un bouton de plus sur
+ * le téléphone, qu'on ignore sans conséquence.
+ *
+ * D'où une fraction, et non le temps restant qui gouverne `shouldAdvance` :
+ * arriver un peu tôt ne coûte rien ici, alors que lancer l'épisode suivant
+ * avant la fin du précédent couperait une scène. Et d'où une fraction un peu
+ * plus haute que celle de la coche : à quatre-vingt-dix pour cent l'épisode
+ * est compté comme vu, à quatre-vingt-douze le générique de fin est bien
+ * engagé et la suite n'est plus une interruption.
+ */
+export const OFFER_RATIO = 0.92
+
 /** Une lecture dont on peut tirer quelque chose. */
 export function playable(now: Playing): boolean {
   if (!Number.isFinite(now.duration) || !Number.isFinite(now.position)) return false
@@ -69,6 +86,12 @@ export function watchedRatio(now: Playing): number {
 export function shouldTick(now: Playing, alreadySeen: boolean): boolean {
   if (alreadySeen || !playable(now)) return false
   return now.position / now.duration >= SEEN_RATIO
+}
+
+/** Vrai quand la suite mérite d'être proposée — pas lancée. */
+export function shouldOfferNext(now: Playing): boolean {
+  if (!playable(now)) return false
+  return now.position / now.duration >= OFFER_RATIO
 }
 
 /**

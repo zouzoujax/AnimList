@@ -39,16 +39,17 @@ import {
 } from '@shared/remote'
 import { nextEpisode } from '@shared/resume'
 import { canTick, isUnaired } from '@shared/airing'
+import { shouldOfferNext } from '@shared/binge'
 import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode } from './watch-window'
-import { playerCommand, playerState, type PlayerAction } from './playing'
+import { playerCommand, playerState, type PlayerAction, type PlayerState } from './playing'
 import { browse, refreshMedia } from './anilist'
-import { getPrefs } from './store'
+import { getMedia, getPrefs } from './store'
 import { setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
-import { getLaunched, rememberLaunch, setLaunched } from './now'
+import { getLaunched, rememberLaunch, setLaunched, type Launched } from './now'
 import { page } from './remote-page'
 
 export interface RemoteStatus {
@@ -144,6 +145,41 @@ async function remoteState(): Promise<unknown> {
   return { series: rows, player: await nowPlaying() }
 }
 
+/**
+ * Le temps qu'on laisse au lecteur pour rattraper un changement d'épisode.
+ *
+ * Mesuré sur leur page : le cadre se recharge, la vidéo repart, et
+ * `autostart` repasse toutes les sept dixièmes de seconde pendant une
+ * quinzaine de secondes. Dix suffisent largement au cas courant, et le seul
+ * coût d'une attente trop longue est un bouton qui tarde à reparaître.
+ */
+const SETTLE_MS = 10000
+
+/**
+ * L'épisode à proposer quand celui-ci touche à sa fin, s'il y en a un.
+ *
+ * Le téléphone est déjà en main : c'est le seul endroit où enchaîner ne
+ * demande pas de se lever. La règle du « quand » est partagée avec le reste de
+ * l'app ; ce qui se décide ici, c'est le « s'il y en a un » — une bande-annonce
+ * n'a pas de suite, et le dernier épisode d'une série non plus.
+ */
+function offerNext(state: PlayerState, launched: Launched): number | null {
+  if (state.kind !== 'animesama' || launched.note || launched.episode === null) return null
+  // Le lecteur met quelques secondes à charger l'épisode qu'on vient de
+  // lancer, et jusque-là il rapporte la fin du précédent. Sans ce délai, le
+  // bouton reparaîtrait aussitôt sur le numéro d'après : un clic de trop
+  // sauterait un épisode entier.
+  if (Date.now() - launched.at < SETTLE_MS) return null
+  if (!shouldOfferNext({ position: state.position, duration: state.duration, playing: state.playing })) return null
+
+  const next = launched.episode + 1
+  // Le compte d'épisodes manque parfois — une série en cours de diffusion dont
+  // la fiche ne l'annonce pas. On propose alors : le site dira mieux que nous
+  // si le numéro existe, et le bouton ne coûte rien s'il n'existe pas.
+  const total = getMedia(launched.animeId)?.episodes ?? null
+  return total !== null && next > total ? null : next
+}
+
 /** L'état du lecteur, complété par ce qu'on sait de la série lancée. */
 async function nowPlaying(): Promise<unknown> {
   const state = await playerState()
@@ -152,7 +188,7 @@ async function nowPlaying(): Promise<unknown> {
     return null
   }
   const launched = getLaunched()
-  return launched ? { ...state, ...launched } : state
+  return launched ? { ...state, ...launched, offerNext: offerNext(state, launched) } : state
 }
 
 /**

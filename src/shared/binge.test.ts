@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { MIN_DURATION_S, playable, SEEN_RATIO, shouldAdvance, shouldTick, watchedRatio, type Playing } from './binge'
+import {
+  MIN_DURATION_S,
+  OFFER_RATIO,
+  playable,
+  SEEN_RATIO,
+  shouldAdvance,
+  shouldOfferNext,
+  shouldTick,
+  watchedRatio,
+  type Playing
+} from './binge'
 
 /** Un épisode de vingt-quatre minutes, en cours de lecture. */
 const at = (
@@ -107,6 +117,43 @@ describe('watchedRatio', () => {
   it('rend zéro quand rien n’est mesurable', () => {
     expect(watchedRatio(lit(60, 30))).toBe(0)
     expect(watchedRatio({ position: NaN, duration: 1440, playing: true })).toBe(0)
+
     expect(watchedRatio(lit(700, 0))).toBe(0)
+  })
+})
+
+/**
+ * Proposer n'est ni cocher ni enchaîner : le bouton se montre plus tard que la
+ * coche, et bien plus tôt que le départ automatique. Trois seuils pour trois
+ * questions, et c'est ce que ce bloc tient en place.
+ */
+describe('shouldOfferNext', () => {
+  // Quatre-vingt-douze pour cent de vingt-quatre minutes : 1324,8 secondes.
+  it('attend que le générique de fin soit bien engagé', () => {
+    expect(shouldOfferNext(at(1324))).toBe(false)
+    expect(shouldOfferNext(at(1325))).toBe(true)
+  })
+
+  it('se montre après la coche, et bien avant le départ automatique', () => {
+    expect(OFFER_RATIO).toBeGreaterThan(SEEN_RATIO)
+    // L'épisode est déjà coché depuis une demi-minute quand le bouton paraît,
+    // et le départ automatique attendra encore près de deux minutes.
+    const juste = at(1325)
+    expect(shouldTick(juste, false)).toBe(true)
+    expect(shouldOfferNext(juste)).toBe(true)
+    expect(shouldAdvance(juste)).toBe(false)
+  })
+
+  it('se propose aussi sur un épisode en pause', () => {
+    // Mis en pause dans le générique : c'est justement le moment où on prend
+    // son téléphone. La suite se propose, contrairement au départ automatique.
+    const pause = at(1400, { playing: false })
+    expect(shouldOfferNext(pause)).toBe(true)
+    expect(shouldAdvance(pause)).toBe(false)
+  })
+
+  it('ne propose rien sur ce qui n’est pas un épisode', () => {
+    expect(shouldOfferNext(at(110, { duration: MIN_DURATION_S - 1 }))).toBe(false)
+    expect(shouldOfferNext(at(0, { duration: 0 }))).toBe(false)
   })
 })

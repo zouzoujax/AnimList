@@ -30,6 +30,16 @@ export interface Launched {
   episode: number | null
   /** Quand ce n'est pas un épisode : « Bande-annonce ». */
   note?: string
+  /**
+   * Quand ça a été lancé.
+   *
+   * Le numéro d'épisode change ici à la seconde du clic, alors que la fenêtre
+   * met quelques secondes à charger le nouveau lecteur. Entre les deux, la
+   * position mesurée est encore celle de l'épisode qu'on quitte — et elle est
+   * près de sa fin, puisque c'est pour ça qu'on a changé. Qui croise les deux
+   * doit pouvoir savoir que le lecteur n'a pas encore rattrapé.
+   */
+  at: number
 }
 
 let launched: Launched | null = null
@@ -117,6 +127,7 @@ export function rememberLaunch(animeId: number | undefined, episode: number | nu
     title: media.title.english ?? media.title.romaji,
     cover: media.cover.large,
     episode,
-    note
+    note,
+    at: Date.now()
   })
 }

@@ -323,6 +323,7 @@ const SCRIPT = `
     info: 'M12 8h.01M11 12h1v4h1M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',
     pause: 'M7 4h3v16H7zM14 4h3v16h-3z',
     skip: 'M5 4l10 8-10 8zM19 5v14',
+    next: 'M4 5v14l9-7zM13 5v14l9-7',
     expand: 'M8 3H3v5M16 3h5v5M16 21h5v-5M8 21H3v-5',
     shrink: 'M3 8h5V3M21 8h-5V3M21 16h-5v5M3 16h5v5',
     close: 'M18 6 6 18M6 6l12 12',
@@ -402,13 +403,21 @@ const SCRIPT = `
       ? ''
       : '<div class="note">Lecteur pas encore prêt : les commandes apparaîtront dès que la vidéo démarre.</div>'
 
-    // Leur lecteur propose de passer le générique : le bouton se pose ici, à
-    // portée de pouce, et s'en va avec lui. Le libellé est le leur — c'est ce
-    // qui est écrit sur l'écran d'en face, et deux formulations pour un même
-    // bouton feraient douter de ce qu'on presse.
-    var skip = p.skip
-      ? '<div class="acts"><button data-act="skip">' + icon('skip') + esc(p.skip) + '</button></div>'
+    // Ce que le moment propose, et qui s'en va avec lui.
+    //
+    // Passer le générique : le libellé est le leur — c'est ce qui est écrit
+    // sur l'écran d'en face, et deux formulations pour un même bouton feraient
+    // douter de ce qu'on presse.
+    var skipBtn = p.skip ? '<button data-act="skip">' + icon('skip') + esc(p.skip) + '</button>' : ''
+    // Enchaîner : proposé quand le générique de fin est bien engagé. Un bouton
+    // et pas un départ automatique — le PC ne décide pas à la place du canapé.
+    var nextBtn = p.offerNext
+      ? '<button data-act="next" data-id="' + Number(p.animeId) + '" data-ep="' + Number(p.offerNext) + '">' +
+        icon('next') + 'Épisode ' + Number(p.offerNext) + '</button>'
       : ''
+    // Une seule rangée : deux offres à la fois se partagent la largeur plutôt
+    // que de faire grandir la carte sous les doigts.
+    var offers = skipBtn || nextBtn ? '<div class="acts">' + skipBtn + nextBtn + '</div>' : ''
 
     var seek = p.canSeek && p.duration > 0
       ? '<div class="seekline">' +
@@ -431,7 +440,7 @@ const SCRIPT = `
             '<div class="name">' + esc(p.title) + '</div>' + sub +
           '</div>' +
         '</div>' +
-        limit + seek + skip +
+        limit + seek + offers +
         '<div class="acts">' +
           (p.canSeek
             ? btn('data-act="' + (p.playing ? 'pause' : 'play') + '"', p.playing ? 'Pause' : 'Lecture',
@@ -869,6 +878,20 @@ const SCRIPT = `
     }
     if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }
     if (action === 'search') { query = (document.getElementById('q') || {}).value || ''; return load() }
+
+    // Enchaîner sur le suivant. La fenêtre est déjà ouverte sur la bonne
+    // saison : le PC change d'épisode dans son menu, sans tout recharger.
+    if (action === 'next') {
+      el.disabled = true
+      try {
+        renderPlayer((await call('/api/watch', { id: id, episode: ep })).player)
+        say('Épisode ' + ep + ' lancé sur le PC')
+      } catch (err) {
+        say(err.message)
+      }
+      el.disabled = false
+      return
+    }
 
     if (CONTROLS.indexOf(action) >= 0) {
       el.disabled = true
