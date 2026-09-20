@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { makeToken, needsToken, remoteUrl, routeOf, safeEqual, tokenFrom, TOKEN_LENGTH } from './remote'
+import {
+  checkChosen,
+  makeToken,
+  MAX_CHOSEN,
+  MIN_CHOSEN,
+  needsToken,
+  remoteUrl,
+  routeOf,
+  safeEqual,
+  tokenFrom,
+  TOKEN_LENGTH
+} from './remote'
 
 describe('makeToken', () => {
   it('a la longueur annoncée', () => {
@@ -119,5 +130,52 @@ describe('needsToken', () => {
 describe('remoteUrl', () => {
   it('donne une adresse recopiable', () => {
     expect(remoteUrl('192.168.1.20', 8787, 'abc')).toBe('http://192.168.1.20:8787/?t=abc')
+  })
+})
+
+/**
+ * Un mot de passe choisi remplace un tirage au sort : c'est un affaiblissement
+ * consenti, et ces règles sont ce qui en borne le prix. Elles se vérifient
+ * ici, là où personne ne les contourne.
+ */
+describe('checkChosen', () => {
+  it('accepte un mot de passe assez long et recopiable', () => {
+    expect(checkChosen('canape2026')).toEqual({ ok: true, token: 'canape2026' })
+    expect(checkChosen('mon-mot_de.passe~1')).toEqual({ ok: true, token: 'mon-mot_de.passe~1' })
+  })
+
+  it('ne retient pas les espaces autour', () => {
+    expect(checkChosen('  canape2026  ')).toEqual({ ok: true, token: 'canape2026' })
+  })
+
+  it('refuse ce qui se devine en quelques essais', () => {
+    expect(checkChosen('court').ok).toBe(false)
+    expect(checkChosen('').ok).toBe(false)
+    expect(checkChosen('a'.repeat(MIN_CHOSEN - 1)).ok).toBe(false)
+    expect(checkChosen('a'.repeat(MIN_CHOSEN)).ok).toBe(true)
+  })
+
+  it('refuse ce qui ne tiendrait pas dans une adresse', () => {
+    // Un espace, un accent, une esperluette : encodés dans le lien, ils ne se
+    // recopient plus à la main sans se tromper.
+    expect(checkChosen('mot de passe').ok).toBe(false)
+    expect(checkChosen('motdepassé').ok).toBe(false)
+    expect(checkChosen('mot&passe=1').ok).toBe(false)
+    expect(checkChosen('a'.repeat(MAX_CHOSEN + 1)).ok).toBe(false)
+  })
+
+  it('dit pourquoi il refuse, en une phrase affichable', () => {
+    const refus = checkChosen('abc')
+    expect(refus.ok).toBe(false)
+    if (!refus.ok) expect(refus.error.length).toBeGreaterThan(10)
+  })
+
+  it('donne un mot de passe qui traverse une adresse tel quel', () => {
+    const chosen = checkChosen('canape2026')
+    expect(chosen.ok).toBe(true)
+    if (chosen.ok) {
+      const url = remoteUrl('192.168.1.20', 8787, chosen.token)
+      expect(tokenFrom(url, null)).toBe(chosen.token)
+    }
   })
 })

@@ -9,7 +9,9 @@
  * dans cet ordre d'importance :
  *
  * 1. Un mot de passe tiré au hasard à chaque allumage, exigé sur tout ce qui
- *    touche à la bibliothèque, comparé à durée constante.
+ *    touche à la bibliothèque, comparé à durée constante. Il peut être choisi
+ *    dans les réglages, pour ne plus avoir à rescanner : c'est alors un secret
+ *    qui dure, et les règles qui l'encadrent sont dans `shared/remote.ts`.
  * 2. Une liste fermée de quatre adresses. Aucun chemin n'est jamais traduit en
  *    fichier, donc rien du disque ne peut fuir par une remontée
  *    d'arborescence.
@@ -25,7 +27,16 @@ import { randomBytes } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import { networkInterfaces } from 'node:os'
 import { BrowserWindow } from 'electron'
-import { makeToken, needsToken, REMOTE_PORT, remoteUrl, routeOf, safeEqual, tokenFrom } from '@shared/remote'
+import {
+  checkChosen,
+  makeToken,
+  needsToken,
+  REMOTE_PORT,
+  remoteUrl,
+  routeOf,
+  safeEqual,
+  tokenFrom
+} from '@shared/remote'
 import { nextEpisode } from '@shared/resume'
 import { canTick, isUnaired } from '@shared/airing'
 import { searchTitles } from '@shared/titles'
@@ -415,7 +426,20 @@ export function remoteStatus(): RemoteStatus {
   return status
 }
 
-/** Allume le serveur. Un nouveau mot de passe à chaque fois. */
+/**
+ * Le mot de passe de cette session.
+ *
+ * Celui des réglages s'il y en a un et qu'il tient les règles, un tirage neuf
+ * sinon. Un mot de passe enregistré qui ne les tiendrait pas — un fichier de
+ * préférences modifié à la main — ne fait pas échouer l'allumage : on retombe
+ * sur le hasard, qui protège au moins autant.
+ */
+function sessionToken(): string {
+  const chosen = checkChosen(getPrefs().remotePassword ?? '')
+  return chosen.ok ? chosen.token : makeToken(randomBytes(64))
+}
+
+/** Allume le serveur. Un nouveau mot de passe à chaque fois, sauf s'il est choisi. */
 export function startRemote(port = REMOTE_PORT): Promise<RemoteStatus> {
   return new Promise((resolve) => {
     if (server) {
@@ -430,7 +454,7 @@ export function startRemote(port = REMOTE_PORT): Promise<RemoteStatus> {
       return
     }
 
-    token = makeToken(randomBytes(64))
+    token = sessionToken()
     const next = createServer((req, res) => {
       void handle(req, res).catch(() => {
         if (!res.headersSent) json(res, 500, { error: 'Erreur interne.' })
@@ -455,7 +479,9 @@ export function stopRemote(): RemoteStatus {
   server?.close()
   server = null
   // Le mot de passe meurt avec le serveur : le rallumage en tire un neuf, si
-  // bien qu'une adresse notée hier ne rouvre rien aujourd'hui.
+  // bien qu'une adresse notée hier ne rouvre rien aujourd'hui. À moins qu'il
+  // n'ait été choisi dans les réglages — c'est justement ce qu'on demande
+  // alors, et le lien mis en favori continue de marcher.
   token = ''
   status = { on: false, url: null, token: null, port: status.port, error: null }
   return status

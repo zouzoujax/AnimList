@@ -19,7 +19,7 @@ export const SETTINGS_SECTIONS = [
     keywords: 'lecteur coche automatique enchaîner épisode suivant anime-sama opening générique'
   },
   { id: 'suites', title: 'Suites', keywords: 'saison suivante ajout automatique franchise' },
-  { id: 'telecommande', title: 'Télécommande', keywords: 'téléphone qr code mobile' },
+  { id: 'telecommande', title: 'Télécommande', keywords: 'téléphone qr code mobile mot de passe' },
   { id: 'discord', title: 'Statut Discord', keywords: 'discord rich presence profil' },
   { id: 'traduction', title: 'Traduction', keywords: 'résumé français traduire deepl' },
   { id: 'suivis', title: 'Ce que tu suis', keywords: 'studio doubleur suivre muets' },

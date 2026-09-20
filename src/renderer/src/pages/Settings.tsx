@@ -39,6 +39,7 @@ import {
   type TitleLang
 } from '@shared/types'
 import { looksLikeAppId, type DiscordStatus } from '@shared/discord'
+import { checkChosen } from '@shared/remote'
 import { Modal } from '@/components/ui'
 import QrCode from '@/components/QrCode'
 import TvTimeImport from '@/components/TvTimeImport'
@@ -317,6 +318,14 @@ export default function SettingsPage(): React.JSX.Element {
   const [follows, setFollows] = useState<Follow[]>([])
   const [handle, setHandle] = useState('')
   const [remote, setRemote] = useState<RemoteStatus | null>(null)
+  /**
+   * Le mot de passe en cours de frappe.
+   *
+   * À part des préférences tant qu'on tape : l'enregistrer à chaque touche
+   * validerait « m », puis « mo », puis « mot » — trois refus pour un mot de
+   * passe qu'on est en train d'écrire. Il part quand on quitte le champ.
+   */
+  const [password, setPassword] = useState(prefs.remotePassword)
   const [discord, setDiscord] = useState<DiscordStatus | null>(null)
   const [query, setQuery] = useState('')
   const [visible, setVisible] = useState<Set<string> | null>(null)
@@ -387,6 +396,52 @@ export default function SettingsPage(): React.JSX.Element {
   useEffect(() => {
     void window.api.app.info().then(setInfo)
   }, [])
+
+  /**
+   * Enregistre le mot de passe choisi, quand on quitte le champ.
+   *
+   * Le serveur porte le sien depuis son allumage : changer la préférence ne
+   * suffit pas, il faut le rallumer. On le fait tout de suite plutôt que de
+   * laisser affiché un réglage qui n'est pas celui qui protège — et on dit que
+   * le lien a changé, parce que le téléphone déjà connecté vient d'être
+   * déconnecté.
+   */
+  async function applyPassword(): Promise<void> {
+    const typed = password.trim()
+    if (typed === prefs.remotePassword) {
+      // Les espaces autour, eux, n'ont pas à rester dans le champ.
+      setPassword(typed)
+      return
+    }
+
+    let chosen = ''
+    if (typed) {
+      const checked = checkChosen(typed)
+      if (!checked.ok) {
+        toast(checked.error, 'error')
+        setPassword(prefs.remotePassword)
+        return
+      }
+      chosen = checked.token
+    }
+
+    // Attendu, pas lancé : c'est le processus principal qui relit la
+    // préférence en rallumant, et il la lirait encore vide.
+    await setPrefs({ remotePassword: chosen })
+    setPassword(chosen)
+
+    const kept = chosen ? 'Mot de passe enregistré.' : 'Mot de passe effacé : il sera de nouveau tiré au hasard.'
+    if (!remote?.on) {
+      toast(`${kept} Il servira au prochain allumage.`, 'ok')
+      return
+    }
+
+    await window.api.remote.stop()
+    const next = await window.api.remote.start()
+    setRemote(next)
+    if (next.error) toast(next.error, 'error')
+    else toast(`${kept} Le lien a changé : rescanne le QR code.`, 'ok')
+  }
 
   const media = useApp((s) => s.media)
   const muted = [...entries.values()].filter((e) => e.notify === false)
@@ -803,7 +858,7 @@ export default function SettingsPage(): React.JSX.Element {
             décide à chaque fois plutôt qu'une fois pour toutes. */}
           <Row
             label="Piloter depuis le téléphone"
-            hint="Ouvre une petite page sur le réseau local : voir ce qu’il reste à reprendre, cocher un épisode, faire ouvrir une fiche sur le PC. Protégée par un mot de passe tiré au hasard, qui change à chaque allumage. Toujours éteinte au démarrage."
+            hint="Ouvre une petite page sur le réseau local : voir ce qu’il reste à reprendre, cocher un épisode, faire ouvrir une fiche sur le PC. Protégée par un mot de passe, tiré au hasard à chaque allumage tant que tu n’en choisis pas un. Toujours éteinte au démarrage."
           >
             <Toggle
               on={remote?.on ?? false}
@@ -813,6 +868,33 @@ export default function SettingsPage(): React.JSX.Element {
                   if (on && next.error) toast(next.error, 'error')
                 })
               }
+            />
+          </Row>
+
+          {/* Le mot de passe tiré au hasard est le meilleur des deux, et il
+            reste la valeur par défaut. En choisir un se paie d'un secret qui
+            dure : c'est dit, et c'est à l'utilisateur de trancher. */}
+          <Row
+            label="Choisir le mot de passe"
+            hint="Laissé vide, il est tiré au hasard à chaque allumage — le plus sûr, mais il faut rescanner le QR code à chaque fois. Rempli, le lien ne change plus et se met en favori sur le téléphone. Au moins 8 caractères, lettres et chiffres."
+          >
+            <input
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => void applyPassword()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') e.currentTarget.blur()
+                // Échap rend le champ à ce qui est enregistré : on s'est ravisé.
+                if (e.key === 'Escape') {
+                  setPassword(prefs.remotePassword)
+                  e.currentTarget.blur()
+                }
+              }}
+              placeholder="tiré au hasard"
+              className="field !h-[34px] w-[190px]"
+              spellCheck={false}
+              autoComplete="off"
             />
           </Row>
 

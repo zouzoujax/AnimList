@@ -39,6 +39,48 @@ export function makeToken(bytes: Uint8Array): string {
 }
 
 /**
+ * Un mot de passe choisi à la main plutôt que tiré au hasard.
+ *
+ * Le tirage au sort est meilleur, et il reste ce qui se passe par défaut :
+ * vingt caractères imprévisibles, renouvelés à chaque allumage. Mais il oblige
+ * à rescanner le QR à chaque fois, et quelqu'un qui se sert de sa télécommande
+ * tous les soirs préfère mettre son lien en favori une bonne fois.
+ *
+ * Ce choix a un prix, et ces règles-là sont ce qui l'empêche d'être trop
+ * élevé : un mot de passe court se devine depuis le même réseau, et un mot de
+ * passe qui ne tient pas dans une adresse ne se scanne plus.
+ */
+export const MIN_CHOSEN = 8
+export const MAX_CHOSEN = 64
+
+/**
+ * Ce qu'une adresse transporte sans avoir à l'encoder.
+ *
+ * Le mot de passe voyage dans le lien, celui du QR code comme celui qu'on met
+ * en favori. Un espace ou un accent y survivrait encodé, et ne se recopierait
+ * plus à la main sans se tromper.
+ */
+const CHOSEN_OK = /^[A-Za-z0-9._~-]+$/
+
+export type TokenCheck = { ok: true; token: string } | { ok: false; error: string }
+
+/**
+ * Accepte, ou dit pourquoi non.
+ *
+ * Le refus est une phrase et pas un booléen : c'est elle que les réglages
+ * affichent, et deux formulations pour une même règle finiraient par diverger.
+ */
+export function checkChosen(raw: string): TokenCheck {
+  const token = raw.trim()
+  if (token.length < MIN_CHOSEN) return { ok: false, error: `Au moins ${MIN_CHOSEN} caractères.` }
+  if (token.length > MAX_CHOSEN) return { ok: false, error: `Pas plus de ${MAX_CHOSEN} caractères.` }
+  if (!CHOSEN_OK.test(token)) {
+    return { ok: false, error: 'Lettres, chiffres, et . _ ~ - seulement : le mot de passe voyage dans l’adresse.' }
+  }
+  return { ok: true, token }
+}
+
+/**
  * Comparaison à durée constante.
  *
  * Une comparaison ordinaire s'arrête au premier caractère faux, et le temps

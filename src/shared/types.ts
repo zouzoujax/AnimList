@@ -555,6 +555,15 @@ export interface Prefs {
   discordAppId: string
   /** N'annoncer que « Un anime » : ni titre, ni jaquette, ni épisode. */
   discordHideTitle: boolean
+  /**
+   * Le mot de passe de la télécommande, quand on préfère le choisir.
+   *
+   * Vide, c'est le comportement d'origine : un mot de passe tiré au hasard à
+   * chaque allumage, qu'on rescanne. Rempli, le lien ne change plus et se met
+   * en favori sur le téléphone — au prix d'un secret qui dure. Les règles
+   * qu'il doit tenir sont dans `shared/remote.ts`.
+   */
+  remotePassword: string
   /** Hand corrections for the TV Time importer, keyed by source series id. */
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
@@ -986,6 +995,8 @@ export const DEFAULT_PREFS: Prefs = {
   discord: false,
   discordAppId: '1544850319878656161',
   discordHideTitle: false,
+  // Vide : le tirage au sort reste ce qui se passe quand on ne demande rien.
+  remotePassword: '',
   tvtimeOverrides: {},
   tvtimeFolder: null
 }
