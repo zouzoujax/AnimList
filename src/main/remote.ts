@@ -44,7 +44,8 @@ import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
-import { openAnimeSamaEpisode } from './watch-window'
+import { openAnimeSamaEpisode, watchWindow } from './watch-window'
+import { sessionAutoSkip, setSessionAutoSkip } from './binge'
 import { playerCommand, playerState, type PlayerAction, type PlayerState } from './playing'
 import { browse, refreshMedia } from './anilist'
 import { getMedia, getPrefs } from './store'
@@ -188,7 +189,10 @@ async function nowPlaying(): Promise<unknown> {
     return null
   }
   const launched = getLaunched()
-  return launched ? { ...state, ...launched, offerNext: offerNext(state, launched) } : state
+  // Le saut des génériques n'a de sens que sur leur lecteur : une bande-annonce
+  // n'en a pas.
+  const autoSkip = state.kind === 'animesama' ? sessionAutoSkip() : null
+  return launched ? { ...state, ...launched, offerNext: offerNext(state, launched), autoSkip } : state
 }
 
 /**
@@ -359,6 +363,19 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
 
   if (route === 'control') {
+    /**
+     * Le saut automatique des génériques, pour la séance.
+     *
+     * Pas une écriture dans les réglages — la télécommande n'en fait aucune —
+     * mais un choix gardé en mémoire tant que la fenêtre de lecture reste
+     * ouverte. Hors de cette fenêtre, il n'y aurait rien à quoi l'appliquer.
+     */
+    if (body.action === 'autoskip') {
+      if (!watchWindow()) return json(res, 409, { error: 'Aucun épisode en cours de lecture.' })
+      setSessionAutoSkip(Number(body.value) === 1)
+      return json(res, 200, { player: await nowPlaying() })
+    }
+
     const action = String(body.action ?? '') as PlayerAction
     const allowed: PlayerAction[] = ['play', 'pause', 'seek', 'volume', 'fullscreen', 'windowed', 'close', 'skip']
     if (!allowed.includes(action)) return json(res, 400, { error: 'Commande inconnue.' })

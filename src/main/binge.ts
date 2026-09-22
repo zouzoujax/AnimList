@@ -22,12 +22,21 @@
 
 import { shouldAdvance, shouldTick, watchedRatio, type Playing } from '@shared/binge'
 import { canTick } from '@shared/airing'
-import { activeSkip, endsTheEpisode, SKIP_LABELS } from '@shared/skip'
+import {
+  activeSkip,
+  autoSkipOn,
+  choose,
+  endsTheEpisode,
+  sessionSkip,
+  SKIP_LABELS,
+  withPref,
+  type SessionSkip
+} from '@shared/skip'
 import { searchTitles } from '@shared/titles'
 import { isCinema, leaveCinema, videoFrame } from './video-frame'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { getLaunched, rememberLaunch, sendProgress } from './now'
-import { getMedia, getPrefs, isWatched, setWatched } from './store'
+import { getMedia, getPrefs, isWatched, setWatched, store } from './store'
 import { skipRangesFor } from './skip'
 import { soireeNext, stopSoiree } from './soiree-queue'
 import { openAnimeSamaEpisode, playNext, watchWindow } from './watch-window'
@@ -65,6 +74,35 @@ const refused = new Set<string>()
 
 /** Les génériques déjà proposés ou passés : on ne revient pas dessus. */
 const offered = new Set<string>()
+
+/**
+ * Le saut automatique de la séance, que le téléphone peut changer.
+ *
+ * En mémoire seulement, jamais dans les réglages, et effacé à la fermeture de
+ * la fenêtre de lecture comme le reste de ce que la séance a décidé. Relu
+ * contre les réglages à chaque changement : la règle est dans `@shared/skip`.
+ */
+let skip: SessionSkip | null = null
+
+const currentSkip = (): SessionSkip => {
+  skip = skip ? withPref(skip, getPrefs().autoSkip) : sessionSkip(getPrefs().autoSkip)
+  return skip
+}
+
+/** Le saut automatique tel qu'il s'applique, et s'il vient du téléphone. */
+export function sessionAutoSkip(): { on: boolean; session: boolean } {
+  const s = currentSkip()
+  return { on: autoSkipOn(s), session: s.chosen !== null }
+}
+
+/** Coche ou décoche le saut automatique pour la séance, sans toucher aux réglages. */
+export function setSessionAutoSkip(on: boolean): void {
+  skip = choose(currentSkip(), on)
+  // Allumé en plein générique, il doit servir tout de suite : le bouton déjà
+  // posé pour celui-ci l'avait rangé parmi les génériques traités. Ceux qui
+  // sont passés ne reviennent pas, `activeSkip` ne les voit plus.
+  if (on) offered.clear()
+}
 
 const keyOf = (animeId: number, episode: number): string => `${animeId}:${episode}`
 
@@ -479,6 +517,7 @@ async function tick(): Promise<void> {
     advancing = null
     refused.clear()
     offered.clear()
+    skip = null
     sendProgress(null)
     return
   }
@@ -495,9 +534,11 @@ async function tick(): Promise<void> {
   sendProgress({ animeId: launched.animeId, episode: launched.episode, ratio: watchedRatio(now) })
 
   // Avant les réglages de la coche, pour la même raison : passer un générique
-  // n'a rien à voir avec cocher un épisode.
-  if (prefs.skipHint || prefs.autoSkip) {
-    await offerSkip(launched.animeId, launched.episode, now, prefs.autoSkip)
+  // n'a rien à voir avec cocher un épisode. Le saut automatique est celui de la
+  // séance, que le téléphone a pu changer sans toucher aux réglages.
+  const autoSkip = sessionAutoSkip().on
+  if (prefs.skipHint || autoSkip) {
+    await offerSkip(launched.animeId, launched.episode, now, autoSkip)
   }
 
   if (!prefs.autoTick && !prefs.autoNext) return
@@ -518,5 +559,14 @@ async function tick(): Promise<void> {
  */
 export function startBinge(): () => void {
   const timer = setInterval(() => void tick(), POLL_MS)
-  return () => clearInterval(timer)
+  // Chaque changement de réglage est vu au moment où il se produit : entre deux
+  // tours d'horloge, un aller-retour passerait inaperçu.
+  const relire = (): void => {
+    if (skip) currentSkip()
+  }
+  store.on('change', relire)
+  return () => {
+    clearInterval(timer)
+    store.off('change', relire)
+  }
 }

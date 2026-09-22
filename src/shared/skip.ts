@@ -129,3 +129,46 @@ export function endsTheEpisode(range: SkipRange, duration: number): boolean {
   if (!Number.isFinite(duration) || duration <= 0) return false
   return duration - range.end <= TAIL_S
 }
+
+/**
+ * Le saut automatique d'une séance : ce que disent les réglages, et ce que le
+ * téléphone a choisi par-dessus.
+ *
+ * Le choix du téléphone ne s'écrit jamais dans les réglages : la télécommande
+ * n'a le droit d'y toucher en rien, et une décision prise du canapé pour un
+ * soir n'a pas à devenir la règle.
+ */
+export interface SessionSkip {
+  /** Le choix du téléphone, ou `null` pour suivre les réglages. */
+  chosen: boolean | null
+  /** La valeur des réglages la dernière fois qu'on l'a vue. */
+  pref: boolean
+}
+
+export const sessionSkip = (pref: boolean): SessionSkip => ({ chosen: null, pref })
+
+/**
+ * Les réglages, relus : s'ils ont changé, le choix de la séance tombe.
+ *
+ * On vient de modifier le réglage sur le PC ; le voir ignoré parce qu'un
+ * téléphone avait dit autre chose une heure plus tôt serait incompréhensible.
+ * Il faut l'effacer au moment du changement, pas seulement tant que les deux
+ * diffèrent : éteint, allumé du téléphone, puis allumé et rééteint dans les
+ * réglages, le choix du téléphone ressusciterait sinon au second geste.
+ */
+export function withPref(state: SessionSkip, pref: boolean): SessionSkip {
+  return pref === state.pref ? state : sessionSkip(pref)
+}
+
+/**
+ * Le téléphone coche ou décoche.
+ *
+ * Rejoindre la valeur des réglages efface le choix plutôt que de le garder : il
+ * n'y a plus rien de propre à la séance.
+ */
+export function choose(state: SessionSkip, on: boolean): SessionSkip {
+  return { ...state, chosen: on === state.pref ? null : on }
+}
+
+/** Ce qui s'applique en ce moment. */
+export const autoSkipOn = (state: SessionSkip): boolean => state.chosen ?? state.pref

@@ -1,12 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   activeSkip,
+  autoSkipOn,
+  choose,
   endsTheEpisode,
   LENGTH_TOLERANCE_S,
   MIN_SKIP_S,
   parseSkipTimes,
+  sessionSkip,
   TAIL_S,
   usable,
+  withPref,
   type SkipRange
 } from './skip'
 
@@ -145,5 +149,51 @@ describe('endsTheEpisode', () => {
 
   it('se tait sur une durée inconnue', () => {
     expect(endsTheEpisode(ed(1440), 0)).toBe(false)
+  })
+})
+
+describe('le saut automatique de la séance', () => {
+  it('suit les réglages tant que le téléphone n’a rien dit', () => {
+    expect(autoSkipOn(sessionSkip(true))).toBe(true)
+    expect(autoSkipOn(sessionSkip(false))).toBe(false)
+  })
+
+  // Le cas demandé : éteint dans les réglages, allumé pour ce soir.
+  it('s’allume pour la séance quand les réglages l’ont éteint', () => {
+    const soir = choose(sessionSkip(false), true)
+    expect(autoSkipOn(soir)).toBe(true)
+    expect(soir.pref).toBe(false)
+  })
+
+  it('s’éteint pour la séance quand les réglages l’ont allumé', () => {
+    expect(autoSkipOn(choose(sessionSkip(true), false))).toBe(false)
+  })
+
+  // Recocher ce que disent les réglages n'est plus un choix de séance.
+  it('efface le choix quand il rejoint les réglages', () => {
+    const allume = choose(sessionSkip(false), true)
+    expect(choose(allume, false).chosen).toBeNull()
+  })
+
+  it('garde le choix quand autre chose que ce réglage change', () => {
+    const soir = choose(sessionSkip(false), true)
+    expect(withPref(soir, false)).toBe(soir)
+  })
+
+  // Éteint, allumé du téléphone, puis allumé et rééteint dans les réglages :
+  // c'est le dernier geste sur le PC qui compte, pas le téléphone d'avant.
+  it('ne ressuscite pas le choix après un aller-retour dans les réglages', () => {
+    let s = choose(sessionSkip(false), true)
+    s = withPref(s, true)
+    expect(autoSkipOn(s)).toBe(true)
+    s = withPref(s, false)
+    expect(autoSkipOn(s)).toBe(false)
+    expect(s.chosen).toBeNull()
+  })
+
+  it('efface un choix contraire quand on allume dans les réglages', () => {
+    const coupe = choose(sessionSkip(true), false)
+    const rallume = withPref(withPref(coupe, false), true)
+    expect(autoSkipOn(rallume)).toBe(true)
   })
 })

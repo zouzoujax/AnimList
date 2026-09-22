@@ -95,6 +95,19 @@ const STYLE = `
   .player .name { font-weight: 650; font-size: .95rem; margin-top: 4px; line-height: 1.25; }
   .note { color: var(--faint); font-size: .72rem; margin-top: 4px; line-height: 1.45; }
 
+  /*
+   * Une option de la séance : une case, pas un bouton — elle a un état, et il
+   * doit se lire sans appuyer. Toute la ligne est la cible, pour le pouce.
+   */
+  .opt {
+    display: flex; align-items: center; gap: 10px; margin-top: 12px;
+    padding: 9px 12px; min-height: 42px; border-radius: 12px;
+    background: var(--panel-2); border: 1px solid var(--line);
+    font-size: .82rem; font-weight: 600; color: var(--text); cursor: pointer;
+  }
+  .opt input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+  .opt small { display: block; color: var(--faint); font-size: .7rem; font-weight: 500; margin-top: 1px; }
+
   .seekline { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
   .time { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; flex: none; min-width: 38px; }
   .time.right { text-align: right; }
@@ -419,6 +432,19 @@ const SCRIPT = `
     // que de faire grandir la carte sous les doigts.
     var offers = skipBtn || nextBtn ? '<div class="acts">' + skipBtn + nextBtn + '</div>' : ''
 
+    // Passer les génériques sans rien demander. Cochée comme les réglages au
+    // départ ; la changer ici vaut pour la séance et ne les touche pas, ce que
+    // la ligne dit sous le libellé. Absente sur une bande-annonce.
+    var sk = p.autoSkip
+    var autoSkip = sk
+      ? '<label class="opt"><input type="checkbox" data-act="autoskip"' + (sk.on ? ' checked' : '') + '>' +
+          '<span class="grow">Passer l’intro et l’ending tout seul' +
+            '<small>' + (sk.session ? 'Pour cette séance seulement, les réglages ne changent pas' : 'Comme dans les réglages') +
+            '</small>' +
+          '</span>' +
+        '</label>'
+      : ''
+
     var seek = p.canSeek && p.duration > 0
       ? '<div class="seekline">' +
           '<span class="time">' + mmss(p.position) + '</span>' +
@@ -450,6 +476,7 @@ const SCRIPT = `
               p.fullscreen ? 'Fenêtre' : 'Plein écran', p.fullscreen ? 'shrink' : 'expand', 'ghost') +
           btn('data-act="close"', 'Fermer', 'close', 'ghost') +
         '</div>' +
+        autoSkip +
       '</div>'
 
     var seekEl = document.getElementById('seek')
@@ -890,6 +917,23 @@ const SCRIPT = `
         say(err.message)
       }
       el.disabled = false
+      return
+    }
+
+    // Une case : son nouvel état est déjà posé quand le clic arrive. La
+    // réponse redessine la carte avec ce que le PC applique vraiment.
+    if (action === 'autoskip') {
+      var voulu = el.checked
+      el.disabled = true
+      try {
+        renderPlayer((await call('/api/control', { action: 'autoskip', value: voulu ? 1 : 0 })).player)
+        say(voulu ? 'Intro et ending passés tout seuls' : 'Plus de saut automatique')
+      } catch (err) {
+        // Refusé : la case reprend l'état que le PC applique toujours.
+        el.checked = !voulu
+        el.disabled = false
+        say(err.message)
+      }
       return
     }
 
