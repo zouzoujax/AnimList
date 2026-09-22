@@ -40,11 +40,12 @@ import {
 import { nextEpisode } from '@shared/resume'
 import { canTick, isUnaired } from '@shared/airing'
 import { shouldOfferNext } from '@shared/binge'
+import { playerIndex } from '@shared/as-players'
 import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
-import { openAnimeSamaEpisode, watchWindow } from './watch-window'
+import { openAnimeSamaEpisode, playerChoices, switchPlayer, watchWindow } from './watch-window'
 import { sessionAutoSkip, setSessionAutoSkip } from './binge'
 import { playerCommand, playerState, type PlayerAction, type PlayerState } from './playing'
 import { browse, refreshMedia } from './anilist'
@@ -189,10 +190,12 @@ async function nowPlaying(): Promise<unknown> {
     return null
   }
   const launched = getLaunched()
-  // Le saut des génériques n'a de sens que sur leur lecteur : une bande-annonce
-  // n'en a pas.
-  const autoSkip = state.kind === 'animesama' ? sessionAutoSkip() : null
-  return launched ? { ...state, ...launched, offerNext: offerNext(state, launched), autoSkip } : state
+  // Le saut des génériques et le choix du lecteur n'ont de sens que chez eux :
+  // une bande-annonce n'a ni l'un ni l'autre.
+  const anime = state.kind === 'animesama'
+  const autoSkip = anime ? sessionAutoSkip() : null
+  const players = anime ? await playerChoices() : null
+  return launched ? { ...state, ...launched, offerNext: offerNext(state, launched), autoSkip, players } : state
 }
 
 /**
@@ -373,6 +376,22 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     if (body.action === 'autoskip') {
       if (!watchWindow()) return json(res, 409, { error: 'Aucun épisode en cours de lecture.' })
       setSessionAutoSkip(Number(body.value) === 1)
+      return json(res, 200, { player: await nowPlaying() })
+    }
+
+    /**
+     * Un autre lecteur chez eux, sur le même épisode.
+     *
+     * Leur page conseille d'en changer quand la vidéo ne vient pas, et depuis
+     * le canapé leur menu est hors d'atteinte. Le numéro est vérifié ici : il
+     * finit dans un script exécuté dans leur page.
+     */
+    if (body.action === 'lecteur') {
+      const index = playerIndex(body.value)
+      if (index === null) return json(res, 400, { error: 'Lecteur inconnu.' })
+      if (!(await switchPlayer(index))) {
+        return json(res, 409, { error: 'Ce lecteur n’est pas proposé pour cet épisode.' })
+      }
       return json(res, 200, { player: await nowPlaying() })
     }
 

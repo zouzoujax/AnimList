@@ -108,6 +108,14 @@ const STYLE = `
   .opt input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
   .opt small { display: block; color: var(--faint); font-size: .7rem; font-weight: 500; margin-top: 1px; }
 
+  /*
+   * Les lecteurs de leur page, en numéros : jusqu'à huit doivent tenir sur la
+   * largeur d'un téléphone, et chacun rester une cible pour le pouce.
+   */
+  .lecteurs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
+  .lecteurs .lab { color: var(--muted); font-size: .78rem; font-weight: 600; margin-right: 4px; }
+  .lecteurs .chip { min-width: 42px; min-height: 38px; padding: 0 10px; justify-content: center; }
+
   .seekline { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
   .time { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; flex: none; min-width: 38px; }
   .time.right { text-align: right; }
@@ -432,6 +440,20 @@ const SCRIPT = `
     // que de faire grandir la carte sous les doigts.
     var offers = skipBtn || nextBtn ? '<div class="acts">' + skipBtn + nextBtn + '</div>' : ''
 
+    // Changer de lecteur chez eux : même épisode, autre hébergeur. C'est quand
+    // la vidéo ne vient pas qu'on en a besoin — la carte est alors là quand
+    // même, sans commandes —, d'où la ligne d'aide tant qu'aucune n'a démarré.
+    var pl = p.players
+    var lecteurs = pl
+      ? '<div class="lecteurs"><span class="lab">Lecteur</span>' +
+          pl.labels.map(function (name, i) {
+            return '<button class="chip" data-act="lecteur" data-n="' + i + '" aria-pressed="' + (i === pl.current) +
+              '" aria-label="' + esc(name) + '">' + (i + 1) + '</button>'
+          }).join('') +
+        '</div>' +
+        (p.canSeek ? '' : '<div class="note">La vidéo ne vient pas ? Essaie un autre lecteur.</div>')
+      : ''
+
     // Passer les génériques sans rien demander. Cochée comme les réglages au
     // départ ; la changer ici vaut pour la séance et ne les touche pas, ce que
     // la ligne dit sous le libellé. Absente sur une bande-annonce.
@@ -476,6 +498,7 @@ const SCRIPT = `
               p.fullscreen ? 'Fenêtre' : 'Plein écran', p.fullscreen ? 'shrink' : 'expand', 'ghost') +
           btn('data-act="close"', 'Fermer', 'close', 'ghost') +
         '</div>' +
+        lecteurs +
         autoSkip +
       '</div>'
 
@@ -917,6 +940,21 @@ const SCRIPT = `
         say(err.message)
       }
       el.disabled = false
+      return
+    }
+
+    // Un autre hébergeur pour le même épisode. Retoucher celui qui est chargé
+    // le recharge : parfois, c'est tout ce qu'il fallait.
+    if (action === 'lecteur') {
+      var numero = Number(el.getAttribute('data-n'))
+      el.disabled = true
+      try {
+        renderPlayer((await call('/api/control', { action: 'lecteur', value: numero })).player)
+        say('Lecteur ' + (numero + 1) + ' chargé sur le PC')
+      } catch (err) {
+        el.disabled = false
+        say(err.message)
+      }
       return
     }
 

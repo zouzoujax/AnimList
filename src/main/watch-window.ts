@@ -22,6 +22,7 @@
 import { BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import type { Entry } from '@shared/as-sections'
+import { parsePlayers, type PlayerChoice } from '@shared/as-players'
 import { ORIGIN } from './animesama'
 import {
   autostart,
@@ -296,6 +297,69 @@ export async function playNext(episode: number): Promise<boolean> {
   if (before?.state.full === true) await exitFullscreen(target)
 
   if (!(await switchEpisode(target, episode))) return false
+  void autostart(target, true, stale)
+  return true
+}
+
+/**
+ * Les lecteurs proposés pour l'épisode affiché, et celui qui est chargé.
+ *
+ * Lus dans leur menu à chaque fois plutôt que retenus : il change de longueur
+ * d'un épisode à l'autre, selon ce que chaque hébergeur a mis en ligne.
+ */
+export async function playerChoices(): Promise<PlayerChoice | null> {
+  const target = watchWindow()
+  if (!target) return null
+
+  const raw: unknown = await target.webContents
+    .executeJavaScript(
+      `(function () {
+        var sel = document.getElementById('selectLecteurs')
+        if (!sel || !sel.options) return null
+        var labels = []
+        for (var i = 0; i < sel.options.length; i++) labels.push(sel.options[i].textContent || '')
+        return { labels: labels, current: sel.selectedIndex }
+      })()`,
+      true
+    )
+    .catch(() => null)
+  return parsePlayers(raw)
+}
+
+/**
+ * Change de lecteur dans la page ouverte, sur le même épisode.
+ *
+ * Le même geste que pour l'épisode : leur `<select id="selectLecteurs">` et son
+ * `onchange`, qui recharge le cadre avec l'hébergeur choisi. Rechoisir celui
+ * qui est déjà chargé le recharge, ce qui suffit parfois à débloquer une vidéo.
+ *
+ * `index` compte à partir de zéro, et il est vérifié entier par l'appelant
+ * comme ici : il est écrit dans un script exécuté chez eux.
+ */
+export async function switchPlayer(index: number): Promise<boolean> {
+  const target = watchWindow()
+  if (!target || !Number.isInteger(index) || index < 0) return false
+
+  // Comme pour un changement d'épisode : relevée avant, pour ne pas relancer
+  // l'ancien lecteur, et le plein écran quitté avant que son cadre ne parte.
+  const before = await videoFrame(target)
+  const stale = before ? playerSignature(before) : null
+  if (before?.state.full === true) await exitFullscreen(target)
+
+  const done: unknown = await target.webContents
+    .executeJavaScript(
+      `(function () {
+        var sel = document.getElementById('selectLecteurs')
+        if (!sel || !sel.options || ${index} >= sel.options.length) return false
+        sel.selectedIndex = ${index}
+        sel.dispatchEvent(new Event('change'))
+        return true
+      })()`,
+      true
+    )
+    .catch(() => false)
+  if (done !== true) return false
+
   void autostart(target, true, stale)
   return true
 }
