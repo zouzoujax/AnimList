@@ -9,7 +9,7 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'apparence',
     title: 'Apparence',
-    keywords: 'thème couleur accent disposition mica nouveau design expérience mouvement animation'
+    keywords: 'thème couleur accent disposition mica nouveau design expérience mouvement animation badge son trophée'
   },
   { id: 'affichage', title: 'Affichage', keywords: 'titres langue romaji anglais semaine lundi durée adulte' },
   { id: 'notifications', title: 'Notifications', keywords: 'rappel alerte diffusion délai sortie épisode' },

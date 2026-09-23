@@ -98,7 +98,8 @@ import {
   Infinity as InfinityIcon
 } from 'lucide-react'
 import { useMemo } from 'react'
-import { startOfDay } from '@/lib/format'
+import { unlockedAt, UNKNOWN_DATE } from '@shared/badge-log'
+import { formatDate, startOfDay } from '@/lib/format'
 import { useApp } from '@/store/app'
 
 /*
@@ -140,6 +141,29 @@ export interface Badge {
   /** 1 or more means unlocked; below that it drives the progress bar. */
   progress: number
   group: string
+  /**
+   * Le jour où il est tombé, `UNKNOWN_DATE` s'il était acquis avant que le
+   * registre n'existe, `null` s'il n'y est pas encore inscrit.
+   */
+  unlockedAt: number | null
+}
+
+/**
+ * Ce que dit un badge quand le curseur s'y pose.
+ *
+ * Une seule fabrique pour les sept endroits qui affichent des badges — la page
+ * classique, la nouvelle, et les cinq expériences : deux formulations pour la
+ * même chose finiraient par diverger.
+ */
+export function badgeTitle(badge: Badge): string {
+  if (badge.progress < 1) {
+    return `${Math.round(Math.min(1, Math.max(0, badge.progress)) * 100)} % — ${badge.hint}`
+  }
+  if (badge.unlockedAt === null) return `Débloqué — ${badge.hint}`
+  // Tous les badges d'avant le registre : la date n'a jamais été notée, et
+  // afficher celle du jour où il a été inventorié serait un mensonge.
+  if (badge.unlockedAt === UNKNOWN_DATE) return `Débloqué avant le suivi des dates — ${badge.hint}`
+  return `Débloqué le ${formatDate(badge.unlockedAt)} — ${badge.hint}`
 }
 
 export const BADGE_GROUPS = [
@@ -420,7 +444,8 @@ export function useBadgeWall(): { stats: BadgeStats; badges: Badge[] } {
     }
   }, [events, entries, mediaMap])
 
-  const badges = useMemo<Badge[]>(() => {
+  // Sans la date : elle n'est pas calculée mais lue dans le registre, plus bas.
+  const badges = useMemo<Omit<Badge, 'unlockedAt'>[]>(() => {
     const hours = stats.minutes / 60
     const days = stats.minutes / 1440
     return [
@@ -1219,5 +1244,13 @@ export function useBadgeWall(): { stats: BadgeStats; badges: Badge[] } {
     ]
   }, [stats, listCount])
 
-  return { stats, badges }
+  // Les dates viennent du registre, à part : elles ne se déduisent de rien et
+  // n'ont donc pas leur place dans le calcul qui précède.
+  const log = useApp((s) => s.prefs.badgesAt)
+  const dated = useMemo<Badge[]>(
+    () => badges.map((badge) => ({ ...badge, unlockedAt: unlockedAt(badge.id, log) })),
+    [badges, log]
+  )
+
+  return { stats, badges: dated }
 }

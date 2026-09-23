@@ -649,6 +649,13 @@ export default function SettingsPage(): React.JSX.Element {
           </Row>
 
           <Row
+            label="Un son quand un badge tombe"
+            hint="Trois notes, très courtes, avec le carton qui annonce le badge. Le carton reste si tu coupes le son ; « Réduire les animations » le calme sans le faire taire."
+          >
+            <Toggle on={prefs.badgeSound} onChange={(badgeSound) => setPrefs({ badgeSound })} />
+          </Row>
+
+          <Row
             label="Nouveau design"
             hint="Frise d'épisodes, phrases plutôt qu'étiquettes, une ligne par série. Allumé, tu choisis ci-dessous les pages qui changent. Sans effet dans les expériences, qui ont leurs propres pages."
           >

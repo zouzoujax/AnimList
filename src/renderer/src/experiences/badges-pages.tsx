@@ -1,6 +1,6 @@
 import { motion } from 'motion/react'
 import { useState } from 'react'
-import { BADGE_GROUPS, useBadgeWall, type Badge } from '@/lib/badges'
+import { BADGE_GROUPS, badgeTitle, useBadgeWall, type Badge } from '@/lib/badges'
 
 /*
  * Le mur des badges, une fois par expérience.
@@ -82,7 +82,7 @@ export function StreamingBadges(): React.JSX.Element {
                   className="xs-medal shrink-0"
                   data-on={on}
                   whileHover={{ scale: 1.08 }}
-                  title={badge.hint}
+                  title={badgeTitle(badge)}
                 >
                   <span className="xs-medal-disc" style={{ '--p': `${pct(badge)}%` } as React.CSSProperties}>
                     <Icon size={30} />
@@ -209,7 +209,7 @@ export function MagazineBadges(): React.JSX.Element {
             {list.map((badge) => {
               const on = badge.progress >= 1
               return (
-                <div key={badge.id} className="xm-entry" title={badge.hint}>
+                <div key={badge.id} className="xm-entry" title={badgeTitle(badge)}>
                   <span className="xm-entry-title" style={on ? undefined : { color: '#8a847b' }}>
                     {badge.label}
                   </span>
@@ -243,7 +243,7 @@ export function HudBadges(): React.JSX.Element {
         </div>
         <div className="xh-segments flex-1" style={{ gridTemplateColumns: `repeat(${badges.length}, 1fr)` }}>
           {badges.map((b) => (
-            <span key={b.id} data-on={b.progress >= 1} />
+            <span key={b.id} data-on={b.progress >= 1} title={badgeTitle(b)} />
           ))}
         </div>
         <div className="flex gap-2">
@@ -267,7 +267,7 @@ export function HudBadges(): React.JSX.Element {
               const Icon = badge.icon
               const on = badge.progress >= 1
               return (
-                <div key={badge.id} className="xh-badge" data-on={on} title={badge.hint}>
+                <div key={badge.id} className="xh-badge" data-on={on} title={badgeTitle(badge)}>
                   <span className="xh-badge-icon">
                     <Icon size={18} />
                   </span>
@@ -336,7 +336,7 @@ export function CarnetBadges(): React.JSX.Element {
                   <motion.div
                     key={badge.id}
                     className="text-center"
-                    title={badge.hint}
+                    title={badgeTitle(badge)}
                     whileHover={on ? { rotate: 0, scale: 1.1 } : undefined}
                     style={{ rotate: on ? tilt(i + gi) * 2 : 0 }}
                   >

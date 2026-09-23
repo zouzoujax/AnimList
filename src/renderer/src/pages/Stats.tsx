@@ -20,7 +20,7 @@ import { EmptyState, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba } from '@/lib/color'
 import { dayLabel, durationParts, hoursOf, minutesToHuman, monthLabel, num, startOfDay, titleOf } from '@/lib/format'
 import { useApp } from '@/store/app'
-import { BADGE_GROUPS, useBadgeWall, type Badge } from '@/lib/badges'
+import { BADGE_GROUPS, badgeTitle, useBadgeWall, type Badge } from '@/lib/badges'
 
 const DAY_MS = 86_400_000
 
@@ -53,7 +53,7 @@ function BadgeCard({ badge, index }: { badge: Badge; index: number }): React.JSX
       transition={{ delay: Math.min(index * 0.02, 0.3) }}
       className="glass relative overflow-hidden rounded-[16px] p-3.5 text-center"
       style={done ? { borderColor: rgba(accent, 0.45), background: rgba(accent, 0.1) } : undefined}
-      title={done ? `Débloqué — ${badge.hint}` : `${Math.round(pct * 100)} % — ${badge.hint}`}
+      title={badgeTitle(badge)}
     >
       <div
         className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-full"

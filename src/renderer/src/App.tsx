@@ -25,6 +25,12 @@ import { routeKeyOf, useApp } from '@/store/app'
  * Le nouveau design, page par page (Réglages › Apparence). Chaque page vit
  * dans son propre morceau : qui ne l'allume pas ne le télécharge jamais.
  */
+/*
+ * À la demande : il tire tout le mur des badges, qui vit dans son propre
+ * morceau. Le charger au démarrage l'alourdirait de soixante-dix kilo-octets
+ * pour un carton qui ne paraît qu'après une coche.
+ */
+const BadgeUnlocked = lazy(() => import('@/components/BadgeUnlocked').then((m) => ({ default: m.BadgeUnlocked })))
 const NdHomePage = lazy(() => import('@/pages/nd/Home'))
 const NdLibraryPage = lazy(() => import('@/pages/nd/Library'))
 const NdDiscoverPage = lazy(() => import('@/pages/nd/Discover'))
@@ -197,6 +203,10 @@ export default function App(): React.JSX.Element {
       <Intro />
       {/* Au-dessus des pages : une série se termine depuis n'importe quel écran. */}
       <NextUp />
+      {/* Au-dessus des pages aussi : un badge tombe pendant qu'on coche, où qu'on soit. */}
+      <Suspense fallback={null}>
+        <BadgeUnlocked />
+      </Suspense>
       <Aurora />
       <TitleBar />
 

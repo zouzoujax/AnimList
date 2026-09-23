@@ -568,6 +568,21 @@ export interface Prefs {
   tvtimeOverrides: Record<string, number>
   /** Last export folder read, so a re-run can offer it straight away. */
   tvtimeFolder: string | null
+  /**
+   * Les badges déjà obtenus, et le jour où ils sont tombés.
+   *
+   * Les badges se recalculent depuis l'historique et ne sont écrits nulle
+   * part : sans ce registre, rien ne peut dire quand l'un d'eux a été gagné,
+   * ni qu'il vient de l'être. Rangé dans les réglages comme `sequelsAdded`,
+   * pour la même raison — c'est un relevé de ce qui a déjà eu lieu, pas une
+   * donnée de la bibliothèque.
+   *
+   * `null` veut dire que le registre n'a jamais été tenu : les règles sont
+   * dans `shared/badge-log.ts`, et le premier inventaire se fait en silence.
+   */
+  badgesAt: Record<string, number> | null
+  /** Un son quand un badge tombe. L'animation, elle, suit `reduceMotion`. */
+  badgeSound: boolean
 }
 
 /** A user-made collection, orthogonal to the five statuses. */
@@ -998,5 +1013,9 @@ export const DEFAULT_PREFS: Prefs = {
   // Vide : le tirage au sort reste ce qui se passe quand on ne demande rien.
   remotePassword: '',
   tvtimeOverrides: {},
-  tvtimeFolder: null
+  tvtimeFolder: null,
+  // `null` et non `{}` : une bibliothèque d'avant a déjà ses badges, et le
+  // premier inventaire doit pouvoir les inscrire sans les fêter.
+  badgesAt: null,
+  badgeSound: true
 }

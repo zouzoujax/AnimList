@@ -6,7 +6,7 @@ import { NdTabs, plural, spokenDuration } from '@/components/nd'
 import { EmptyState, Poster, RowScroller } from '@/components/ui'
 import { toneAccent } from '@/lib/color'
 import { dayLabel, hoursOf, minutesToHuman, monthLabel, num, startOfDay, titleOf } from '@/lib/format'
-import { BADGE_GROUPS, useBadgeWall, type Badge } from '@/lib/badges'
+import { BADGE_GROUPS, badgeTitle, useBadgeWall, type Badge } from '@/lib/badges'
 import { useApp } from '@/store/app'
 
 const DAY_MS = 86_400_000
@@ -65,7 +65,7 @@ function BadgeRow({ badge }: { badge: Badge }): React.JSX.Element {
   const pct = Math.min(1, Math.max(0, badge.progress))
   const Icon = badge.icon
   return (
-    <li className="nd-badge" data-done={done}>
+    <li className="nd-badge" data-done={done} title={badgeTitle(badge)}>
       <span className="nd-badge-icon" aria-hidden>
         <Icon size={17} />
       </span>
