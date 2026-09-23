@@ -338,3 +338,38 @@
   font-size: 0.78rem;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- Badge obtenu : une vignette imprimée.
+   Une page de magazine n'a ni lueur ni néon : un filet d'encre, un angle droit,
+   un filet au-dessus du sur-titre comme dans les chapeaux d'article. */
+:root[data-theme='xp-magazine'] .badge-glow {
+  display: none;
+}
+:root[data-theme='xp-magazine'] .badge-medal {
+  border-radius: 0;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+  box-shadow: none;
+}
+:root[data-theme='xp-magazine'] .badge-halo {
+  background: conic-gradient(from 0deg, transparent 0deg, var(--line-2) 44deg, transparent 120deg);
+}
+:root[data-theme='xp-magazine'] .badge-rays {
+  background: repeating-conic-gradient(from 0deg, var(--line-2) 0deg 0.5deg, transparent 0.5deg 15deg);
+  mask-image: radial-gradient(circle, transparent 55%, #000 64%, transparent 80%);
+}
+:root[data-theme='xp-magazine'] .badge-spark {
+  background: var(--line-2);
+  border-radius: 0;
+  width: 4px;
+  height: 4px;
+}
+:root[data-theme='xp-magazine'] .badge-kicker {
+  border-top: 1px solid var(--line-2);
+  display: inline-block;
+  padding-top: 0.4rem;
+}
+:root[data-theme='xp-magazine'] .badge-label {
+  font-size: 2rem;
+  font-weight: 700;
+}

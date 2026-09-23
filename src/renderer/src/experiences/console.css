@@ -220,3 +220,32 @@
   font-size: 0.72rem;
   font-weight: 600;
 }
+
+/* ---- Badge obtenu : un trophée qui prend le focus.
+   Tout est rond ici, et ce qui compte porte un anneau lumineux — le même
+   vocabulaire que la tuile sélectionnée. */
+:root[data-theme='xp-console'] .badge-medal {
+  width: 132px;
+  height: 132px;
+  border: 0;
+  background: color-mix(in oklab, var(--badge-accent) 22%, var(--panel-2));
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--badge-accent) 85%, transparent),
+    0 0 0 10px color-mix(in oklab, var(--badge-accent) 22%, transparent),
+    0 24px 60px -20px color-mix(in oklab, var(--badge-accent) 70%, transparent);
+}
+:root[data-theme='xp-console'] .badge-rays {
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in oklab, var(--badge-accent) 22%, transparent) 0deg 10deg,
+    transparent 10deg 30deg
+  );
+  animation-duration: 30s;
+}
+:root[data-theme='xp-console'] .badge-spark {
+  width: 9px;
+  height: 9px;
+}
+:root[data-theme='xp-console'] .badge-kicker {
+  color: color-mix(in oklab, var(--badge-accent) 60%, var(--color-muted));
+}

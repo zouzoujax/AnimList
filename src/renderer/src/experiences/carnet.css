@@ -441,3 +441,35 @@
   box-shadow: 0 22px 22px -12px rgba(0, 0, 0, 0.7);
   background: linear-gradient(to top, rgba(0, 0, 0, 0.3), transparent 45%);
 }
+
+/* ---- Badge obtenu : un tampon dans le carnet.
+   Ni lueur ni néon : un cercle d'encre au trait interrompu, posé de travers
+   comme on tamponne une page. */
+:root[data-theme='xp-carnet'] .badge-glow {
+  display: none;
+}
+:root[data-theme='xp-carnet'] .badge-medal {
+  background: color-mix(in oklab, var(--badge-accent) 10%, transparent);
+  border: 2px dashed color-mix(in oklab, var(--badge-accent) 60%, transparent);
+  box-shadow: none;
+  rotate: -7deg;
+}
+:root[data-theme='xp-carnet'] .badge-halo {
+  width: 210px;
+  height: 210px;
+  background: none;
+  mask-image: none;
+  border: 1px dashed color-mix(in oklab, var(--badge-accent) 45%, transparent);
+  animation-duration: 40s;
+}
+:root[data-theme='xp-carnet'] .badge-rays {
+  display: none;
+}
+:root[data-theme='xp-carnet'] .badge-spark {
+  width: 4px;
+  height: 4px;
+  background: color-mix(in oklab, var(--badge-accent) 70%, transparent);
+}
+:root[data-theme='xp-carnet'] .badge-label {
+  font-size: 1.8rem;
+}
