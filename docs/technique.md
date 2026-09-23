@@ -328,6 +328,14 @@ de deux builds dans `release/` a déjà coûté une version — et s'arrête net
 sur un même tag. Il vérifie enfin que le `latest.yml` répond bien par l'URL du tag, seule preuve
 qui compte.
 
+Cette preuve obtenue, il vide `release/` de ce que GitHub héberge désormais. Un installeur pèse
+cent mégaoctets et ne ressert jamais : l'app installée télécharge depuis GitHub, pas depuis ce
+dossier. Huit versions y dormaient, 843 Mo. La règle n'est pas « tout sauf la dernière » mais
+« tout ce que GitHub publie » : le script lit la liste des assets en ligne et n'efface que les
+noms qui s'y trouvent. Un build jamais publié — une version montée puis abandonnée — reste sur
+le disque, et le script annonce qu'il l'a gardé. Rien n'est effacé si le téléchargement n'a pas
+répondu : le disque est alors la seule copie qui reste.
+
 `electron-updater` ne lit pas la page de release : il lui faut ce `latest.yml`. Envoyer le `.exe`
 à la main ne suffit donc pas.
 

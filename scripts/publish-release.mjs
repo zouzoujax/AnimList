@@ -143,6 +143,41 @@ async function upload(rel, name) {
   console.log(`  ${name} envoyé`)
 }
 
+/**
+ * Efface de `release/` ce que GitHub héberge désormais.
+ *
+ * Un installeur pèse cent mégaoctets et ne sert plus à rien une fois en ligne :
+ * l'app installée le télécharge depuis GitHub, jamais depuis ce dossier. Huit
+ * versions y dormaient, 843 Mo pour rien.
+ *
+ * La règle est celle-ci, et pas « tout sauf la dernière » : un fichier ne part
+ * que si GitHub annonce un asset du même nom. Un build jamais publié — une
+ * version montée puis abandonnée, un essai — reste donc sur le disque, et le
+ * script dit qu'il l'a gardé plutôt que de l'effacer en silence.
+ */
+async function sweep() {
+  const published = new Set(
+    (await json(`${api}/releases?per_page=100`)).flatMap((r) => (r.assets ?? []).map((a) => a.name))
+  )
+  let freed = 0
+  let swept = 0
+  const kept = []
+  for (const name of fs.readdirSync(DIR)) {
+    if (!name.endsWith('-setup.exe') && !name.endsWith('-setup.exe.blockmap') && name !== 'latest.yml') continue
+    if (!published.has(name)) {
+      if (name.endsWith('-setup.exe')) kept.push(name)
+      continue
+    }
+    freed += fs.statSync(path.join(DIR, name)).size
+    fs.rmSync(path.join(DIR, name))
+    swept += 1
+  }
+  if (swept) {
+    console.log(`\n${swept} fichiers retirés de release/ — ${(freed / 1e6).toFixed(0)} Mo rendus. GitHub les héberge.`)
+  }
+  for (const name of kept) console.log(`  ${name} gardé : aucune release GitHub ne le publie.`)
+}
+
 checkArtifacts()
 const RELEASE_BODY = notes()
 const rel = await release()
@@ -155,3 +190,7 @@ console.log(
     ? `\nlatest.yml atteignable par le tag — l'app installée trouvera la ${version}.`
     : `\nAttention : latest.yml répond ${probe.status} par l'URL du tag. Une release en double traîne peut-être.`
 )
+
+// Rien n'est effacé tant que le téléchargement n'a pas répondu : le disque est
+// la seule copie qui reste si la release est mal formée.
+if (probe.ok) await sweep()
