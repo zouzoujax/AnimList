@@ -15,7 +15,6 @@ le code.
 
 - Un badge obtenu s'annonce au moment où il tombe, et non plus quand on pense à ouvrir les statistiques : la médaille paraît au centre de l'écran, son nom dessous, des auréoles tournent autour et trois notes l'accompagnent. Le reste de la page s'assombrit le temps de l'annonce sans rien bloquer — on continue de cocher derrière. Chaque thème l'habille à sa façon : un tampon d'encre dans le Carnet, un relevé d'instrument dans le Cockpit, une vignette imprimée dans Magazine, un cadre qui tourne dans Terminal
 - Le curseur posé sur un badge donne sa date d'obtention. Ceux gagnés avant cette version n'en ont pas : ils le disent plutôt que d'inventer un jour
-- Un bouton « Essayer », dans Réglages → Apparence, montre l'animation et le son sans attendre d'avoir gagné quelque chose. Le son se coupe juste au-dessus ; « Réduire les animations » calme l'annonce sans la faire taire
 - La télécommande sait changer de lecteur chez Anime-Sama. Leur page en propose plusieurs pour un même épisode et conseille d'en changer quand la vidéo ne vient pas : la rangée « Lecteur 1 2 3 » le fait depuis le canapé, sur le même épisode. Retoucher celui qui est déjà chargé le recharge, ce qui suffit parfois
 - La télécommande peut passer les génériques tout seul pour la soirée. La case part cochée comme dans les réglages ; la changer là ne les touche pas et ne vaut que jusqu'à la fermeture du lecteur
 

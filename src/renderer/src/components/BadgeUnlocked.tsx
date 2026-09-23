@@ -30,35 +30,16 @@
  * transformé, et les expériences en transforment.
  */
 
-import { PartyPopper } from 'lucide-react'
 import { motion, AnimatePresence } from 'motion/react'
-import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { firstInventory, freshBadges, MAX_CHEERS, withUnlocked } from '@shared/badge-log'
-import { endBadgePreview, isPreviewingBadge, subscribeBadgePreview } from '@/lib/badge-preview'
-import { useBadgeWall, type Badge } from '@/lib/badges'
+import { useBadgeWall } from '@/lib/badges'
 import { playBadgeChime } from '@/lib/chime'
 import { useApp } from '@/store/app'
 
 /** Le temps d'un carton : assez pour lire trois lignes, pas pour gêner. */
 const SHOWN_MS = 4600
-
-/**
- * Le badge du bouton d'essai.
- *
- * Un badge inventé plutôt qu'un vrai pris au hasard : voir passer « Centurion »
- * ferait croire qu'on vient de le gagner. Celui-ci ne peut être confondu avec
- * rien, et n'entre jamais au registre.
- */
-const TEST_BADGE: Badge = {
-  id: '__essai',
-  label: 'Badge d’essai',
-  hint: 'Voilà ce que fait un badge quand il tombe',
-  icon: PartyPopper,
-  progress: 1,
-  group: 'Volume',
-  unlockedAt: null
-}
 
 export function BadgeUnlocked(): React.JSX.Element | null {
   const ready = useApp((s) => s.ready)
@@ -69,8 +50,6 @@ export function BadgeUnlocked(): React.JSX.Element | null {
   const setPrefs = useApp((s) => s.setPrefs)
   const { badges } = useBadgeWall()
 
-  const previewing = useSyncExternalStore(subscribeBadgePreview, isPreviewingBadge)
-
   const unlocked = badges.filter((b) => b.progress >= 1)
   const fresh = freshBadges(
     unlocked.map((b) => b.id),
@@ -78,10 +57,7 @@ export function BadgeUnlocked(): React.JSX.Element | null {
   )
   // Le premier non inscrit, et seulement une fois la bibliothèque chargée :
   // avant, le mur est vide et l'inventaire porterait sur rien.
-  const gagne = ready ? (unlocked.find((b) => b.id === fresh[0]) ?? null) : null
-  // L'essai passe devant : on vient d'appuyer sur le bouton, et un vrai badge
-  // qui attend son tour attendra quatre secondes de plus.
-  const current = previewing ? TEST_BADGE : gagne
+  const current = ready ? (unlocked.find((b) => b.id === fresh[0]) ?? null) : null
 
   /**
    * L'écriture du registre est asynchrone : tant qu'elle n'est pas revenue, le
@@ -118,14 +94,12 @@ export function BadgeUnlocked(): React.JSX.Element | null {
   })
 
   // Le carton vit le temps qu'il faut, puis son badge entre au registre — ce
-  // qui fait apparaître le suivant, s'il y en a un. L'essai, lui, ne laisse
-  // aucune trace : il se contente de s'en aller.
+  // qui fait apparaître le suivant, s'il y en a un.
   useEffect(() => {
     if (id === null) return
     if (sound) void playBadgeChime()
 
     const timer = setTimeout(() => {
-      if (previewing) return endBadgePreview()
       if (writing.current) return
       writing.current = true
       shown.current += 1
@@ -138,12 +112,10 @@ export function BadgeUnlocked(): React.JSX.Element | null {
     }, SHOWN_MS)
 
     return () => clearTimeout(timer)
-  }, [id, sound, previewing, setPrefs])
+  }, [id, sound, setPrefs])
 
   const Icon = current?.icon
-  // L'essai ne parle que de lui : compter les vrais badges qui attendent leur
-  // tour derrière lui donnerait un « et 3 autres » que rien ne vient expliquer.
-  const others = previewing ? 0 : fresh.length - 1
+  const others = fresh.length - 1
 
   /**
    * Le portail reste monté, vide.
@@ -195,7 +167,11 @@ export function BadgeUnlocked(): React.JSX.Element | null {
               {/* Trois étincelles en orbite. */}
               <div aria-hidden className="badge-orbit">
                 {[0, 120, 240].map((angle) => (
-                  <span key={angle} className="badge-spark" style={{ '--badge-angle': `${angle}deg` } as React.CSSProperties} />
+                  <span
+                    key={angle}
+                    className="badge-spark"
+                    style={{ '--badge-angle': `${angle}deg` } as React.CSSProperties}
+                  />
                 ))}
               </div>
 
