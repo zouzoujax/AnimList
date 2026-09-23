@@ -242,18 +242,25 @@ export function BadgeUnlocked(): React.JSX.Element | null {
               >
                 <Icon size={52} strokeWidth={1.5} />
               </span>
-            </div>
 
-            {/* Le nom, dessous et hors des auréoles. */}
-            <div className="relative -mt-3 flex flex-col items-center px-6 text-center">
-              <span className="flex flex-col items-center gap-1">
-                <span className="text-[0.66rem] font-bold uppercase tracking-[0.16em] text-muted">Badge obtenu</span>
-                <span className="text-[1.5rem] font-semibold leading-tight">{current.label}</span>
-                <span className="max-w-[22rem] text-[0.82rem] leading-snug text-faint">
+              {/*
+                Le nom, suspendu sous les auréoles et hors du flux.
+
+                Dans le flux, il comptait dans la hauteur du bloc : c'est
+                l'ensemble « badge + nom » qui se centrait, et la médaille se
+                retrouvait au-dessus du milieu de l'écran. Ce qu'on veut voir
+                centré, c'est elle.
+              */}
+              <div className="absolute left-1/2 top-full w-[24rem] -translate-x-1/2 -translate-y-3 px-4 text-center">
+                <span className="block text-[0.66rem] font-bold uppercase tracking-[0.16em] text-muted">
+                  Badge obtenu
+                </span>
+                <span className="mt-1 block text-[1.5rem] font-semibold leading-tight">{current.label}</span>
+                <span className="mt-1 block text-[0.82rem] leading-snug text-faint">
                   {current.hint}
                   {others > 0 ? ` · et ${others} autre${others > 1 ? 's' : ''}` : ''}
                 </span>
-              </span>
+              </div>
             </div>
           </motion.div>
         )}
