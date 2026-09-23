@@ -9,6 +9,14 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.8.4 — 24 septembre 2026
+
+### Modifications
+
+- L'installation change de visage. Fini l'assistant gris hérité de Windows 2000, son bandeau vide et sa file de « Précédent / Suivant » : trois écrans sombres aux couleurs de l'app. Le premier montre le dossier d'installation, qu'on peut changer, et un bouton « Installer » ; le deuxième une barre de progression teintée ; le dernier propose de lancer AnimeList. Les boutons s'éclairent au passage de la souris, leurs coins sont arrondis, la barre de titre est sombre
+- L'installation ne demande plus pour qui installer : elle se fait dans votre compte Windows, sans droits administrateur. C'était déjà le cas en pratique, la question restait posée pour rien
+- La mise à jour automatique n'est pas touchée : elle passe par le même installeur, en silence, comme avant
+
 ## 0.8.3 — 23 septembre 2026
 
 ### Ajouts
