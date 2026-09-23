@@ -293,6 +293,14 @@ Quatre pièges ont coûté un aller-retour chacun :
   demande `PostMessage` : la section tourne dans son propre fil, et attendre que le fil de
   l'interface change de page les fige tous les deux — barre arrêtée à un quart, fenêtre disparue.
 
+Deux autres surprises, côté dessin. Un contrôle `STATIC` qui affiche une icône ne colore pas son
+fond tout seul : les coins transparents du logo viraient au gris système (`#F0F0F0`), bien visibles
+sur fond sombre — il lui faut son `SetCtlColors` comme aux autres. Et pour arrondir les boutons,
+`SetWindowRgn` ne suffit pas : la classe `STATIC` porte `CS_PARENTDC`, ses fenêtres peignent dans
+le contexte du parent et ignorent leur propre région. Le style retiré (`SetClassLong`,
+`GCL_STYLE`), la découpe prend enfin. La fenêtre, elle, demande ses coins arrondis à DWM
+(attribut 33), que Windows n'accorde pas d'office aux fenêtres de NSIS.
+
 Dernier détail, pour la barre de progression : tant qu'elle garde son thème visuel elle reste
 verte, et tant qu'elle garde son liseré `WS_EX_STATICEDGE` sa gouttière reste blanche même après
 `PBM_SETBKCOLOR`. Il faut les deux.

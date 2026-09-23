@@ -75,6 +75,28 @@ Caption "${PRODUCT_NAME}"
   Pop ${OUT}
 !macroend
 
+# Découpe un contrôle en rectangle arrondi. Le fond du parent apparaît dans les
+# coins retirés — d'où des boutons qui ne sont plus des rectangles.
+#
+# La classe STATIC porte CS_PARENTDC (0x0080) : ses fenêtres peignent dans le
+# contexte du parent et se moquent de leur propre région. Tant qu'on ne retire
+# pas ce style, SetWindowRgn s'applique sans que rien ne change à l'écran.
+!macro ndRound HWND W H R
+  Push $7
+  Push $8
+  Push $9
+  System::Call `user32::GetClassLongW(i ${HWND}, i -26) i .r7`
+  IntOp $7 $7 & 0xFFFFFF7F
+  System::Call `user32::SetClassLongW(i ${HWND}, i -26, i $7)`
+  IntOp $8 ${W} + 1
+  IntOp $9 ${H} + 1
+  System::Call `gdi32::CreateRoundRectRgn(i 0, i 0, i $8, i $9, i ${R}, i ${R}) i .r7`
+  System::Call `user32::SetWindowRgn(i ${HWND}, i $7, i 1)`
+  Pop $9
+  Pop $8
+  Pop $7
+!macroend
+
 !macro ndFont HWND FONT
   SendMessage ${HWND} ${WM_SETFONT} ${FONT} 1
 !macroend
@@ -180,6 +202,7 @@ Caption "${PRODUCT_NAME}"
     System::Call `kernel32::GetModuleHandleW(i 0) i .r2`
     System::Call `user32::LoadImageW(i r2, t "#103", i 1, i ${ND_ICON}, i ${ND_ICON}, i 0) i .r3`
     !insertmacro ndStatic $1 ${SS_ICON} ${ND_PAD} 26 ${ND_ICON} ${ND_ICON} "" $4
+    SetCtlColors $4 ${ND_TEXT} ${ND_BG}
     SendMessage $4 ${STM_SETICON} $3 0
 
     IntOp $2 $ndW - ${ND_TEXT_X}
@@ -322,12 +345,14 @@ Caption "${PRODUCT_NAME}"
     !insertmacro ndStatic $ndDlg ${SS_PATHELLIPSIS}|${SS_CENTERIMAGE} ${ND_PAD} 132 $1 28 "  $INSTDIR" $ndPath
     !insertmacro ndFont $ndPath $ndFontBody
     SetCtlColors $ndPath ${ND_TEXT} ${ND_PANEL}
+    !insertmacro ndRound $ndPath $1 28 10
 
     IntOp $2 $ndW - 134
     nsDialogs::CreateControl STATIC ${ND_WS_CHILD_VISIBLE}|${SS_NOTIFY}|${SS_CENTER}|${SS_CENTERIMAGE} 0 $2 132 110 28 "Changer…"
     Pop $ndBtnBrowse
     !insertmacro ndFont $ndBtnBrowse $ndFontBody
     SetCtlColors $ndBtnBrowse ${ND_TEXT} ${ND_PANEL}
+    !insertmacro ndRound $ndBtnBrowse 110 28 10
     ${NSD_OnClick} $ndBtnBrowse ndOnBrowse
 
     IntOp $1 $ndW - 48
@@ -349,6 +374,7 @@ Caption "${PRODUCT_NAME}"
     Pop $ndBtnInstall
     !insertmacro ndFont $ndBtnInstall $ndFontBtn
     SetCtlColors $ndBtnInstall ${ND_ON_ACC} ${ND_ACCENT}
+    !insertmacro ndRound $ndBtnInstall 150 40 14
     ${NSD_OnClick} $ndBtnInstall ndOnInstall
 
     StrCpy $ndBtnA $ndBtnInstall
@@ -469,6 +495,7 @@ Caption "${PRODUCT_NAME}"
     Pop $ndBtnClose
     !insertmacro ndFont $ndBtnClose $ndFontBtn
     SetCtlColors $ndBtnClose ${ND_TEXT} ${ND_PANEL}
+    !insertmacro ndRound $ndBtnClose 110 40 14
     ${NSD_OnClick} $ndBtnClose ndOnClose
 
     IntOp $2 $ndW - 174
@@ -476,6 +503,7 @@ Caption "${PRODUCT_NAME}"
     Pop $ndBtnRun
     !insertmacro ndFont $ndBtnRun $ndFontBtn
     SetCtlColors $ndBtnRun ${ND_ON_ACC} ${ND_ACCENT}
+    !insertmacro ndRound $ndBtnRun 150 40 14
     ${NSD_OnClick} $ndBtnRun ndOnRun
 
     StrCpy $ndBtnA $ndBtnRun
@@ -496,6 +524,9 @@ Function ndGuiInit
   System::Call `dwmapi::DwmSetWindowAttribute(i $HWNDPARENT, i 35, *i ${ND_BGR_BG}, i 4)`
   System::Call `dwmapi::DwmSetWindowAttribute(i $HWNDPARENT, i 36, *i ${ND_BGR_TEXT}, i 4)`
   System::Call `dwmapi::DwmSetWindowAttribute(i $HWNDPARENT, i 34, *i ${ND_BGR_PANEL}, i 4)`
+  # 33 : la forme des coins. 2 = arrondis, au lieu du rectangle sec que Windows
+  # laisse aux fenêtres de NSIS.
+  System::Call `dwmapi::DwmSetWindowAttribute(i $HWNDPARENT, i 33, *i 2, i 4)`
 FunctionEnd
 
 !define MUI_CUSTOMFUNCTION_GUIINIT ndGuiInit
