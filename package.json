@@ -20,7 +20,8 @@
     "dist": "npm run build && electron-builder --win --config electron-builder.yml",
     "dist:dir": "npm run build && electron-builder --win --dir --config electron-builder.yml",
     "release": "npm run dist && node scripts/publish-release.mjs",
-    "screenshots": "npm run build && node scripts/screenshots.mjs"
+    "screenshots": "npm run build && node scripts/screenshots.mjs",
+    "nothing": "npm run build && node scripts/nothing.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
