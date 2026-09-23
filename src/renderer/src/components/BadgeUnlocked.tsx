@@ -21,9 +21,10 @@
  * victoires vieilles de plusieurs mois.
  *
  * **Au milieu de l'écran, et sans rien bloquer.** Le badge paraît en fondu au
- * centre, son nom dessous, entouré d'auréoles qui tournent ; la page reste
- * cliquable derrière — ce n'est pas une modale, rien n'attend de réponse. Il
- * s'en va comme il est venu, en fondu.
+ * centre, son nom dessous, entouré d'auréoles qui tournent, le reste de la
+ * page assombri pour le temps de l'annonce. Le voile ne prend pas les clics —
+ * ce n'est pas une modale, rien n'attend de réponse, et on continue de cocher
+ * derrière. Il s'en va comme il est venu, en fondu.
  *
  * Le tout passe par un portail : `position: fixed` ne tient pas sous un parent
  * transformé, et les expériences en transforment.
@@ -158,7 +159,11 @@ export function BadgeUnlocked(): React.JSX.Element | null {
         {current && Icon && (
           <motion.div
             key={current.id}
-            className="relative grid place-items-center"
+            // Le voile couvre toute la fenêtre et s'efface avec le badge : la
+            // page s'assombrit pour le temps de l'annonce, sans rien retenir —
+            // la couche ne prend pas les clics, on continue de cocher derrière.
+            className="absolute inset-0 grid place-items-center"
+            style={{ background: 'rgba(4, 4, 10, 0.82)' }}
             // Un fondu, et rien d'autre : l'entrée et la sortie ne bougent pas
             // de place. Ce qui tourne, ce sont les auréoles, dessous.
             initial={{ opacity: 0 }}
