@@ -40,6 +40,8 @@ Caption "${PRODUCT_NAME}"
 !define ND_DIM     0x8C90A3
 !define ND_ACCENT  0x7C5CFF
 !define ND_ON_ACC  0xFFFFFF
+!define ND_ACCENT_HI 0x9279FF
+!define ND_PANEL_HI  0x1F2540
 
 # Journal sombre (il reste masqué) et barre lisse. Surtout pas « colored » :
 # NSIS repeindrait la barre à chaque fichier et écraserait nos couleurs.
@@ -98,6 +100,10 @@ Caption "${PRODUCT_NAME}"
   Var ndPath
   Var ndBtnBrowse
   Var ndBtnInstall
+  Var ndBtnA
+  Var ndBtnB
+  Var ndHover
+  Var ndHandCursor
   Var ndFontTitle
   Var ndFontSub
   Var ndFontBody
@@ -194,6 +200,67 @@ Caption "${PRODUCT_NAME}"
     Pop $0
   FunctionEnd
 
+  # Un STATIC ne sait pas dire « la souris est sur moi » : pas de WM_MOUSEHOVER,
+  # pas de WM_MOUSELEAVE tant que personne ne les a demandés. On regarde donc
+  # nous-mêmes, quarante fois par seconde, et on ne repeint qu'au changement.
+  Function ndHoverTick
+    Push $0
+    Push $1
+    Push $2
+    Push $3
+
+    System::Alloc 8
+    Pop $3
+    System::Call `user32::GetCursorPos(i $3)`
+    System::Call `*$3(i .r1, i .r2)`
+    System::Free $3
+    System::Call `user32::WindowFromPoint(i r1, i r2) i .r0`
+
+    ${If} $0 != $ndHover
+      ${If} $ndHover == $ndBtnA
+        SetCtlColors $ndHover ${ND_ON_ACC} ${ND_ACCENT}
+        System::Call `user32::InvalidateRect(i $ndHover, i 0, i 1)`
+      ${ElseIf} $ndHover == $ndBtnB
+        SetCtlColors $ndHover ${ND_TEXT} ${ND_PANEL}
+        System::Call `user32::InvalidateRect(i $ndHover, i 0, i 1)`
+      ${EndIf}
+
+      ${If} $0 == $ndBtnA
+        SetCtlColors $0 ${ND_ON_ACC} ${ND_ACCENT_HI}
+        System::Call `user32::InvalidateRect(i $0, i 0, i 1)`
+      ${ElseIf} $0 == $ndBtnB
+        SetCtlColors $0 ${ND_TEXT} ${ND_PANEL_HI}
+        System::Call `user32::InvalidateRect(i $0, i 0, i 1)`
+      ${EndIf}
+
+      StrCpy $ndHover $0
+    ${EndIf}
+
+    Pop $3
+    Pop $2
+    Pop $1
+    Pop $0
+  FunctionEnd
+
+  # $ndBtnA : le bouton d'accent de la page ; $ndBtnB : le secondaire.
+  Function ndHoverStart
+    StrCpy $ndHover ""
+    ${If} $ndHandCursor == ""
+      System::Call `user32::LoadCursorW(i 0, i 32649) i .r0`
+      StrCpy $ndHandCursor $0
+    ${EndIf}
+
+    # -12 : le curseur de la classe STATIC. Seuls nos boutons le verront : un
+    # libellé sans SS_NOTIFY est transparent au pointage, et c'est le dialogue
+    # qui répond à sa place.
+    System::Call `user32::SetClassLongW(i $ndBtnA, i -12, i $ndHandCursor)`
+    ${NSD_CreateTimer} ndHoverTick 40
+  FunctionEnd
+
+  Function ndHoverStop
+    ${NSD_KillTimer} ndHoverTick
+  FunctionEnd
+
   Function ndOnBrowse
     Pop $0
     ${If} $0 != $ndBtnBrowse
@@ -284,6 +351,10 @@ Caption "${PRODUCT_NAME}"
     SetCtlColors $ndBtnInstall ${ND_ON_ACC} ${ND_ACCENT}
     ${NSD_OnClick} $ndBtnInstall ndOnInstall
 
+    StrCpy $ndBtnA $ndBtnInstall
+    StrCpy $ndBtnB $ndBtnBrowse
+    Call ndHoverStart
+
     nsDialogs::Show
   FunctionEnd
 
@@ -327,7 +398,7 @@ Caption "${PRODUCT_NAME}"
     System::Call `user32::InvalidateRect(i $1, i 0, i 1)`
   FunctionEnd
 
-  Page custom ndInstallPage
+  Page custom ndInstallPage ndHoverStop
 
   # Consommé par le !insertmacro MUI_PAGE_INSTFILES qui suit immédiatement.
   !define MUI_PAGE_CUSTOMFUNCTION_SHOW ndProgressShow
@@ -407,10 +478,14 @@ Caption "${PRODUCT_NAME}"
     SetCtlColors $ndBtnRun ${ND_ON_ACC} ${ND_ACCENT}
     ${NSD_OnClick} $ndBtnRun ndOnRun
 
+    StrCpy $ndBtnA $ndBtnRun
+    StrCpy $ndBtnB $ndBtnClose
+    Call ndHoverStart
+
     nsDialogs::Show
   FunctionEnd
 
-  Page custom ndFinishPage
+  Page custom ndFinishPage ndHoverStop
 !macroend
 
 # Barre de titre sombre, sur Windows 10 2004 et au-delà. L'attribut 20 est

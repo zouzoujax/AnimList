@@ -279,7 +279,11 @@ Quatre pièges ont coûté un aller-retour chacun :
 
 - **Un bouton ne se colore pas.** Windows n'envoie jamais `WM_CTLCOLORBTN` à un bouton poussoir :
   il reste gris quoi qu'on lui dise. Les boutons sont donc des `STATIC` avec `SS_NOTIFY`, qui se
-  cliquent aussi bien et acceptent `SetCtlColors`.
+  cliquent aussi bien et acceptent `SetCtlColors`. En échange, un `STATIC` ne sait pas dire que la
+  souris est sur lui : le survol se lit au chronomètre, quarante fois par seconde, et ne repeint
+  qu'au changement d'état. Le curseur main, lui, vient de la classe `STATIC` elle-même
+  (`SetClassLong`, `GCL_HCURSOR`) — les libellés n'en héritent pas, car sans `SS_NOTIFY` ils sont
+  transparents au pointage et c'est le dialogue qui répond à leur place.
 - **L'apostrophe tue.** `System::Call 'user32::CreateWindowExW(..., w "Dossier d'installation")'`
   se coupe en deux au `d'` : le script compile, et l'installeur meurt à l'affichage sans un mot,
   après avoir installé. Tous les `System::Call` sont délimités par des accents graves.
