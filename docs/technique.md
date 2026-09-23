@@ -10,6 +10,8 @@ Chaque section explique un **pourquoi**, souvent mesuré plutôt que supposé.
 - [Qualité et tests](#qualité-et-tests)
 - [Pourquoi un script d'installation d'Electron](#pourquoi-un-script-dinstallation-delectron)
 - [Pourquoi la bande-annonce passe par un serveur local](#pourquoi-la-bande-annonce-passe-par-un-serveur-local)
+- [Pourquoi l'import TV Time n'apparie pas par numéro](#pourquoi-limport-tv-time-napparie-pas-par-numéro)
+- [Audit des dépendances](#audit-des-dépendances)
 - [Régénérer les captures](#régénérer-les-captures)
 - [Pourquoi l'installeur est dessiné à la main](#pourquoi-linstalleur-est-dessiné-à-la-main)
 - [Publier une mise à jour](#publier-une-mise-à-jour)
@@ -224,6 +226,34 @@ sens.
 Certaines chaînes désactivent l'intégration de leurs vidéos. Le lecteur affiche alors sa propre
 erreur avec un lien « regarder sur YouTube », qui ouvre le vrai navigateur. Sur les 48 bandes-
 annonces des animes les plus populaires d'AniList, l'intégration était autorisée dans 48 cas.
+
+## Pourquoi l'import TV Time n'apparie pas par numéro
+
+TheTVDB — la source de TV Time et d'OpenTV — modélise un long anime comme **une** série à
+saisons numérotées. AniList le découpe en **une entrée par cour diffusé**. L'épisode 38 de la
+série TheTVDB n'est donc pas l'épisode 38 d'une entrée AniList : c'est le 14e d'une troisième
+entrée que rien ne nomme pareil.
+
+Les épisodes vus sont donc versés dans l'ordre de diffusion le long d'une chaîne d'entrées
+reliées par des relations `SEQUEL`, avec débordement sur l'entrée suivante quand la courante est
+pleine. Le graphe de relations d'AniList a des trous — Dr. STONE et Tensei Shitara Slime Datta
+Ken n'exposent pas un `SEQUEL` pour chaque cour — alors une recherche de franchise complète la
+chaîne par préfixe de titre et date de diffusion. C'est ce mécanisme, et lui seul, qui rend un
+vrai historique TV Time importable.
+
+La chaîne vit dans `src/main/tvtime/` : `csv.ts` et `read.ts` lisent l'export, `match.ts`
+apparie les titres, `chain.ts` construit la suite d'entrées, `allocate.ts` répartit les
+épisodes, `run.ts` orchestre et rend le rapport, `service.ts` et `folder.ts` tiennent le dossier
+et les dialogues. Chacun a ses tests.
+
+Trois choix valent d'être dits. Le dossier se choisit dans l'app et le dernier est mémorisé :
+aucun chemin n'est codé en dur. Les séries introuvables sont listées avec un champ pour saisir
+un id AniList ou les écarter, et ces corrections sont conservées puis rejouées. Enfin les
+événements écrits portent `imported: true`, sans quoi les dates de pointage de l'app d'origine
+fausseraient les séries de jours, la heatmap et la meilleure journée.
+
+Des scripts autonomes occupaient `scripts/tvtime/` avant que tout cela n'entre dans
+l'application ; ils sont dans l'historique (`git show 5756598 -- scripts/tvtime/`).
 
 ## Audit des dépendances
 
