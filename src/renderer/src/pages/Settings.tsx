@@ -48,6 +48,7 @@ import { ACCENT_PRESETS } from '@/lib/color'
 import { minutesToHuman } from '@/lib/format'
 import Health from '@/components/Health'
 import { SETTINGS_SECTIONS, fold, type SettingsSection } from '@/lib/settings-sections'
+import { previewBadge } from '@/lib/badge-preview'
 import { useApp } from '@/store/app'
 
 /** Tiny wireframe so the option is legible without trying it. */
@@ -653,6 +654,15 @@ export default function SettingsPage(): React.JSX.Element {
             hint="Trois notes, très courtes, avec le carton qui annonce le badge. Le carton reste si tu coupes le son ; « Réduire les animations » le calme sans le faire taire."
           >
             <Toggle on={prefs.badgeSound} onChange={(badgeSound) => setPrefs({ badgeSound })} />
+          </Row>
+
+          <Row
+            label="Voir ce que ça donne"
+            hint="Un carton d'essai, avec le son s'il est allumé. Il n'entre pas dans tes badges — sans ce bouton, il faudrait en gagner un pour le voir, et quand ils sont tous gagnés plus rien ne se déclenche."
+          >
+            <button className="btn" onClick={previewBadge}>
+              Essayer
+            </button>
           </Row>
 
           <Row
