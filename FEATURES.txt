@@ -1,13 +1,14 @@
 ================================================================================
 ANIMELIST - LISTE DES FONCTIONNALITES
-Etat au 6 septembre 2026, version 0.5.1
+Etat au 24 septembre 2026, version 0.8.4
 ================================================================================
 
 Suivi d'animes local-first pour Windows. Aucun compte, aucun serveur : tout vit
 dans %APPDATA%\AnimeList. Electron + React + TypeScript.
 
-Ce document est reconstruit de deux sources : le CHANGELOG, qui ne remonte qu'a
-la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
+Ce document dit ce que l'app fait aujourd'hui. Le CHANGELOG dit ce qui a change
+d'une version a l'autre, PRODUCT.md dit ce que le produit est. Celui-ci ne vaut
+que par sa date : la relire est la premiere chose a faire avant de s'y fier.
 
 
 --------------------------------------------------------------------------------
@@ -16,10 +17,10 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
 
   - Catalogue AniList complet : recherche, fiches, jaquettes, bannieres,
     genres, studios, notes de la communaute, popularite
-  - Statuts : a voir, en cours, termine, abandonne
+  - Cinq statuts : a voir, en cours, termine, en pause, abandonne
   - Note personnelle, favori, notes libres par serie
-  - Huit emotions attachables a une serie ou a un episode :
-    coup de coeur, hype, larmes, rire, cerveau, chill, peur, ennui
+  - Huit emotions attachables a une serie ou a un episode : coup de coeur,
+    hype, larmes, fou rire, claque, cosy, flippant, longuet
   - Listes personnalisees : creer, renommer, supprimer, faire entrer et sortir
     des series depuis un panneau unique
   - Actions groupees : selectionner plusieurs series, changer leur statut,
@@ -29,7 +30,12 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Bilan de sante de la bibliotheque : fiches manquantes, visionnages
     orphelins, episodes au-dela du total, doublons, fichiers residuels, avec
     de quoi nettoyer ce qui peut l'etre
-  - Ctrl+Z annule la derniere coche : cocher, cocher jusque-la, reinitialiser
+  - Ctrl+Z annule la derniere coche : cocher, cocher jusque-la, reinitialiser.
+    Les notifications proposent aussi "Annuler", pour qui ne connait pas le
+    raccourci : coche en bloc, progression effacee, statut ou favoris d'une
+    selection entiere
+  - L'onglet, le tri, la recherche et le genre survivent a un aller-retour
+    vers une fiche, et repartent a zero au lancement suivant
 
 
 --------------------------------------------------------------------------------
@@ -42,6 +48,8 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
     toujours etre decoche
   - Decocher puis recocher rend a l'episode sa date d'origine, sa duree et sa
     note : une fausse manoeuvre ne fausse plus les statistiques
+  - La case de l'episode en cours de lecture se remplit a mesure qu'on avance
+    dedans, et bascule en case cochee aux neuf dixiemes
   - Titres et vignettes d'episodes, apparies par numero et non par position
   - Episodes hors intrigue (filler) reperes via MyAnimeList, affichables ou
     masquables d'un bouton
@@ -50,6 +58,15 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Personnages et doubleurs cliquables, avec leur page dediee
   - Bande-annonce, en fenetre detachable
   - Frise des saisons d'une meme serie
+  - Arbre de la franchise : les saisons en tronc, et accrochees a chacune les
+    films, OVA, spin-off, versions alternatives et resumes, avec l'avancement
+    sur chaque branche. Sur Naruto, dix-sept films et OVA que la bande des
+    saisons ne montrait pas. Rien n'est demande de plus a AniList, et l'arbre
+    reste consultable quand leur catalogue ne repond pas
+  - Fin d'une serie : une fenetre propose la suite en suivant l'arbre, jusqu'a
+    huit entrees rangees par date de sortie, chaque type avec sa couleur, la
+    saison suivante jamais ecartee faute de place. Elle propose aussi de noter
+    la serie tant que l'avis est frais, et se tait si elle est deja notee
   - Resumes et titres traduits en francais quand AniList ne les publie qu'en
     anglais
 
@@ -64,6 +81,14 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
     lise
   - Bouton de lecture au survol de chaque case de la grille
   - Changement d'episode sans recharger toute la page
+  - VO ou VF au choix : deux pastilles sur la fiche quand la saison existe
+    dans les deux langues. Le choix est retenu pour cette serie et vaut
+    partout, grille comprise
+  - Films et OAV ouverts dans leur propre section, sur le bon titre, meme hors
+    bibliotheque. Un film absent de chez eux ouvre leur liste dans le
+    navigateur au lieu d'en lancer un autre
+  - Un encadre rappelle que leur lecteur peut ouvrir un mauvais episode : leur
+    site n'a pas d'adresse par episode
   - Fenetres surgissantes bloquees, navigation confinee au site
   - Mode cinema : la fenetre passe en plein ecran et le lecteur est etale sur
     tout l'ecran, en-tete du site masque. Echap rend l'ecran, puis ferme
@@ -72,6 +97,12 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Enchainement automatique de l'episode suivant apres huit secondes, avec un
     bouton Annuler. Une pause volontaire n'enchaine rien, une saison finie
     s'arrete d'elle-meme. Les deux se coupent separement dans les reglages
+  - Passer l'opening et le generique de fin (WIP) : un bouton dans le coin du
+    lecteur, les minutages venant d'AniSkip. Neuf series sur dix en ont un,
+    rien ne s'affiche pour les autres. Quand le generique de fin termine
+    l'episode, le bouton annonce le suivant et y va directement. Le saut
+    automatique existe dans Reglages > Lecture, eteint volontairement : un
+    contributeur peut se tromper d'etiquette
 
   Fichiers locaux
   - Associer un dossier a une serie et lire les episodes depuis sa fiche
@@ -84,7 +115,7 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
 
 
 --------------------------------------------------------------------------------
-4. ACCUEIL
+4. ACCUEIL ET SOIREE ANIME
 --------------------------------------------------------------------------------
 
   - Continuer : les series en cours, avec l'episode suivant a portee de clic
@@ -96,6 +127,20 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Chez ceux que tu suis : les sorties des studios et doubleurs suivis
   - La saison en cours, les sorties du moment, les tendances
   - Halos colores d'apres la jaquette mise en avant
+
+  Soiree anime
+  - Dis si tu as trente minutes, une heure, deux heures - ou que tu n'en sais
+    rien - et l'app compose la suite avec ce qui est regardable tout de suite.
+    Chaque episode dit pourquoi il est la : tu y etais, en retard, jamais
+    commencee
+  - "Aucune idee" n'est pas un tirage au sort : c'est la duree mediane de tes
+    journees de visionnage, lue dans ton propre historique. La mediane et non
+    la moyenne, sans quoi un week-end de douze heures deciderait de tes mardis
+  - "Autre idee" propose une autre soiree pour la meme duree, et se grise
+    quand plus rien ne rentre. Une croix ecarte une serie
+  - La soiree enchaine vraiment : episode suivant, changement de serie quand
+    la premiere est epuisee, carton "Soiree terminee" au bout. La liste ne se
+    recompose pas en cours de route
 
 
 --------------------------------------------------------------------------------
@@ -109,6 +154,10 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
     faire semblant de lire des notes
   - Recommandations AniList a partir de ce que tu as aime, moins ce que tu
     suis deja, avec la serie qui a mene a chaque suggestion
+  - Saison en cours : une page pour faire le tri en debut de saison, chaque
+    serie avec sa case - a trier, suivie, prevue, ecartee. "Je regarde" et
+    "Plus tard" l'ajoutent a la bibliotheque, "Pas pour moi" l'ecarte sans
+    rien y mettre
   - Pages de studio et de personne, deroulantes a l'infini
   - Suivre un studio ou un doubleur : leurs nouvelles sorties sont annoncees
     et remontent sur l'accueil. Seul ce qui arrive apres le suivi compte
@@ -137,15 +186,36 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Ce qu'il te reste : heures en cours, heures en pile, estimation en jours
     a ton rythme reel
   - Mon pantheon, tes meilleures notes
+  - Genres et studios les plus regardes, cliquables vers la bibliotheque
   - Cent badges repartis en sept groupes : Volume, Assiduite, Exploits,
     Collection, Curiosite, Critique, Epoques. Filtrables (tous, debloques,
     a faire), les plus proches d'abord
+  - Un badge obtenu s'annonce au moment ou il tombe : la medaille parait au
+    centre de l'ecran, le reste s'assombrit sans rien bloquer, et chaque theme
+    l'habille a sa facon. Le curseur pose sur un badge donne sa date
+    d'obtention ; ceux gagnes avant la 0.8.3 disent qu'ils ne l'ont pas
   - Ton annee : une carte a enregistrer en image, avec le temps, les episodes
     et les affiches de l'annee
 
 
 --------------------------------------------------------------------------------
-8. CALENDRIER
+8. JOURNAL
+--------------------------------------------------------------------------------
+
+  - Tout ce que tu as regarde, a sa date, groupe par journee
+  - Les ressentis et les notes ecrits depuis la fiche d'une serie s'y
+    relisent sans avoir a se souvenir de quelle serie il s'agissait
+  - La recherche porte sur le texte de tes notes autant que sur les titres
+  - Filtres : les seuls episodes annotes, ou ceux mis de cote
+  - Un clic sur une ligne rouvre l'episode pour corriger sa date, sa duree ou
+    ce qu'on en avait dit
+  - Les lignes importees restent en dehors : elles portent la date du
+    pointage dans l'app d'origine, pas celle du visionnage. Une phrase le dit
+    quand il y en a, et corriger la date d'une ligne la fait entrer
+
+
+--------------------------------------------------------------------------------
+9. CALENDRIER
 --------------------------------------------------------------------------------
 
   - Semaine de diffusion de tes series, avec choix de la semaine
@@ -153,7 +223,7 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
 
 
 --------------------------------------------------------------------------------
-9. MANGA
+10. MANGA
 --------------------------------------------------------------------------------
 
   - Onglet dedie, catalogue AniList en lecture seule
@@ -163,32 +233,48 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
 
 
 --------------------------------------------------------------------------------
-10. INTEGRATION WINDOWS
+11. INTEGRATION WINDOWS
 --------------------------------------------------------------------------------
 
-  - Clic droit sur l'icone de la barre des taches : la serie en cours
+  - Clic droit sur l'icone de la barre des taches : la serie en cours, et
+    "Vu : Serie - ep. N" pour cocher sans ouvrir l'app
   - Touches multimedia du clavier pendant qu'un episode est ouvert
   - Mini-lecteur toujours au-dessus des autres fenetres
   - Barre de progression dans la barre des taches pendant un telechargement
   - Notifications de diffusion, avec delai d'avance reglable et rattrapage
-    des episodes manques
+    des episodes manques. Elles portent un bouton "Marquer vu" : un episode
+    regarde ailleurs se coche depuis la notification
+  - Quand une coche rattrape la diffusion, l'app dit quand arrive le prochain
+    episode et si elle previendra
   - Effet Mica
 
 
 --------------------------------------------------------------------------------
-11. TELECOMMANDE TELEPHONE
+12. TELECOMMANDE TELEPHONE
 --------------------------------------------------------------------------------
 
   - Un QR code dans les reglages, et le telephone pilote le PC sur le reseau
     local : lecture, pause, volume, plein ecran, episode suivant
   - Pilote aussi le lecteur d'Anime-Sama, pas seulement celui de l'app
-  - Accueil, bibliotheque et Decouvrir consultables depuis le telephone
+  - Accueil, "Ma liste", Decouvrir, Calendrier et Stats consultables depuis le
+    telephone. L'accueil et "Ma liste" montrent une grille de jaquettes, les
+    actions s'ouvrant au toucher d'une serie
   - Cocher un episode a distance, avec les memes garde-fous que dans l'app
-  - Protegee par un jeton
+  - Le bouton "Passer l'intro" du lecteur est relaye tel quel, avec le texte
+    exact qui est ecrit dessus. Rien n'est relaye de ce qui saute une publicite
+  - Un bouton "Episode N" apparait a 92 % de l'episode en cours : c'est une
+    proposition, rien ne se lance sans le clic, et rien n'est propose apres le
+    dernier episode
+  - Changer de lecteur chez Anime-Sama depuis le canape : la rangee
+    "Lecteur 1 2 3", sur le meme episode
+  - Passer les generiques tout seul pour la soiree, sans toucher aux reglages
+  - Protegee par un mot de passe : tire au hasard a chaque allumage par
+    defaut, ou choisi dans Reglages > Telecommande pour que le lien ne change
+    plus et se mette en favori
 
 
 --------------------------------------------------------------------------------
-12. DISCORD
+13. DISCORD
 --------------------------------------------------------------------------------
 
   - Rich Presence : serie, episode, jaquette, temps restant, compte a rebours
@@ -200,7 +286,7 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
 
 
 --------------------------------------------------------------------------------
-13. DONNEES
+14. DONNEES
 --------------------------------------------------------------------------------
 
   - Tout en local : un fichier JSON, et un journal d'historique a cote
@@ -213,28 +299,69 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
   - Import AniList ou Kitsu depuis un simple pseudo, sans compte ni cle
   - Sauvegarde et restauration completes
   - Cache AniList borne en taille, poids affiche et vidable dans les reglages
+  - Quand le catalogue AniList tombe, l'app le dit en francais et precise ce
+    qui marche encore : bibliotheque, episodes et statistiques ne touchent
+    jamais au reseau. Une panne generale met les appels en pause un quart
+    d'heure au lieu de faire clignoter la meme erreur partout, et l'app repart
+    d'elle-meme
+  - Un temoin dans la barre de titre quand le catalogue ne suit pas :
+    "Hors ligne", "AniList en pause" ou "AniList ralentit", avec le temps
+    restant. Invisible le reste du temps
 
 
 --------------------------------------------------------------------------------
-14. APPARENCE ET CONFORT
+15. APPARENCE, THEMES ET EXPERIENCES
 --------------------------------------------------------------------------------
 
-  - Quatre themes : Nebula, Papier, Terminal, Synth
+  - Quinze themes : Nebuleuse, Papier, Terminal, Synthwave, Indigo, OLED,
+    Manga, Arcade, Cyberpunk, Kawaii, Liquid Glass, Bento, Aurore, Ardoise,
+    Carbon. Chacun a ses couleurs, ses polices et, pour la plupart, un effet
+    anime : trait de lumiere autour de la une, etoiles filantes, trame de
+    points, grille qui clignote, bulles, reflet d'or, rideaux de lumiere
+  - Cinq experiences, rangees a part, qui refont l'app entiere et pas
+    seulement ses couleurs : Streaming, Console, Magazine, Cockpit, Carnet.
+    Chacune a son menu, son accueil, sa bibliotheque, ses statistiques, son
+    calendrier, ses pages Decouvrir et Manga, sa fiche d'anime, sa page de
+    badges et ses transitions. Chargees seulement quand on en choisit une
   - Quatre dispositions : Classique, Rail compact, Barre haute,
-    Tableau de bord
-  - Couleur d'accent personnalisable
-  - Mouvement reductible
+    Tableau de bord. Themes et dispositions se croisent librement
+  - Un nouveau design, activable page par page dans Reglages > Apparence :
+    une frise d'episodes plutot que des cartes, des phrases plutot que des
+    etiquettes. Dix pages le proposent - accueil, bibliotheque, decouvrir,
+    calendrier, manga, statistiques, journal, fiche d'un anime, studio,
+    personnage et doubleur - et chacune garde son interrupteur
+  - Couleur d'accent personnalisable, chaque theme arrivant avec la sienne et
+    un bouton pour la retablir
+  - Une ouverture au lancement : la marque se trace, un halo respire, puis
+    l'ecran s'ecarte. Elle suit l'accent choisi, un clic l'abrege, elle ne
+    joue qu'une fois par lancement et ne retarde rien
+  - Mouvement reductible, qui remplace l'ouverture par une presentation
+    immobile trois fois plus courte
   - Langue des titres au choix : romaji, anglais, natif
   - Duree d'episode par defaut, pour les series dont AniList ne dit rien
   - Contenu adulte affichable ou non
-  - Palette de commandes (Ctrl+K)
-  - Aide des raccourcis, ouverte par ? ou depuis les reglages, gestes de
-    souris compris
   - Traduction automatique en francais, avec cle DeepL optionnelle
 
 
 --------------------------------------------------------------------------------
-15. MISES A JOUR
+16. NAVIGATION ET RACCOURCIS
+--------------------------------------------------------------------------------
+
+  - Huit entrees au menu : Accueil, Decouvrir, Bibliotheque, Manga,
+    Calendrier, Statistiques, Journal, Reglages. Ctrl+1 a Ctrl+8 y menent
+    droit, le raccourci etant rappele dans l'infobulle de chaque entree
+  - "Retour" et "Suivant" dans la barre de titre, Alt+gauche et Alt+droite,
+    et les boutons lateraux de la souris, comme dans un navigateur
+  - Revenir sur une page la retrouve la ou on l'avait laissee
+  - Palette de commandes (Ctrl+K), qui trouve aussi les sections des reglages
+  - Un champ de recherche en tete des Reglages, et un sommaire a gauche qui
+    suit la lecture
+  - Aide des raccourcis, ouverte par ? ou depuis les reglages, gestes de
+    souris compris
+
+
+--------------------------------------------------------------------------------
+17. MISES A JOUR
 --------------------------------------------------------------------------------
 
   - Verification toutes les six heures, telechargement et installation
@@ -243,11 +370,15 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
     avant installation
   - "Redemarrer maintenant" installe et rouvre l'app sans assistant Windows
   - Chaque etape desactivable dans les reglages
-  - Installeur NSIS signe, publie sur GitHub Releases
+  - Installeur NSIS dessine a la main, aux couleurs de l'app : trois ecrans
+    sombres, le dossier d'installation modifiable, une barre de progression
+    teintee, et le lancement propose a la fin. L'installation se fait dans le
+    compte Windows courant, sans droits administrateur
+  - Publie sur GitHub Releases
 
 
 --------------------------------------------------------------------------------
-16. REPERES DE VERSIONS
+18. REPERES DE VERSIONS
 --------------------------------------------------------------------------------
 
   0.3.0   Cent badges, panneau des listes personnalisees
@@ -261,16 +392,34 @@ la 0.3.0, et le code lui-meme pour tout ce qui est anterieur.
           AniList/Kitsu, integration Windows, traduction
   0.5.0   Coche et enchainement automatiques, mode cinema
   0.5.1   Date rendue a un episode recoche, grille qui ne saute plus
+  0.5.2   Soiree anime
+  0.5.5   Arbre de la franchise
+  0.5.7   Passer les generiques (AniSkip, WIP)
+  0.5.8   VO / VF chez Anime-Sama
+  0.5.10  Ouverture au lancement
+  0.5.11  Suites proposees a la fin d'une serie, films et OAV chez Anime-Sama
+  0.6.0   Onze themes de plus, cinq experiences
+  0.7.0   Nouveau design, activable page par page
+  0.8.0   Navigation suivant/precedent, Ctrl+1 a Ctrl+7, "Annuler" dans les
+          notifications, recherche dans les reglages, page Saison en cours,
+          temoin d'etat du catalogue
+  0.8.1   Journal
+  0.8.2   Telecommande : bouton d'intro relaye, episode suivant, mot de passe
+          choisi
+  0.8.3   Badge annonce a l'obtention, changement de lecteur a distance
+  0.8.4   Installeur dessine a la main
 
 
 --------------------------------------------------------------------------------
-17. CE QUE L'APP NE FAIT PAS, ET NE FERA PAS
+19. CE QUE L'APP NE FAIT PAS, ET NE FERA PAS
 --------------------------------------------------------------------------------
 
   - Extraire, telecharger ou rediffuser un flux video depuis Anime-Sama ou
     FrAnime. L'app ouvre leur page, dans leur lecteur, comme un visiteur
   - Envoyer quoi que ce soit sur un serveur. La seule sortie volontaire est le
     statut Discord, eteint par defaut
+  - Corriger a la main les dates de diffusion. AniList les fournit, et une
+    saisie manuelle serait une deuxieme source de verite a maintenir
 
 
 ================================================================================
