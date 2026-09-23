@@ -504,6 +504,25 @@ textarea {
   }
 }
 
+/* Les auréoles du badge qui vient de tomber.
+
+   En CSS et non pilotées par `motion` : `AnimatePresence` attend la fin des
+   animations dont il a la charge avant de démonter ce qui s'en va, et une
+   rotation sans fin ne finit jamais — le fondu de disparition n'arrivait donc
+   jamais, le badge restait à l'écran. La règle `.reduce-motion` ci-dessous les
+   arrête, comme le reste. */
+@keyframes badge-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes badge-turn-back {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
 .reduce-motion *,
 .reduce-motion *::before,
 .reduce-motion *::after {

@@ -20,8 +20,13 @@
  * badges gagnés ; les annoncer à la file serait une avalanche pour des
  * victoires vieilles de plusieurs mois.
  *
- * Le carton passe par un portail : `position: fixed` ne tient pas sous un
- * parent transformé, et les expériences en transforment.
+ * **Au milieu de l'écran, et sans rien bloquer.** Le badge paraît en fondu au
+ * centre, son nom dessous, entouré d'auréoles qui tournent ; la page reste
+ * cliquable derrière — ce n'est pas une modale, rien n'attend de réponse. Il
+ * s'en va comme il est venu, en fondu.
+ *
+ * Le tout passe par un portail : `position: fixed` ne tient pas sous un parent
+ * transformé, et les expériences en transforment.
  */
 
 import { PartyPopper } from 'lucide-react'
@@ -135,50 +140,118 @@ export function BadgeUnlocked(): React.JSX.Element | null {
     return () => clearTimeout(timer)
   }, [id, sound, previewing, setPrefs])
 
-  if (!current) return null
-  const Icon = current.icon
+  const Icon = current?.icon
   // L'essai ne parle que de lui : compter les vrais badges qui attendent leur
   // tour derrière lui donnerait un « et 3 autres » que rien ne vient expliquer.
   const others = previewing ? 0 : fresh.length - 1
 
+  /**
+   * Le portail reste monté, vide.
+   *
+   * `AnimatePresence` ne peut animer une sortie que s'il survit à ce qui s'en
+   * va : rendre `null` plus haut arrachait le carton d'un coup, et le fondu de
+   * disparition n'avait jamais lieu.
+   */
   return createPortal(
-    <div
-      className="pointer-events-none fixed inset-x-0 bottom-7 z-[70] flex justify-center px-4"
-      role="status"
-      aria-live="polite"
-    >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={current.id}
-          initial={calm ? { opacity: 0 } : { opacity: 0, y: 26, scale: 0.94 }}
-          animate={calm ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-          exit={calm ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.97 }}
-          transition={calm ? { duration: 0.18 } : { type: 'spring', stiffness: 420, damping: 26 }}
-          className="glass-blur flex items-center gap-3.5 rounded-2xl px-4 py-3 shadow-2xl"
-          style={{ border: `1px solid ${rgba(accent, 0.45)}` }}
-        >
-          <motion.span
-            aria-hidden
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full"
-            style={{ background: rgba(accent, 0.18) }}
-            // La médaille arrive un cran après la carte, et se pose : c'est ce
-            // geste-là qu'on regarde.
-            initial={calm ? false : { scale: 0.4, rotate: -25 }}
-            animate={calm ? false : { scale: 1, rotate: 0 }}
-            transition={{ type: 'spring', stiffness: 500, damping: 14, delay: 0.08 }}
+    <div className="pointer-events-none fixed inset-0 z-[70] grid place-items-center" role="status" aria-live="polite">
+      <AnimatePresence>
+        {current && Icon && (
+          <motion.div
+            key={current.id}
+            className="relative grid place-items-center"
+            // Un fondu, et rien d'autre : l'entrée et la sortie ne bougent pas
+            // de place. Ce qui tourne, ce sont les auréoles, dessous.
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: calm ? 0.2 : 0.55, ease: 'easeOut' }}
           >
-            <Icon size={22} />
-          </motion.span>
+            {/* Les auréoles tournent en CSS, pas par `motion` : rien de ce qui
+                tourne sans fin ne doit retenir `AnimatePresence`, qui attend
+                les animations dont il a la charge avant de démonter ce qui
+                s'en va. La règle `.reduce-motion` les arrête toute seule.
 
-          <span className="min-w-0">
-            <span className="block text-[0.64rem] font-bold uppercase tracking-[0.09em] text-muted">Badge obtenu</span>
-            <span className="block text-[0.95rem] font-semibold leading-tight">{current.label}</span>
-            <span className="block text-[0.74rem] leading-snug text-faint">
-              {current.hint}
-              {others > 0 ? ` · et ${others} autre${others > 1 ? 's' : ''}` : ''}
-            </span>
-          </span>
-        </motion.div>
+                Elles vivent dans un carré à la taille de la plus grande, et
+                centré sur la médaille : posées autour du bloc entier, elles se
+                centraient entre l'image et le texte, et les rayons barraient
+                le nom. */}
+            <div className="relative grid h-[300px] w-[300px] shrink-0 place-items-center">
+              {/* Une lueur qui pose le badge sur la page sans l'assombrir : ce
+                  n'est pas une modale, on continue derrière. */}
+              <div
+                aria-hidden
+                className="absolute h-[440px] w-[440px] rounded-full"
+                style={{ background: `radial-gradient(circle, ${rgba(accent, 0.22)} 0%, transparent 62%)` }}
+              />
+
+              {/* L'auréole : un balayage qui tourne lentement. */}
+              <div
+                aria-hidden
+                className="absolute h-[232px] w-[232px] rounded-full"
+                style={{
+                  background: `conic-gradient(from 0deg, transparent 0deg, ${rgba(accent, 0.5)} 60deg, transparent 150deg, transparent 360deg)`,
+                  maskImage: 'radial-gradient(circle, transparent 58%, #000 60%, #000 100%)',
+                  WebkitMaskImage: 'radial-gradient(circle, transparent 58%, #000 60%, #000 100%)',
+                  animation: 'badge-turn 7s linear infinite'
+                }}
+              />
+
+              {/* Les rayons, en sens inverse : deux vitesses valent mieux
+                  qu'une, l'œil y lit une profondeur. */}
+              <div
+                aria-hidden
+                className="absolute h-[300px] w-[300px] rounded-full"
+                style={{
+                  background: `repeating-conic-gradient(from 0deg, ${rgba(accent, 0.16)} 0deg 3deg, transparent 3deg 18deg)`,
+                  maskImage: 'radial-gradient(circle, transparent 52%, #000 66%, transparent 86%)',
+                  WebkitMaskImage: 'radial-gradient(circle, transparent 52%, #000 66%, transparent 86%)',
+                  animation: 'badge-turn-back 22s linear infinite'
+                }}
+              />
+
+              {/* Trois étincelles en orbite. */}
+              <div
+                aria-hidden
+                className="absolute h-[200px] w-[200px]"
+                style={{ animation: 'badge-turn 11s linear infinite' }}
+              >
+                {[0, 120, 240].map((angle) => (
+                  <span
+                    key={angle}
+                    className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full"
+                    style={{
+                      background: rgba(accent, 0.9),
+                      transform: `rotate(${angle}deg) translateY(-100px)`
+                    }}
+                  />
+                ))}
+              </div>
+
+              <span
+                className="relative grid h-[124px] w-[124px] place-items-center rounded-full"
+                style={{
+                  background: rgba(accent, 0.16),
+                  border: `1px solid ${rgba(accent, 0.45)}`,
+                  boxShadow: `0 18px 60px -18px ${rgba(accent, 0.75)}`
+                }}
+              >
+                <Icon size={52} strokeWidth={1.5} />
+              </span>
+            </div>
+
+            {/* Le nom, dessous et hors des auréoles. */}
+            <div className="relative -mt-3 flex flex-col items-center px-6 text-center">
+              <span className="flex flex-col items-center gap-1">
+                <span className="text-[0.66rem] font-bold uppercase tracking-[0.16em] text-muted">Badge obtenu</span>
+                <span className="text-[1.5rem] font-semibold leading-tight">{current.label}</span>
+                <span className="max-w-[22rem] text-[0.82rem] leading-snug text-faint">
+                  {current.hint}
+                  {others > 0 ? ` · et ${others} autre${others > 1 ? 's' : ''}` : ''}
+                </span>
+              </span>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>,
     document.body
