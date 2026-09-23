@@ -277,12 +277,18 @@
 
 /* ---- Badge obtenu : une vignette, pas une médaille.
    Cette expérience n'a ni rondeur ni fioriture — des affiches, des ombres
-   franches, du rouge. Les rayons s'en vont, la lueur reste et force le trait. */
+   franches, du rouge. La vignette porte son liseré rouge sur la tranche, comme
+   les marqueurs de cette interface, et ce qui tourne est un balayage de
+   projecteur : large, sourd, sans bord net. Les rayons s'en vont.
+
+   Un anneau carré dont un seul bord était coloré ne donnait pas un cadre mais
+   une barre en diagonale qui traversait l'écran. */
 :root[data-theme='xp-streaming'] .badge-medal {
   width: 132px;
   height: 132px;
   border-radius: 4px;
   border: 0;
+  border-left: 5px solid var(--badge-accent);
   background: var(--panel-2);
   box-shadow: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
 }
@@ -290,18 +296,24 @@
   display: none;
 }
 :root[data-theme='xp-streaming'] .badge-halo {
-  width: 188px;
-  height: 188px;
-  border-radius: 4px;
-  background: none;
-  mask-image: none;
-  border-left: 3px solid var(--badge-accent);
-  border-top: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-bottom: 3px solid transparent;
+  width: 300px;
+  height: 300px;
+  border-radius: 999px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in oklab, var(--badge-accent) 30%, transparent) 70deg,
+    transparent 170deg
+  );
+  mask-image: radial-gradient(circle, transparent 38%, #000 58%, transparent 96%);
+  animation-duration: 9s;
 }
 :root[data-theme='xp-streaming'] .badge-glow {
   background: radial-gradient(circle, color-mix(in oklab, var(--badge-accent) 30%, transparent) 0%, transparent 58%);
+}
+:root[data-theme='xp-streaming'] .badge-spark {
+  width: 5px;
+  height: 5px;
 }
 :root[data-theme='xp-streaming'] .badge-label {
   font-size: 1.7rem;
