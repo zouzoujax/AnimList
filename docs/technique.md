@@ -11,6 +11,7 @@ Chaque section explique un **pourquoi**, souvent mesuré plutôt que supposé.
 - [Pourquoi un script d'installation d'Electron](#pourquoi-un-script-dinstallation-delectron)
 - [Pourquoi la bande-annonce passe par un serveur local](#pourquoi-la-bande-annonce-passe-par-un-serveur-local)
 - [Régénérer les captures](#régénérer-les-captures)
+- [Pourquoi l'installeur est dessiné à la main](#pourquoi-linstalleur-est-dessiné-à-la-main)
 - [Publier une mise à jour](#publier-une-mise-à-jour)
 - [Feuille de route](#feuille-de-route)
 
@@ -255,6 +256,42 @@ Trois choix qui expliquent le résultat :
 
 Les images sont en JPEG et non en PNG : ce sont surtout des jaquettes, que PNG stocke mal — les
 mêmes huit pages pesaient 8,7 Mo en PNG contre 1,7 Mo ici.
+
+## Pourquoi l'installeur est dessiné à la main
+
+L'assistant par défaut d'electron-builder, c'est MUI : le bandeau gris, le panneau latéral vide,
+« < Précédent | Suivant > | Annuler ». Il a l'âge de Windows 2000 et il est la première chose que
+voit quelqu'un qui installe AnimeList.
+
+`build/installer.nsh` le remplace, sans changer de moteur. electron-builder greffe ce fichier
+avant MUI2 et avant la déclaration des pages (`nsis.include`), ce qui laisse la main sur les
+`!define` de MUI, sur les macros `customPageAfterChangeDir`, `customFinishPage`, `customInstall`,
+et permet de glisser un `MUI_PAGE_CUSTOMFUNCTION_SHOW` juste avant la page d'installation. NSIS
+reste donc le moteur : `electron-updater` continue de lancer le même `.exe` avec `/S`, et la mise
+à jour silencieuse ne voit rien de tout cela.
+
+Trois écrans, plus d'assistant : le dossier et le bouton « Installer », la progression, puis
+« Lancer AnimeList ». Les pages de MUI ne sont pas remplacées mais déshabillées — en-tête,
+boutons, pied et traits masqués, boîte intérieure étirée sur toute la fenêtre — puis nos contrôles
+sont posés dessus, aux mêmes pixels d'une page à l'autre pour que le passage ne déplace rien.
+
+Quatre pièges ont coûté un aller-retour chacun :
+
+- **Un bouton ne se colore pas.** Windows n'envoie jamais `WM_CTLCOLORBTN` à un bouton poussoir :
+  il reste gris quoi qu'on lui dise. Les boutons sont donc des `STATIC` avec `SS_NOTIFY`, qui se
+  cliquent aussi bien et acceptent `SetCtlColors`.
+- **L'apostrophe tue.** `System::Call 'user32::CreateWindowExW(..., w "Dossier d'installation")'`
+  se coupe en deux au `d'` : le script compile, et l'installeur meurt à l'affichage sans un mot,
+  après avoir installé. Tous les `System::Call` sont délimités par des accents graves.
+- **Un membre de structure laissé vide se sert sur la pile.** `*$1(i, i, i .r2, i .r3)` dépile
+  deux valeurs sauvegardées au lieu d'ignorer deux champs ; on lit les quatre coins du `RECT`.
+- **`SendMessage` depuis la section bloque tout.** Passer à la page de fin depuis `customInstall`
+  demande `PostMessage` : la section tourne dans son propre fil, et attendre que le fil de
+  l'interface change de page les fige tous les deux — barre arrêtée à un quart, fenêtre disparue.
+
+Dernier détail, pour la barre de progression : tant qu'elle garde son thème visuel elle reste
+verte, et tant qu'elle garde son liseré `WS_EX_STATICEDGE` sa gouttière reste blanche même après
+`PBM_SETBKCOLOR`. Il faut les deux.
 
 ## Publier une mise à jour
 

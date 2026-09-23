@@ -22,7 +22,10 @@ win:
 nsis:
   oneClick: false
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  # Le dossier se choisit sur notre propre page (build/installer.nsh), pas sur
+  # la page grise de MUI : on désactive donc celle d'electron-builder.
+  allowToChangeInstallationDirectory: false
+  include: build/installer.nsh
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: AnimeList
