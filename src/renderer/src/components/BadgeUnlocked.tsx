@@ -38,7 +38,6 @@ import { firstInventory, freshBadges, MAX_CHEERS, withUnlocked } from '@shared/b
 import { endBadgePreview, isPreviewingBadge, subscribeBadgePreview } from '@/lib/badge-preview'
 import { useBadgeWall, type Badge } from '@/lib/badges'
 import { playBadgeChime } from '@/lib/chime'
-import { rgba } from '@/lib/color'
 import { useApp } from '@/store/app'
 
 /** Le temps d'un carton : assez pour lire trois lignes, pas pour gêner. */
@@ -159,11 +158,20 @@ export function BadgeUnlocked(): React.JSX.Element | null {
         {current && Icon && (
           <motion.div
             key={current.id}
-            // Le voile couvre toute la fenêtre et s'efface avec le badge : la
-            // page s'assombrit pour le temps de l'annonce, sans rien retenir —
-            // la couche ne prend pas les clics, on continue de cocher derrière.
-            className="absolute inset-0 grid place-items-center"
-            style={{ background: 'rgba(4, 4, 10, 0.82)' }}
+            /*
+             * L'habillage vit dans la feuille de style, pas ici.
+             *
+             * Vingt thèmes, et chacun sa langue : Papier est plat et éditorial,
+             * Terminal n'a ni ombre ni rondeur, Arcade est en marches de pixels.
+             * Des couleurs écrites dans le composant les auraient tous habillés
+             * en Nébuleuse. Le composant pose donc des classes et l'accent, et
+             * `styles.css` fait le reste — comme pour le reste de l'app.
+             *
+             * Le voile couvre la fenêtre et s'efface avec le badge ; il ne prend
+             * pas les clics : rien n'attend de réponse, on coche derrière.
+             */
+            className="badge-cheer"
+            style={{ '--badge-accent': accent } as React.CSSProperties}
             // Un fondu, et rien d'autre : l'entrée et la sortie ne bougent pas
             // de place. Ce qui tourne, ce sont les auréoles, dessous.
             initial={{ opacity: 0 }}
@@ -173,73 +181,25 @@ export function BadgeUnlocked(): React.JSX.Element | null {
           >
             {/* Les auréoles tournent en CSS, pas par `motion` : rien de ce qui
                 tourne sans fin ne doit retenir `AnimatePresence`, qui attend
-                les animations dont il a la charge avant de démonter ce qui
-                s'en va. La règle `.reduce-motion` les arrête toute seule.
+                les animations dont il a la charge avant de démonter ce qui s'en
+                va. La règle `.reduce-motion` les arrête toute seule.
 
-                Elles vivent dans un carré à la taille de la plus grande, et
-                centré sur la médaille : posées autour du bloc entier, elles se
-                centraient entre l'image et le texte, et les rayons barraient
-                le nom. */}
-            <div className="relative grid h-[300px] w-[300px] shrink-0 place-items-center">
-              {/* Une lueur qui pose le badge sur la page sans l'assombrir : ce
-                  n'est pas une modale, on continue derrière. */}
-              <div
-                aria-hidden
-                className="absolute h-[440px] w-[440px] rounded-full"
-                style={{ background: `radial-gradient(circle, ${rgba(accent, 0.22)} 0%, transparent 62%)` }}
-              />
-
-              {/* L'auréole : un balayage qui tourne lentement. */}
-              <div
-                aria-hidden
-                className="absolute h-[232px] w-[232px] rounded-full"
-                style={{
-                  background: `conic-gradient(from 0deg, transparent 0deg, ${rgba(accent, 0.5)} 60deg, transparent 150deg, transparent 360deg)`,
-                  maskImage: 'radial-gradient(circle, transparent 58%, #000 60%, #000 100%)',
-                  WebkitMaskImage: 'radial-gradient(circle, transparent 58%, #000 60%, #000 100%)',
-                  animation: 'badge-turn 7s linear infinite'
-                }}
-              />
-
-              {/* Les rayons, en sens inverse : deux vitesses valent mieux
-                  qu'une, l'œil y lit une profondeur. */}
-              <div
-                aria-hidden
-                className="absolute h-[300px] w-[300px] rounded-full"
-                style={{
-                  background: `repeating-conic-gradient(from 0deg, ${rgba(accent, 0.16)} 0deg 3deg, transparent 3deg 18deg)`,
-                  maskImage: 'radial-gradient(circle, transparent 52%, #000 66%, transparent 86%)',
-                  WebkitMaskImage: 'radial-gradient(circle, transparent 52%, #000 66%, transparent 86%)',
-                  animation: 'badge-turn-back 22s linear infinite'
-                }}
-              />
+                Elles vivent dans un carré centré sur la médaille : posées
+                autour du bloc entier, elles se centraient entre l'image et le
+                texte, et les rayons barraient le nom. */}
+            <div className="badge-stage">
+              <div aria-hidden className="badge-glow" />
+              <div aria-hidden className="badge-halo" />
+              <div aria-hidden className="badge-rays" />
 
               {/* Trois étincelles en orbite. */}
-              <div
-                aria-hidden
-                className="absolute h-[200px] w-[200px]"
-                style={{ animation: 'badge-turn 11s linear infinite' }}
-              >
+              <div aria-hidden className="badge-orbit">
                 {[0, 120, 240].map((angle) => (
-                  <span
-                    key={angle}
-                    className="absolute left-1/2 top-1/2 h-1.5 w-1.5 rounded-full"
-                    style={{
-                      background: rgba(accent, 0.9),
-                      transform: `rotate(${angle}deg) translateY(-100px)`
-                    }}
-                  />
+                  <span key={angle} className="badge-spark" style={{ '--badge-angle': `${angle}deg` } as React.CSSProperties} />
                 ))}
               </div>
 
-              <span
-                className="relative grid h-[124px] w-[124px] place-items-center rounded-full"
-                style={{
-                  background: rgba(accent, 0.16),
-                  border: `1px solid ${rgba(accent, 0.45)}`,
-                  boxShadow: `0 18px 60px -18px ${rgba(accent, 0.75)}`
-                }}
-              >
+              <span className="badge-medal">
                 <Icon size={52} strokeWidth={1.5} />
               </span>
 
@@ -251,12 +211,10 @@ export function BadgeUnlocked(): React.JSX.Element | null {
                 retrouvait au-dessus du milieu de l'écran. Ce qu'on veut voir
                 centré, c'est elle.
               */}
-              <div className="absolute left-1/2 top-full w-[24rem] -translate-x-1/2 -translate-y-3 px-4 text-center">
-                <span className="block text-[0.66rem] font-bold uppercase tracking-[0.16em] text-muted">
-                  Badge obtenu
-                </span>
-                <span className="mt-1 block text-[1.5rem] font-semibold leading-tight">{current.label}</span>
-                <span className="mt-1 block text-[0.82rem] leading-snug text-faint">
+              <div className="badge-name">
+                <span className="badge-kicker">Badge obtenu</span>
+                <span className="badge-label">{current.label}</span>
+                <span className="badge-hint">
                   {current.hint}
                   {others > 0 ? ` · et ${others} autre${others > 1 ? 's' : ''}` : ''}
                 </span>

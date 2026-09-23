@@ -800,3 +800,145 @@
     rotate: calc(var(--ray-rotate) + var(--ray-swing));
   }
 }
+
+/* ══════════════════════════════════════════════════ BADGE OBTENU
+   L'annonce d'un badge, habillée par chaque thème. Sa base est dans
+   `styles.css` et ne parle qu'en jetons ; ici, seulement ce que ces
+   thèmes-là disent autrement. */
+
+/* ---- Arcade : tout est en marches. La rotation avance par crans, les angles
+   sont droits, et la médaille porte le liseré de pixels du thème. */
+:root[data-theme='arcade'] .badge-medal {
+  border-radius: 0;
+  border: 0;
+  background: var(--panel-2);
+  box-shadow: var(--pixel-edge);
+}
+:root[data-theme='arcade'] .badge-glow {
+  display: none;
+}
+:root[data-theme='arcade'] .badge-halo,
+:root[data-theme='arcade'] .badge-orbit {
+  animation-timing-function: steps(16);
+}
+:root[data-theme='arcade'] .badge-rays {
+  animation-timing-function: steps(24);
+  background: repeating-conic-gradient(
+    from 0deg,
+    color-mix(in oklab, var(--badge-accent) 30%, transparent) 0deg 6deg,
+    transparent 6deg 24deg
+  );
+}
+:root[data-theme='arcade'] .badge-spark {
+  border-radius: 0;
+  width: 8px;
+  height: 8px;
+}
+:root[data-theme='arcade'] .badge-label {
+  font-size: 1.1rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-shadow: 3px 3px 0 #2563eb;
+}
+
+/* ---- Cyberpunk : angles coupés, comme les panneaux du thème. */
+:root[data-theme='cyber'] .badge-medal {
+  border-radius: 0;
+  clip-path: var(--chamfer);
+  background: color-mix(in oklab, var(--badge-accent) 18%, var(--panel-2));
+}
+/* Les rayons seuls perdent leur rondeur : le halo, lui, est un dégradé
+   conique — à angles droits et masqué en rond, il ne donnerait qu'une forme
+   bâtarde. */
+:root[data-theme='cyber'] .badge-rays {
+  border-radius: 0;
+}
+:root[data-theme='cyber'] .badge-rays {
+  animation-duration: 14s;
+}
+:root[data-theme='cyber'] .badge-spark {
+  border-radius: 0;
+}
+
+/* ---- Manga : encre et trame. Un cercle tracé à la plume, des points au lieu
+   des rayons, et rien qui brille — la page est blanche. */
+:root[data-theme='manga'] .badge-glow {
+  display: none;
+}
+:root[data-theme='manga'] .badge-medal {
+  background: var(--panel);
+  border: 2px solid var(--line-2);
+  box-shadow: 4px 4px 0 var(--line-2);
+}
+:root[data-theme='manga'] .badge-halo {
+  background: conic-gradient(from 0deg, transparent 0deg, var(--line-2) 50deg, transparent 130deg);
+}
+:root[data-theme='manga'] .badge-rays {
+  background: radial-gradient(circle, var(--line-2) 1.2px, transparent 1.4px) 0 0 / 10px 10px;
+  mask-image: radial-gradient(circle, transparent 54%, #000 62%, transparent 82%);
+}
+:root[data-theme='manga'] .badge-spark {
+  background: var(--line-2);
+}
+
+/* ---- Kawaii : pastel et tout rond. Les rayons deviennent des bulles, et la
+   médaille garde son ombre douce. */
+:root[data-theme='kawaii'] .badge-medal {
+  border: 2px solid color-mix(in oklab, var(--badge-accent) 35%, #ffffff);
+  background: color-mix(in oklab, var(--badge-accent) 12%, #ffffff);
+  box-shadow: 0 10px 24px -12px color-mix(in oklab, var(--badge-accent) 60%, transparent);
+}
+:root[data-theme='kawaii'] .badge-rays {
+  background: radial-gradient(circle, color-mix(in oklab, var(--badge-accent) 45%, transparent) 3px, transparent 4px) 0
+    0 / 26px 26px;
+  mask-image: radial-gradient(circle, transparent 52%, #000 66%, transparent 88%);
+  animation-duration: 30s;
+}
+:root[data-theme='kawaii'] .badge-spark {
+  width: 9px;
+  height: 9px;
+}
+
+/* ---- Liquid Glass : un reflet d'or qui tourne, pas un néon. */
+:root[data-theme='liquid'] .badge-halo {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    color-mix(in oklab, var(--badge-accent) 85%, #ffffff) 40deg,
+    transparent 110deg
+  );
+  animation-duration: 9s;
+}
+:root[data-theme='liquid'] .badge-medal {
+  background: color-mix(in oklab, var(--badge-accent) 10%, var(--panel-2));
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, #ffffff 35%, transparent),
+    0 18px 60px -18px color-mix(in oklab, var(--badge-accent) 60%, transparent);
+}
+
+/* ---- Bento et Carbon : des blocs, pas des médailles. */
+:root[data-theme='bento'] .badge-medal,
+:root[data-theme='ds-carbon'] .badge-medal {
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--panel-2);
+  border: 1px solid var(--line-2);
+}
+:root[data-theme='bento'] .badge-glow,
+:root[data-theme='ds-carbon'] .badge-glow {
+  display: none;
+}
+:root[data-theme='bento'] .badge-rays,
+:root[data-theme='ds-carbon'] .badge-rays {
+  border-radius: 0;
+}
+
+/* ---- OLED : noir pur, rien qui déborde. Une seule auréole, très fine. */
+:root[data-theme='oled'] .badge-glow {
+  display: none;
+}
+:root[data-theme='oled'] .badge-medal {
+  background: #000000;
+  border: 1px solid color-mix(in oklab, var(--badge-accent) 55%, transparent);
+  box-shadow: none;
+}
