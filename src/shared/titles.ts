@@ -102,16 +102,6 @@ export function searchVariants(base: string): string[] {
   return out
 }
 
-/**
- * Substring match that ignores punctuation, spacing and accents, so "rezero"
- * and "re zero" both find "Re:Zero kara Hajimeru Isekai Seikatsu".
- */
-export function titleMatches(needle: string, titles: (string | null | undefined)[]): boolean {
-  const flat = compact(needle)
-  if (!flat) return true
-  return titles.some((title) => title && compact(title).includes(flat))
-}
-
 /** Levenshtein similarity in [0,1]. */
 export function similarity(a: string, b: string): number {
   if (!a.length || !b.length) return 0

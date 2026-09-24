@@ -13,8 +13,8 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Media } from '@shared/types'
-import { titleMatches } from '@shared/titles'
 import { useBrowse, useDebounced } from '@/lib/hooks'
+import { useMatcher } from '@/lib/search'
 import { SETTINGS_SECTIONS, fold } from '@/lib/settings-sections'
 import { formatLabel, titleOf } from '@/lib/format'
 import { useApp, type Route } from '@/store/app'
@@ -80,18 +80,31 @@ function Palette(): React.JSX.Element {
     return () => clearTimeout(t)
   }, [])
 
+  const matches = useMatcher()
+
+  /**
+   * Les séries de la bibliothèque qui répondent, les plus franches d'abord.
+   *
+   * On ne s'arrête plus à la sixième rencontrée : depuis que l'appariement
+   * tolère les abréviations et les fautes, la sixième trouvée dans l'ordre des
+   * identifiants n'est pas la sixième meilleure — la bonne réponse pouvait
+   * rester dehors pendant que cinq approximations passaient devant.
+   */
   const local = useMemo(() => {
     const needle = query.trim()
     if (!needle) return []
-    const out: Media[] = []
+    const found: { media: Media; score: number }[] = []
     for (const id of entries.keys()) {
       const media = mediaMap.get(id)
       if (!media) continue
-      if (titleMatches(needle, [media.title.romaji, media.title.english, media.title.native])) out.push(media)
-      if (out.length >= 6) break
+      const score = matches(needle, media)
+      if (score > 0) found.push({ media, score })
     }
-    return out
-  }, [query, entries, mediaMap])
+    return found
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 6)
+      .map((row) => row.media)
+  }, [query, entries, mediaMap, matches])
 
   const items = useMemo<Item[]>(() => {
     const needle = query.trim().toLowerCase()

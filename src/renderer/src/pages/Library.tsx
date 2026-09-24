@@ -16,7 +16,6 @@ import {
 import { motion } from 'motion/react'
 import { useMemo, useState } from 'react'
 import { GENRE_LABELS, STATUS_LABELS, type Entry, type LibraryStatus, type Media } from '@shared/types'
-import { titleMatches } from '@shared/titles'
 import { AnimeCard } from '@/components/AnimeCard'
 import BulkBar from '@/components/BulkBar'
 import ListPicker from '@/components/ListPicker'
@@ -24,6 +23,7 @@ import { EmptyState, Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { isUnaired, titleOf } from '@/lib/format'
 import { useSessionState } from '@/lib/hooks'
+import { useMatcher } from '@/lib/search'
 import { nextEpisodeOf, useApp } from '@/store/app'
 
 type Filter = LibraryStatus | 'all' | 'favorites'
@@ -261,8 +261,11 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
     return out
   }, [rows, watched, sequelOf])
 
+  const matches = useMatcher()
+
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
+    const scores = new Map<number, number>()
     const inList = activeList ? new Set(activeList.animeIds) : null
     // Une recherche explicite doit retrouver une saison repliée.
     const hide = !showSequels && !needle && folded.size > 0
@@ -272,13 +275,22 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
       if (filter === 'favorites' ? !entry.favorite : filter !== 'all' && entry.status !== filter) return false
       if (genre && !media.genres.includes(genre)) return false
       if (!needle) return true
-      return titleMatches(needle, [media.title.romaji, media.title.english, media.title.native])
+      // Tolérante : abréviation, mots dans le désordre, faute de frappe,
+      // surnom. Le score sert ensuite à ranger — sans lui, une réponse
+      // approximative pourrait arriver avant le titre exact.
+      const score = matches(needle, media)
+      if (score > 0) scores.set(media.id, score)
+      return score > 0
     })
 
     const progress = (id: number, total: number | null): number =>
       total ? (watched.get(id)?.size ?? 0) / total : (watched.get(id)?.size ?? 0) / 100
 
     return filtered.sort((a, b) => {
+      if (needle) {
+        const gap = (scores.get(b.media.id) ?? 0) - (scores.get(a.media.id) ?? 0)
+        if (gap !== 0) return gap
+      }
       switch (sort) {
         case 'title':
           return titleOf(a.media, lang).localeCompare(titleOf(b.media, lang), 'fr')
@@ -295,7 +307,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
           )
       }
     })
-  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched, activeList, folded, showSequels])
+  }, [rows, filter, genre, search, sort, lang, lastWatchAt, watched, activeList, folded, showSequels, matches])
 
   if (rows.length === 0) {
     return (
@@ -470,7 +482,16 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
       </div>
 
       {visible.length === 0 ? (
-        <p className="py-16 text-center text-sm text-faint">Aucun anime ne correspond à ces filtres.</p>
+        <p className="mx-auto max-w-[46ch] py-16 text-center text-sm leading-relaxed text-faint">
+          {search.trim() ? (
+            <>
+              Rien ne répond à « {search.trim()} ». La recherche pardonne les accents, les abréviations et les fautes de
+              frappe — si tu l’appelles autrement, donne-lui ce surnom depuis sa fiche.
+            </>
+          ) : (
+            'Aucun anime ne correspond à ces filtres.'
+          )}
+        </p>
       ) : view === 'grid' ? (
         <div className="card-grid">
           {visible.map(({ media }, i) =>

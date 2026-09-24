@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { baseAndSeason, compact, searchVariants, similarity, siteSlug, slugify, titleMatches } from './titles'
+import { baseAndSeason, compact, searchVariants, similarity, siteSlug, slugify } from './titles'
 
 describe('baseAndSeason', () => {
   it.each([
@@ -73,30 +73,6 @@ describe('siteSlug', () => {
 
   it('strips accents', () => {
     expect(siteSlug('Naruto Shippūden')).toBe('naruto-shippuden')
-  })
-})
-
-describe('titleMatches', () => {
-  const rezero = ['Re:Zero kara Hajimeru Isekai Seikatsu', 'Re:ZERO -Starting Life in Another World-']
-
-  it.each(['rezero', 're zero', 're:zero', 'RE ZERO', 'hajimeru'])('finds Re:Zero from %s', (needle) => {
-    expect(titleMatches(needle, rezero)).toBe(true)
-  })
-
-  it('still matches a plain substring', () => {
-    expect(titleMatches('dxd', ['High School DxD'])).toBe(true)
-  })
-
-  it('rejects an unrelated needle', () => {
-    expect(titleMatches('bebop', rezero)).toBe(false)
-  })
-
-  it('treats an empty needle as a match-all', () => {
-    expect(titleMatches('', rezero)).toBe(true)
-  })
-
-  it('ignores null titles', () => {
-    expect(titleMatches('naruto', [null, undefined, 'NARUTO'])).toBe(true)
   })
 })
 

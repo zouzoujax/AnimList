@@ -33,6 +33,7 @@ import {
   type Media,
   type MediaDetail
 } from '@shared/types'
+import { aliasesOf, parseAliases } from '@shared/search'
 import { MiniCard } from '@/components/AnimeCard'
 import EpisodeEditor from '@/components/EpisodeEditor'
 import ListPicker from '@/components/ListPicker'
@@ -540,6 +541,8 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
   const lang = useApp((s) => s.prefs.titleLang)
   const seenCount = useApp((s) => s.watched.get(id)?.size ?? 0)
   const defaultRuntime = useApp((s) => s.prefs.defaultRuntime)
+  const aliases = useApp((s) => s.prefs.aliases)
+  const setPrefs = useApp((s) => s.setPrefs)
   /**
    * Le même total que celui que la fiche affiche.
    *
@@ -573,6 +576,14 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
    */
   const [synopsis] = useTranslated(media?.description ? [media.description] : [])
   const [draft, setDraft] = useState<{ animeId: number; text: string }>({ animeId: id, text: entry?.notes ?? '' })
+  /**
+   * Les surnoms en cours de frappe.
+   *
+   * À part des préférences le temps de la saisie, comme le mot de passe de la
+   * télécommande : découper sur les virgules à chaque touche effacerait celle
+   * qu'on vient de taper. Ils partent quand on quitte le champ.
+   */
+  const [nicknames, setNicknames] = useState<{ animeId: number; text: string } | null>(null)
   const [expanded, setExpanded] = useState(false)
   // ESSAI — arbre des franchises. Ici, et non dans la grille : l'arbre n'a
   // besoin que d'un identifiant, alors que la grille n'est pas même montée
@@ -674,6 +685,20 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
     setNotes(value)
     if (notesTimer.current) clearTimeout(notesTimer.current)
     notesTimer.current = setTimeout(() => void patch({ notes: value }), 600)
+  }
+
+  /** Enregistre les surnoms quand on quitte le champ, rangés et dédoublonnés. */
+  const saveNicknames = (text: string): void => {
+    const kept = parseAliases(text)
+    const before = aliasesOf(aliases, id)
+    setNicknames(null)
+    if (kept.join(' ') === before.join(' ')) return
+    const next = { ...aliases }
+    // Effacé : on retire la clé plutôt que d'y laisser un tableau vide, qui
+    // finirait par peupler les préférences d'une ligne par série ouverte.
+    if (kept.length) next[String(id)] = kept
+    else delete next[String(id)]
+    void setPrefs({ aliases: next })
   }
 
   const toggleEmotion = async (emotion: EmotionId): Promise<void> => {
@@ -1008,6 +1033,30 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
           placeholder="Une pensée, un moment marquant…"
           className="field w-full !h-auto resize-y py-2 text-[0.8rem] leading-relaxed"
         />
+
+        {/* La recherche pardonne déjà les accents, les abréviations et les
+            fautes de frappe. Ce qu'elle ne peut pas deviner, c'est le nom que
+            tu lui donnes, toi, et qu'aucun des trois titres ne contient. */}
+        <h3 className="label mb-2 mt-5">Ses surnoms</h3>
+        <input
+          type="text"
+          value={nicknames?.animeId === id ? nicknames.text : aliasesOf(aliases, id).join(', ')}
+          onChange={(e) => setNicknames({ animeId: id, text: e.target.value })}
+          onBlur={(e) => saveNicknames(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') {
+              setNicknames(null)
+              e.currentTarget.blur()
+            }
+          }}
+          placeholder="jjk, le truc des sorciers"
+          className="field w-full !h-[34px] text-[0.8rem]"
+          spellCheck={false}
+        />
+        <p className="mt-1.5 text-[0.72rem] leading-snug text-faint">
+          Séparés par des virgules. Ils ne servent qu'à retrouver la série dans ta bibliothèque.
+        </p>
       </div>
     ),
     info: (

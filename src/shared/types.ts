@@ -604,6 +604,17 @@ export interface Prefs {
   backupFolder: string | null
   /** Quand la dernière copie a été écrite. Zéro tant qu'il n'y en a pas eu. */
   backupAt: number
+  /**
+   * Les surnoms donnés à une série, par identifiant.
+   *
+   * « jjk », « le truc des sorciers » : ce que tu tapes pour la retrouver et
+   * qu'aucun de ses trois titres ne contient. Dans les préférences et non dans
+   * l'entrée de bibliothèque, comme `sequelOf` et `tvtimeOverrides` : c'est un
+   * réglage de recherche, pas une donnée du registre, et l'y mettre
+   * demanderait une migration pour un champ qu'on peut retaper en deux
+   * secondes.
+   */
+  aliases: Record<string, string[]>
 }
 
 /** Ce que les Réglages montrent de la sauvegarde automatique. */
@@ -1053,5 +1064,6 @@ export const DEFAULT_PREFS: Prefs = {
   badgesAt: null,
   badgeSound: true,
   backupFolder: null,
-  backupAt: 0
+  backupAt: 0,
+  aliases: {}
 }
