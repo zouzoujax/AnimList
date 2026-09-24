@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { firstInventory, freshBadges, UNKNOWN_DATE, unlockedAt, withUnlocked } from './badge-log'
+import { firstInventory, freshBadges, isEarned, UNKNOWN_DATE, unlockedAt, withUnlocked } from './badge-log'
 
 const NOW = 1790000000000
 
@@ -78,5 +78,27 @@ describe('unlockedAt', () => {
     expect(unlockedAt('a', { a: UNKNOWN_DATE })).toBe(UNKNOWN_DATE)
     expect(unlockedAt('a', {})).toBeNull()
     expect(unlockedAt('a', null)).toBeNull()
+  })
+})
+
+describe('isEarned', () => {
+  it('acquis quand la condition est remplie maintenant', () => {
+    expect(isEarned(1, null)).toBe(true)
+    expect(isEarned(1.4, null)).toBe(true)
+  })
+
+  it('pas acquis quand rien n’est atteint et que le registre est muet', () => {
+    expect(isEarned(0.98, null)).toBe(false)
+  })
+
+  it('reste acquis quand le compte repasse sous la barre', () => {
+    // 49 épisodes de week-end sur 50 après un décochage, mais le badge est
+    // tombé le 24 septembre : il ne se reprend pas.
+    expect(isEarned(0.98, NOW)).toBe(true)
+  })
+
+  it('reste acquis même sans date connue', () => {
+    // Les badges d'avant le registre : inscrits, datés de rien.
+    expect(isEarned(0.5, UNKNOWN_DATE)).toBe(true)
   })
 })

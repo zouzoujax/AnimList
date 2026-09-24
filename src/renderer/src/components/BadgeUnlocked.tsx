@@ -50,7 +50,7 @@ export function BadgeUnlocked(): React.JSX.Element | null {
   const setPrefs = useApp((s) => s.setPrefs)
   const { badges } = useBadgeWall()
 
-  const unlocked = badges.filter((b) => b.progress >= 1)
+  const unlocked = badges.filter((b) => b.earned)
   const fresh = freshBadges(
     unlocked.map((b) => b.id),
     log
@@ -73,7 +73,7 @@ export function BadgeUnlocked(): React.JSX.Element | null {
   useEffect(() => {
     if (!ready || log !== null || writing.current) return
     writing.current = true
-    const inventaire = firstInventory(badges.filter((b) => b.progress >= 1).map((b) => b.id))
+    const inventaire = firstInventory(badges.filter((b) => b.earned).map((b) => b.id))
     void setPrefs({ badgesAt: inventaire }).finally(() => {
       writing.current = false
     })

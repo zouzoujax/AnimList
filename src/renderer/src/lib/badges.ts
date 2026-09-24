@@ -98,7 +98,7 @@ import {
   Infinity as InfinityIcon
 } from 'lucide-react'
 import { useMemo } from 'react'
-import { unlockedAt, UNKNOWN_DATE } from '@shared/badge-log'
+import { isEarned, UNKNOWN_DATE, unlockedAt } from '@shared/badge-log'
 import { formatDate, startOfDay } from '@/lib/format'
 import { useApp } from '@/store/app'
 
@@ -138,7 +138,11 @@ export interface Badge {
   label: string
   hint: string
   icon: typeof Trophy
-  /** 1 or more means unlocked; below that it drives the progress bar. */
+  /**
+   * L'avancement du moment : 1 ou plus, la condition est remplie aujourd'hui.
+   * En dessous, il remplit la barre. Il ne dit pas à lui seul si le badge est
+   * acquis — un badge gagné le reste, voir `earned`.
+   */
   progress: number
   group: string
   /**
@@ -146,6 +150,14 @@ export interface Badge {
    * registre n'existe, `null` s'il n'y est pas encore inscrit.
    */
   unlockedAt: number | null
+  /**
+   * Acquis, une fois pour toutes.
+   *
+   * La condition est remplie maintenant, ou elle l'a été un jour et le
+   * registre s'en souvient. C'est ce qu'il faut regarder pour allumer une
+   * médaille ; `progress` ne sert plus qu'à la barre.
+   */
+  earned: boolean
 }
 
 /**
@@ -156,7 +168,7 @@ export interface Badge {
  * même chose finiraient par diverger.
  */
 export function badgeTitle(badge: Badge): string {
-  if (badge.progress < 1) {
+  if (!badge.earned) {
     return `${Math.round(Math.min(1, Math.max(0, badge.progress)) * 100)} % — ${badge.hint}`
   }
   if (badge.unlockedAt === null) return `Débloqué — ${badge.hint}`
@@ -444,8 +456,9 @@ export function useBadgeWall(): { stats: BadgeStats; badges: Badge[] } {
     }
   }, [events, entries, mediaMap])
 
-  // Sans la date : elle n'est pas calculée mais lue dans le registre, plus bas.
-  const badges = useMemo<Omit<Badge, 'unlockedAt'>[]>(() => {
+  // Ni la date ni « acquis » : la première est lue dans le registre plus bas,
+  // le second s'en déduit. Ici on ne calcule que l'avancement du moment.
+  const badges = useMemo<Omit<Badge, 'unlockedAt' | 'earned'>[]>(() => {
     const hours = stats.minutes / 60
     const days = stats.minutes / 1440
     return [
@@ -1248,7 +1261,11 @@ export function useBadgeWall(): { stats: BadgeStats; badges: Badge[] } {
   // n'ont donc pas leur place dans le calcul qui précède.
   const log = useApp((s) => s.prefs.badgesAt)
   const dated = useMemo<Badge[]>(
-    () => badges.map((badge) => ({ ...badge, unlockedAt: unlockedAt(badge.id, log) })),
+    () =>
+      badges.map((badge) => {
+        const at = unlockedAt(badge.id, log)
+        return { ...badge, unlockedAt: at, earned: isEarned(badge.progress, at) }
+      }),
     [badges, log]
   )
 

@@ -61,7 +61,7 @@ function Part({
  * une liste d'objectifs. Une ligne dit ce qu'il faut faire et où tu en es.
  */
 function BadgeRow({ badge }: { badge: Badge }): React.JSX.Element {
-  const done = badge.progress >= 1
+  const done = badge.earned
   const pct = Math.min(1, Math.max(0, badge.progress))
   const Icon = badge.icon
   return (
@@ -261,12 +261,12 @@ export default function NdStatsPage({ focus }: { focus?: 'badges' }): React.JSX.
     )
   }
 
-  const unlocked = badges.filter((b) => b.progress >= 1).length
+  const unlocked = badges.filter((b) => b.earned).length
   const shownBadges =
     badgeFilter === 'done'
-      ? badges.filter((b) => b.progress >= 1)
+      ? badges.filter((b) => b.earned)
       : badgeFilter === 'todo'
-        ? badges.filter((b) => b.progress < 1).sort((a, b) => b.progress - a.progress)
+        ? badges.filter((b) => !b.earned).sort((a, b) => b.progress - a.progress)
         : badges
 
   // Les chiffres de détail, en liste : l'intitulé à gauche, la valeur à droite.
@@ -508,7 +508,7 @@ export default function NdStatsPage({ focus }: { focus?: 'badges' }): React.JSX.
               const list = shownBadges.filter((b) => b.group === group)
               if (!list.length) return null
               const whole = badges.filter((b) => b.group === group)
-              const done = whole.filter((b) => b.progress >= 1).length
+              const done = whole.filter((b) => b.earned).length
               return (
                 <div key={group}>
                   <h3 className="mb-2 px-1 text-[0.95rem] font-semibold">

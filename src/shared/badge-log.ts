@@ -80,3 +80,22 @@ export function unlockedAt(id: string, log: Record<string, number> | null): numb
   if (!log) return null
   return id in log ? log[id] : null
 }
+
+/**
+ * Un badge est-il acquis ?
+ *
+ * Deux sources, et le registre l'emporte : le compte du moment dit si la
+ * condition est remplie **aujourd'hui**, le registre dit si elle l'a été un
+ * jour. Un badge gagné reste gagné.
+ *
+ * Sans cette règle, décocher un épisode éteignait une médaille obtenue des
+ * semaines plus tôt : le mur disait « 49 sur 50 » pendant que le registre
+ * gardait sa date, et les deux se contredisaient à l'écran. Corriger une
+ * erreur de pointage ne devrait rien retirer à ce qui a été regardé.
+ *
+ * La progression, elle, continue de dire la vérité du moment — c'est elle qui
+ * remplit la barre tant que le badge n'est pas tombé.
+ */
+export function isEarned(progress: number, unlockedAt: number | null): boolean {
+  return progress >= 1 || unlockedAt !== null
+}

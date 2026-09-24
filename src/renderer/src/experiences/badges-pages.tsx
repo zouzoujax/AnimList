@@ -19,19 +19,19 @@ function useWall(filter: Filter): {
   groups: { group: string; list: Badge[]; done: number; total: number }[]
 } {
   const { badges } = useBadgeWall()
-  const unlocked = badges.filter((b) => b.progress >= 1).length
+  const unlocked = badges.filter((b) => b.earned).length
   const shown =
     filter === 'done'
-      ? badges.filter((b) => b.progress >= 1)
+      ? badges.filter((b) => b.earned)
       : filter === 'todo'
-        ? badges.filter((b) => b.progress < 1).sort((a, b) => b.progress - a.progress)
+        ? badges.filter((b) => !b.earned).sort((a, b) => b.progress - a.progress)
         : badges
   const groups = BADGE_GROUPS.map((group) => {
     const whole = badges.filter((b) => b.group === group)
     return {
       group,
       list: shown.filter((b) => b.group === group),
-      done: whole.filter((b) => b.progress >= 1).length,
+      done: whole.filter((b) => b.earned).length,
       total: whole.length
     }
   }).filter((g) => g.list.length > 0)
@@ -75,7 +75,7 @@ export function StreamingBadges(): React.JSX.Element {
           <div className="scroll-x flex gap-4 px-10 py-4">
             {list.map((badge) => {
               const Icon = badge.icon
-              const on = badge.progress >= 1
+              const on = badge.earned
               return (
                 <motion.div
                   key={badge.id}
@@ -141,7 +141,7 @@ export function ConsoleBadges(): React.JSX.Element {
           <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3">
             {list.map((badge, i) => {
               const Icon = badge.icon
-              const on = badge.progress >= 1
+              const on = badge.earned
               return (
                 <motion.div
                   key={badge.id}
@@ -207,7 +207,7 @@ export function MagazineBadges(): React.JSX.Element {
               </span>
             </h2>
             {list.map((badge) => {
-              const on = badge.progress >= 1
+              const on = badge.earned
               return (
                 <div key={badge.id} className="xm-entry" title={badgeTitle(badge)}>
                   <span className="xm-entry-title" style={on ? undefined : { color: '#8a847b' }}>
@@ -243,7 +243,7 @@ export function HudBadges(): React.JSX.Element {
         </div>
         <div className="xh-segments flex-1" style={{ gridTemplateColumns: `repeat(${badges.length}, 1fr)` }}>
           {badges.map((b) => (
-            <span key={b.id} data-on={b.progress >= 1} title={badgeTitle(b)} />
+            <span key={b.id} data-on={b.earned} title={badgeTitle(b)} />
           ))}
         </div>
         <div className="flex gap-2">
@@ -265,7 +265,7 @@ export function HudBadges(): React.JSX.Element {
           <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-2">
             {list.map((badge, i) => {
               const Icon = badge.icon
-              const on = badge.progress >= 1
+              const on = badge.earned
               return (
                 <div key={badge.id} className="xh-badge" data-on={on} title={badgeTitle(badge)}>
                   <span className="xh-badge-icon">
@@ -331,7 +331,7 @@ export function CarnetBadges(): React.JSX.Element {
             <div className="mt-5 grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-6">
               {list.map((badge, i) => {
                 const Icon = badge.icon
-                const on = badge.progress >= 1
+                const on = badge.earned
                 return (
                   <motion.div
                     key={badge.id}

@@ -42,7 +42,7 @@ function yearGrid(year: number, counts: Map<number, number>): DayCount[] {
 
 function BadgeCard({ badge, index }: { badge: Badge; index: number }): React.JSX.Element {
   const accent = useApp((s) => s.prefs.accent)
-  const done = badge.progress >= 1
+  const done = badge.earned
   const pct = Math.min(1, Math.max(0, badge.progress))
   const Icon = badge.icon
 
@@ -284,14 +284,14 @@ export default function StatsPage(): React.JSX.Element {
     )
   }
 
-  const unlocked = badges.filter((b) => b.progress >= 1).length
+  const unlocked = badges.filter((b) => b.earned).length
   // « À faire » classe les plus proches d'abord : sur cent badges, la question
   // n'est pas lesquels manquent, c'est lequel est à portée.
   const shownBadges =
     badgeFilter === 'done'
-      ? badges.filter((b) => b.progress >= 1)
+      ? badges.filter((b) => b.earned)
       : badgeFilter === 'todo'
-        ? badges.filter((b) => b.progress < 1).sort((a, b) => b.progress - a.progress)
+        ? badges.filter((b) => !b.earned).sort((a, b) => b.progress - a.progress)
         : badges
   const BADGE_FILTERS = [
     { id: 'all' as const, label: 'Tous', count: badges.length },
@@ -572,7 +572,7 @@ export default function StatsPage(): React.JSX.Element {
             // Le compte reste celui du groupe entier : filtrer l'affichage ne
             // doit pas changer ce que le groupe vaut.
             const whole = badges.filter((b) => b.group === group)
-            const done = whole.filter((b) => b.progress >= 1).length
+            const done = whole.filter((b) => b.earned).length
             return (
               <div key={group}>
                 <header className="mb-3 flex items-center gap-3 px-1">
