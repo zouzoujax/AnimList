@@ -119,6 +119,11 @@ function seriesRows(keep: (status: string) => boolean): {
     const found = media.get(entry.animeId)
     if (!found) continue
     const episode = nextEpisode(seen.get(entry.animeId), found.episodes)
+    // Le retard se compte sur les épisodes **diffusés**, comme à l'accueil de
+    // l'app : un épisode programmé pour jeudi n'est pas un retard.
+    const aired = found.nextAiring ? found.nextAiring.episode - 1 : (found.episodes ?? 0)
+    let behind = 0
+    for (let n = 1; n <= aired; n += 1) if (!seen.get(entry.animeId)?.has(n)) behind += 1
     rows.push({
       id: entry.animeId,
       title: found.title.english ?? found.title.romaji,
@@ -128,6 +133,8 @@ function seriesRows(keep: (status: string) => boolean): {
       episode,
       total: found.episodes,
       seen: seen.get(entry.animeId)?.size ?? 0,
+      /** Épisodes sortis et pas encore vus : ce qui attend vraiment. */
+      behind,
       // La série reste dans la liste, mais sans bouton : savoir qu'il n'y a
       // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
       unaired: episode !== null && isUnaired(found, episode),

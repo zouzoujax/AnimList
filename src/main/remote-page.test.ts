@@ -34,6 +34,18 @@ describe('la page de la télécommande', () => {
     expect(html).toContain('id="flash"')
   })
 
+  /**
+   * Les deux groupes de l'accueil et les intertitres du calendrier vivent dans
+   * le script, hors de portée du compilateur. Ces deux lignes ne prouvent pas
+   * qu'ils s'affichent bien — seulement qu'on ne les a pas perdus en chemin.
+   */
+  it('range l’accueil par retard et le calendrier par jour', () => {
+    expect(html).toContain('À rattraper')
+    expect(html).toContain('class="late"')
+    expect(html).toContain("Aujourd'hui")
+    expect(html).toContain('function jour(')
+  })
+
   it('reste en français et sans dépendance extérieure', () => {
     expect(html).toContain('lang="fr"')
     expect(html).not.toMatch(/src="https?:/)

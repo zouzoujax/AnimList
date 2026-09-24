@@ -282,6 +282,20 @@ const STYLE = `
   .tile button { width: 100%; margin-top: 6px; min-height: 36px; font-size: .74rem; }
   .owned { color: var(--accent); font-size: .7rem; font-weight: 600; margin-top: 6px; display: block; text-align: center; min-height: 36px; line-height: 36px; }
 
+  /* Le retard, sur la jaquette : c'est l'information qu'on vient chercher
+     depuis le canapé, et elle doit se voir sans lire la légende. */
+  .tile { position: relative; }
+  .tile .late {
+    position: absolute; top: 6px; right: 6px; padding: 3px 7px; border-radius: 99px;
+    font-size: .66rem; font-weight: 700; color: #07080f; background: var(--accent);
+  }
+
+  /* Les groupes d'une liste : « À rattraper », puis le reste. */
+  .sect { margin: 2px 0 10px; display: flex; align-items: baseline; gap: 8px; }
+  .sect h2 { font-size: .92rem; font-weight: 650; }
+  .sect span { color: var(--muted); font-size: .76rem; }
+  .sect + .grid { margin-bottom: 22px; }
+
   /* Le retour à la grille : posé seul, il ne se confond avec aucun filtre. */
   .chip.back { margin-bottom: 12px; }
   .chip.back::before { content: '←'; font-size: .95rem; line-height: 1; }
@@ -661,7 +675,32 @@ const SCRIPT = `
       appEl.innerHTML = '<div class="empty">Rien à reprendre.<br>Commence une série sur le PC, elle apparaîtra ici.</div>'
       return
     }
-    appEl.innerHTML = '<div class="grid">' + state.series.map(seriesTile).join('') + '</div>'
+
+    /*
+     * Deux groupes, et le retard d'abord.
+     *
+     * L'app pose la question à son accueil — « qu'est-ce qui est sorti que je
+     * n'ai pas vu ? » — et c'est encore plus vrai depuis le canapé, où l'on
+     * ouvre la télécommande pour lancer quelque chose maintenant. Une liste
+     * rangée par date de dernière séance y répondait de travers : la série
+     * touchée hier passait devant les cinq épisodes en attente.
+     */
+    var retard = state.series.filter(function (s) { return s.behind > 1 })
+      .sort(function (a, b) { return b.behind - a.behind })
+    var reste = state.series.filter(function (s) { return s.behind <= 1 })
+
+    var total = retard.reduce(function (sum, s) { return sum + s.behind }, 0)
+    var html = ''
+    if (retard.length) {
+      html += '<div class="sect"><h2>À rattraper</h2><span>' + total + ' épisode' + (total > 1 ? 's' : '') +
+        ' déjà sorti' + (total > 1 ? 's' : '') + '</span></div>' +
+        '<div class="grid">' + retard.map(seriesTile).join('') + '</div>'
+    }
+    if (reste.length) {
+      if (retard.length) html += '<div class="sect"><h2>Le reste</h2><span>à jour, ou presque</span></div>'
+      html += '<div class="grid">' + reste.map(seriesTile).join('') + '</div>'
+    }
+    appEl.innerHTML = html
   }
 
   // ---------------------------------------------------------------- onglets
@@ -699,8 +738,11 @@ const SCRIPT = `
   function seriesTile(s) {
     var total = s.total || 0
     var done = total ? Math.round((s.seen / total) * 100) : 0
+    // Un seul épisode en attente n'est pas un retard : c'est le cours normal
+    // d'une série qu'on suit. Au-delà, ça s'accumule, et ça se dit.
+    var late = s.behind > 1 ? '<span class="late">' + s.behind + '</span>' : ''
     return '<div class="tile" data-act="pick" data-id="' + s.id + '">' +
-      '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
+      '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' + late +
       '<div class="title">' + esc(s.title) + '</div>' +
       '<div class="meta">' + (total ? s.seen + ' / ' + total : STATUS[s.status]) + '</div>' +
       (total ? '<div class="bar"><i style="width:' + done + '%"></i></div>' : '') +
@@ -745,14 +787,22 @@ const SCRIPT = `
    * de compter. Au-delà d'une semaine le nom du jour ne suffit plus à situer,
    * et la date reprend sa place.
    */
-  function quand(ms) {
+  /** « Aujourd'hui », « Demain », « Jeudi 2 octobre » : l'intertitre d'un jour. */
+  function jour(ms) {
     var d = new Date(ms)
-    var jours = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000)
-    var heure = d.getHours() + ' h ' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes()
-    if (jours <= 0) return "aujourd'hui, " + heure
-    if (jours === 1) return 'demain, ' + heure
-    if (jours < 7) return JOURS[d.getDay()] + ', ' + heure
-    return d.getDate() + '/' + (d.getMonth() + 1) + ', ' + heure
+    var n = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000)
+    if (n <= 0) return "Aujourd'hui"
+    if (n === 1) return 'Demain'
+    var nom = JOURS[d.getDay()]
+    nom = nom.charAt(0).toUpperCase() + nom.slice(1)
+    if (n < 7) return nom
+    return nom + ' ' + d.getDate() + '/' + (d.getMonth() + 1)
+  }
+
+  /** « 18 h 15 ». Le jour est déjà dit par l'intertitre. */
+  function heure(ms) {
+    var d = new Date(ms)
+    return d.getHours() + ' h ' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes()
   }
 
   function renderCalendar(airing) {
@@ -767,14 +817,39 @@ const SCRIPT = `
         'parmi les séries que tu suis.</div>' + abonnement
       return
     }
-    appEl.innerHTML = airing.map(function (a) {
-      return '<div class="card"><div class="row">' +
-        '<img src="' + esc(a.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + a.animeId + '">' +
-        '<div class="info">' +
-          '<div class="title">' + esc(a.title) + '</div>' +
-          '<div class="meta"><b>Épisode ' + a.episode + '</b> · ' + esc(quand(a.airingAt)) + '</div>' +
-        '</div>' +
-      '</div></div>'
+    /*
+     * La semaine, jour par jour.
+     *
+     * Une liste à plat répétait « jeudi » sur chaque ligne et laissait
+     * compter soi-même combien de choses tombaient le même soir. Le jour
+     * s'annonce donc une fois, et ce qui suit lui appartient — c'est la
+     * question qu'on pose au calendrier : qu'est-ce qui sort ce soir ?
+     */
+    var jours = []
+    var parJour = {}
+    airing.forEach(function (a) {
+      var d = new Date(a.airingAt)
+      var cle = d.getFullYear() + '-' + d.getMonth() + '-' + d.getDate()
+      if (!parJour[cle]) {
+        parJour[cle] = []
+        jours.push({ cle: cle, at: a.airingAt })
+      }
+      parJour[cle].push(a)
+    })
+
+    appEl.innerHTML = jours.map(function (j) {
+      var n = parJour[j.cle].length
+      return '<div class="sect"><h2>' + esc(jour(j.at)) + '</h2><span>' + n + ' épisode' + (n > 1 ? 's' : '') +
+        '</span></div>' +
+        parJour[j.cle].map(function (a) {
+          return '<div class="card"><div class="row">' +
+            '<img src="' + esc(a.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + a.animeId + '">' +
+            '<div class="info">' +
+              '<div class="title">' + esc(a.title) + '</div>' +
+              '<div class="meta"><b>Épisode ' + a.episode + '</b> · ' + esc(heure(a.airingAt)) + '</div>' +
+            '</div>' +
+          '</div></div>'
+        }).join('')
     }).join('') + abonnement
   }
 
