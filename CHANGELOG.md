@@ -9,6 +9,12 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.9.2 — 25 septembre 2026
+
+### Corrections
+
+- Depuis le téléphone, toucher une jaquette dans Découvrir ouvre bien sa fiche sur le PC. La télécommande répondait « Série inconnue » sur tous les titres qui n'étaient pas déjà dans la bibliothèque — elle exigeait la série en cache alors qu'elle n'a besoin que de son numéro, la fenêtre sachant très bien aller chercher une série jamais ouverte. Le refus tombait donc au hasard de ce qui traînait déjà dans la liste
+
 ## 0.9.1 — 24 septembre 2026
 
 ### Corrections
