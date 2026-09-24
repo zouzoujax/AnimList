@@ -84,6 +84,7 @@ describe('routeOf', () => {
     expect(routeOf('/api/discover')).toBe('discover')
     expect(routeOf('/api/add')).toBe('add')
     expect(routeOf('/api/episodes')).toBe('episodes')
+    expect(routeOf('/api/franchise')).toBe('franchise')
   })
 
   it('tolère une barre en trop', () => {

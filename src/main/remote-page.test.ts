@@ -46,6 +46,14 @@ describe('la page de la télécommande', () => {
     expect(html).toContain('function jour(')
   })
 
+  it('emporte l’arbre des franchises et ses libellés de branches', () => {
+    expect(html).toContain('function renderTree(')
+    expect(html).toContain('data-act="tree"')
+    // Les noms des branches viennent de l'app : s'ils manquent, la page les
+    // aurait redéfinis dans son coin.
+    expect(html).toContain('OVA et spéciaux')
+  })
+
   it('reste en français et sans dépendance extérieure', () => {
     expect(html).toContain('lang="fr"')
     expect(html).not.toMatch(/src="https?:/)

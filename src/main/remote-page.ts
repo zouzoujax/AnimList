@@ -1,3 +1,5 @@
+import { BRANCH_LABELS } from '@shared/franchise'
+
 /**
  * La page servie au téléphone.
  *
@@ -207,6 +209,36 @@ const STYLE = `
   }
   .ics span { display: block; margin-top: 4px; font-weight: 400; font-size: .74rem; color: var(--muted); }
 
+  /* L'arbre d'une franchise : les saisons s'empilent, ce qui pousse dessus se
+     range dessous et en retrait. Les traits sont des bordures — sur un
+     téléphone, un dessin qui doit se plier se plie mieux en HTML. */
+  .tree { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .tsea { margin-bottom: 10px; }
+  .tline {
+    display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px;
+    padding: 6px 9px; border-radius: 11px; text-align: left;
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+  }
+  .tline[data-on='true'] { border-color: rgba(124,92,255,.4); }
+  .tnum {
+    flex: none; min-width: 32px; padding: 2px 6px; border-radius: 7px; text-align: center;
+    font-size: .68rem; font-weight: 700; background: var(--panel-2); color: var(--muted);
+  }
+  .tline[data-on='true'] .tnum { background: var(--accent-soft); color: var(--accent); }
+  .ttit { flex: 1; min-width: 0; font-size: .82rem; line-height: 1.3; }
+  .tprog { flex: none; font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .tbr { margin: 6px 0 0 14px; padding-left: 11px; border-left: 1px solid var(--line); }
+  .tbrn { display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
+  .tleaf {
+    display: block; width: 100%; min-height: 36px; margin-bottom: 4px;
+    padding: 7px 9px; border-radius: 9px; text-align: left;
+    font-size: .76rem; line-height: 1.3; color: var(--text);
+    background: transparent; border: 1px solid var(--line);
+  }
+  .tleaf[data-on='true'] { color: var(--accent); border-color: rgba(124,92,255,.3); }
+  .note.alerte { color: var(--warn); }
+
   /* ---- états ---- */
   .empty, .err { text-align: center; color: var(--muted); padding: 46px 12px; font-size: .9rem; line-height: 1.7; }
   .err { color: #ff9b9b; }
@@ -380,7 +412,8 @@ const SCRIPT = `
     plus: 'M12 5v14M5 12h14',
     search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
     calendar: 'M8 3v4M16 3v4M4 8h16M5 5h14v16H5z',
-    chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2'
+    chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    branch: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM15 6a9 9 0 0 1-9 9'
   }
   function icon(name) {
     return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
@@ -582,6 +615,66 @@ const SCRIPT = `
     '</div>'
   }
 
+  /** Les noms des branches, pris à l'app : deux listes auraient divergé. */
+  var BRANCHES = ${JSON.stringify(BRANCH_LABELS)}
+
+  /**
+   * L'arbre d'une franchise, déplié dans la carte — ESSAI, comme sur le PC.
+   *
+   * Le PC dessine un rail vertical et accroche les branches à droite du nœud.
+   * Sur un téléphone il n'y a pas de droite : les saisons s'empilent, et ce qui
+   * pousse sur l'une se range dessous, en retrait. Le même arbre, lu de haut
+   * en bas.
+   *
+   * Toucher un titre l'ouvre sur le PC — y compris un film qui n'est pas dans
+   * la bibliothèque, ce qui est justement l'intérêt de regarder un arbre.
+   */
+  function renderTree(s) {
+    if (tree.id !== s.id) return ''
+    if (!tree.data) {
+      return '<div class="tree"><div class="note">Lecture de la franchise… ' +
+        'plusieurs requêtes, cela peut prendre quelques secondes.</div></div>'
+    }
+
+    var t = tree.data
+    if (!t.trunk || !t.trunk.length) {
+      return '<div class="tree"><div class="note">Aucune franchise trouvée pour cette série.</div></div>'
+    }
+
+    var tete = t.count + (t.count > 1 ? ' séries' : ' série') + ' · ' + t.tracked + ' dans ta liste' +
+      (t.total ? ' · ' + t.seen + ' épisodes vus sur ' + t.total : '')
+
+    var corps = t.trunk.map(function (saison) {
+      var num = 'S' + saison.number + (saison.part ? '.' + saison.part : '')
+      var prog = saison.total ? saison.seen + ' / ' + saison.total : ''
+      var fini = saison.total > 0 && saison.seen >= saison.total
+      var ligne = '<button class="tline" data-act="open" data-id="' + saison.id + '" data-on="' + fini + '">' +
+        '<span class="tnum">' + num + '</span>' +
+        '<span class="ttit">' + esc(saison.title) + '</span>' +
+        '<span class="tprog">' + prog + '</span>' +
+      '</button>'
+
+      var branches = (saison.branches || []).map(function (b) {
+        var feuilles = b.nodes.map(function (n) {
+          var p = n.total ? ' · ' + n.seen + '/' + n.total : ''
+          var complet = n.total > 0 && n.seen >= n.total
+          return '<button class="tleaf" data-act="open" data-id="' + n.id + '" data-on="' + complet + '">' +
+            esc(n.title) + p + '</button>'
+        }).join('')
+        return '<div class="tbr"><span class="tbrn">' + esc(BRANCHES[b.kind] || b.kind) + '</span>' + feuilles + '</div>'
+      }).join('')
+
+      return '<div class="tsea">' + ligne + branches + '</div>'
+    }).join('')
+
+    return '<div class="tree">' +
+      '<div class="note">' + tete + '</div>' +
+      (t.partial ? '<div class="note alerte">Une partie n’a pas pu être lue : l’arbre est peut-être incomplet.</div>' : '') +
+      corps +
+      '<div class="note">Touche un titre pour l’ouvrir sur le PC.</div>' +
+    '</div>'
+  }
+
   /** Les mots de l'app pour chaque statut, employés par la carte et par les filtres. */
   var STATUS = {
     watching: 'En cours',
@@ -643,8 +736,10 @@ const SCRIPT = `
       '<div class="acts">' + first + regarder + ba +
         btn('data-act="open" data-id="' + s.id + '"', 'Fiche', 'info', 'ghost') +
         (lancable && total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
+        btn('data-act="tree" data-id="' + s.id + '"', 'Franchise', 'branch', 'ghost') +
       '</div>' +
       renderEpisodes(s) +
+      renderTree(s) +
     '</div>'
   }
 
@@ -716,6 +811,8 @@ const SCRIPT = `
    * distingue. La grille sert à choisir, la fiche à agir.
    */
   var sheet = 0
+  /** La franchise dépliée, et son arbre une fois arrivé. Voir renderTree. */
+  var tree = { id: 0, data: null }
   var query = ''
   var discoverTab = 'trending'
 
@@ -953,9 +1050,10 @@ const SCRIPT = `
     if (action === 'pick') {
       sheet = Number(el.getAttribute('data-id'))
       eps = { id: 0, data: null, mode: eps.mode }
+      tree = { id: 0, data: null }
       return load()
     }
-    if (action === 'back') { sheet = 0; return load() }
+    if (action === 'back') { sheet = 0; tree = { id: 0, data: null }; return load() }
 
     if (action === 'tab') {
       tab = el.getAttribute('data-tab')
@@ -982,6 +1080,24 @@ const SCRIPT = `
     }
 
     if (action === 'epmode') { eps.mode = el.getAttribute('data-mode'); return load() }
+
+    // L'arbre d'une franchise : plusieurs requêtes chez AniList, donc on le
+    // demande une fois et on le garde tant que la carte reste ouverte.
+    if (action === 'tree') {
+      var voulu = Number(el.getAttribute('data-id'))
+      if (tree.id === voulu) { tree = { id: 0, data: null }; return load() }
+      tree = { id: voulu, data: null }
+      load()
+      try {
+        var arbre = await call('/api/franchise?id=' + voulu)
+        if (tree.id === voulu) { tree.data = arbre; load() }
+      } catch (err) {
+        if (tree.id === voulu) tree = { id: 0, data: null }
+        say(err.message)
+        load()
+      }
+      return
+    }
 
     if (action === 'ep') {
       var epId = Number(el.getAttribute('data-id'))

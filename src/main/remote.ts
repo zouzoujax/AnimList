@@ -46,6 +46,7 @@ import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
 import { buildIcs } from '@shared/ics'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
+import { franchiseTree } from './franchise'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode, playerChoices, switchPlayer, watchWindow } from './watch-window'
 import { sessionAutoSkip, setSessionAutoSkip } from './binge'
@@ -306,6 +307,28 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       // cocher, et la grille le montre plutôt que de laisser essayer.
       lastAired: media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
     })
+  }
+
+  /**
+   * L'arbre d'une franchise — ESSAI, comme sur le PC.
+   *
+   * Demandé au coup par coup et jamais avec l'état : il faut plusieurs
+   * requêtes chez AniList pour le construire, et l'attacher au
+   * rafraîchissement les referait toutes les vingt secondes pour un arbre que
+   * personne ne regarde.
+   *
+   * Le calcul est celui de la fenêtre, au mot près — le même module, le même
+   * cache. Un arbre qui ne dirait pas la même chose sur les deux écrans serait
+   * pire que pas d'arbre du tout.
+   */
+  if (route === 'franchise') {
+    const id = Number(new URLSearchParams(url.slice(url.indexOf('?') + 1)).get('id'))
+    if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: 'Série inconnue.' })
+    try {
+      return json(res, 200, await franchiseTree(id))
+    } catch (err) {
+      return json(res, 502, { error: `Franchise illisible : ${(err as Error).message}` })
+    }
   }
 
   /**
