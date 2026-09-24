@@ -1,10 +1,13 @@
 /**
  * L'arbre d'une franchise — ESSAI.
  *
- * Tout est réuni ici, exprès : ce composant, `@shared/franchise` avec son test,
+ * Tout est réuni exprès : ce composant, `@shared/franchise` avec son test,
  * `src/main/franchise.ts`, une ligne d'IPC, une ligne de préchargement et un
- * bouton sur la fiche. Retirer l'essai revient à supprimer ces fichiers et ces
- * trois lignes ; rien d'autre n'en dépend.
+ * bouton sur la fiche. L'arbre est aussi servi au téléphone — la route
+ * `/api/franchise` et son dépliage dans `remote-page.ts` — et sa structure est
+ * gardée dans `franchise-cache.json`, à côté de la bibliothèque. Retirer
+ * l'essai revient à supprimer ces fichiers, ces lignes et ce cache ; rien
+ * d'autre n'en dépend.
  *
  * Le dessin suit ce que l'arbre raconte : un rail vertical pour le tronc, où
  * chaque saison est un nœud, et les branches accrochées à droite du nœud

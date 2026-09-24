@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { branchOf, buildTree, type Edge, type Progress, type Spine } from './franchise'
+import {
+  branchOf,
+  buildTree,
+  FRANCHISE_FRESH_MS,
+  isStale,
+  MAX_FRANCHISE_CACHE,
+  toForget,
+  type Edge,
+  type Progress,
+  type Spine
+} from './franchise'
 
 const saison = (id: number, number: number, over: Partial<Spine> = {}): Spine => ({
   id,
@@ -185,5 +195,39 @@ describe('buildTree', () => {
     expect(tree.count).toBe(3)
     expect(tree.tracked).toBe(1)
     expect(tree.total).toBe(12)
+  })
+})
+
+describe('isStale', () => {
+  const now = 1_790_000_000_000
+
+  it('laisse tranquille un arbre lu il y a une heure', () => {
+    expect(isStale(now - 3600_000, now)).toBe(false)
+  })
+
+  it('demande une relecture passé le délai', () => {
+    expect(isStale(now - FRANCHISE_FRESH_MS, now)).toBe(true)
+    expect(isStale(now - 5 * FRANCHISE_FRESH_MS, now)).toBe(true)
+  })
+})
+
+describe('toForget', () => {
+  const plein = (n: number): { id: number; usedAt: number }[] =>
+    Array.from({ length: n }, (_, i) => ({ id: i + 1, usedAt: i + 1 }))
+
+  it('ne jette rien tant que ça tient', () => {
+    expect(toForget(plein(MAX_FRANCHISE_CACHE))).toEqual([])
+  })
+
+  it('jette les moins consultés, pas les plus vieux', () => {
+    // `usedAt` croissant : 1 et 2 sont les moins récemment ouverts.
+    expect(toForget(plein(MAX_FRANCHISE_CACHE + 2))).toEqual([1, 2])
+  })
+
+  it('garde celui qu’on rouvre tous les soirs, même ancien', () => {
+    const kept = plein(MAX_FRANCHISE_CACHE + 1)
+    // Le premier arbre, relu à l'instant : c'est le deuxième qui saute.
+    kept[0].usedAt = 10_000
+    expect(toForget(kept)).toEqual([2])
   })
 })

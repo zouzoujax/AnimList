@@ -219,3 +219,51 @@ export function buildTree(spine: Spine[], edgesOf: (id: number) => Edge[], progr
 
   return { trunk, seen, total, count, tracked, partial: false }
 }
+
+/* ─────────────────────────────── Ce qu'on garde d'un arbre d'une fois sur l'autre
+
+   Construire un arbre demande plusieurs requêtes chez AniList : la chaîne des
+   saisons, puis les relations de chacune. C'est long — une trentaine de
+   secondes à froid sur une grosse franchise —, et le résultat ne change
+   presque jamais. Une saison de plus est annoncée deux fois par an, pas deux
+   fois par heure.
+
+   Ce qui est gardé est la **structure** seule : le tronc et ses branches.
+   L'avancement — vus, total, suivie — est recalculé à chaque lecture depuis la
+   bibliothèque, sinon un arbre ressorti du fichier annoncerait les chiffres du
+   jour où on l'a lu la première fois.
+
+   Les deux règles ci-dessous sont ici, avec le reste des règles de l'arbre :
+   elles décident quand redemander et quoi oublier, et ce sont les deux seules
+   choses qu'on puisse se tromper sans le voir. */
+
+/** Passé ce délai, on ressert le cache mais on relit derrière. Une demi-journée. */
+export const FRANCHISE_FRESH_MS = 12 * 3600_000
+
+/**
+ * Combien d'arbres on garde.
+ *
+ * Quelques kilo-octets pièce : la borne n'est pas là pour la place mais pour
+ * que le fichier reste relisable à la main, comme tout ce que cette app écrit.
+ */
+export const MAX_FRANCHISE_CACHE = 80
+
+/** L'arbre gardé mérite-t-il une relecture ? */
+export function isStale(at: number, now: number = Date.now()): boolean {
+  return now - at >= FRANCHISE_FRESH_MS
+}
+
+/**
+ * Lesquels oublier quand le fichier déborde.
+ *
+ * Les moins consultés partent, pas les plus vieux : un arbre qu'on ouvre tous
+ * les soirs a beau dater, c'est celui qu'on veut instantané. Rendus dans
+ * l'ordre où on les efface, pour que le test le montre.
+ */
+export function toForget(kept: { id: number; usedAt: number }[], max = MAX_FRANCHISE_CACHE): number[] {
+  if (kept.length <= max) return []
+  return [...kept]
+    .sort((a, b) => a.usedAt - b.usedAt)
+    .slice(0, kept.length - max)
+    .map((row) => row.id)
+}
