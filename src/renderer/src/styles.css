@@ -239,6 +239,17 @@ textarea {
     color: var(--color-ink);
     border-color: var(--line-2);
   }
+  /* Un statut qu'on ne peut pas encore choisir — « Terminé » sur une série
+     qui diffuse encore. Éteint plutôt que caché : disparu, il laisserait
+     chercher où il est passé. */
+  .chip:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .chip:disabled:hover {
+    color: var(--color-muted);
+    border-color: var(--line);
+  }
   .chip[data-on='true'] {
     background: color-mix(in oklab, var(--accent) 22%, transparent);
     border-color: color-mix(in oklab, var(--accent) 55%, transparent);

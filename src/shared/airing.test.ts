@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canTick, isUnaired } from './airing'
+import { canComplete, canTick, isFullyAired, isUnaired } from './airing'
 
 /** Le repère de temps des tests : tout se lit par rapport à lui. */
 const NOW = 1_700_000_000_000
@@ -70,5 +70,65 @@ describe('canTick', () => {
   // après coup, resterait impossible à retirer.
   it('laisse toujours décocher, même un épisode à venir', () => {
     expect(canTick(airing(9), 9, true, NOW)).toBe(true)
+  })
+})
+
+/** Une fiche telle que la bibliothèque la garde. */
+const fiche = (
+  status: string | null,
+  episodes: number | null,
+  next: { episode: number; airingAt: number } | null = null
+): { status: string | null; episodes: number | null; nextAiring: { episode: number; airingAt: number } | null } => ({
+  status,
+  episodes,
+  nextAiring: next
+})
+
+describe('isFullyAired', () => {
+  it('oui quand AniList la dit terminée', () => {
+    expect(isFullyAired(fiche('FINISHED', 12), NOW)).toBe(true)
+  })
+
+  it('oui quand elle est annulée : il n’en sortira plus rien', () => {
+    expect(isFullyAired(fiche('CANCELLED', null), NOW)).toBe(true)
+  })
+
+  it('non quand un épisode est annoncé', () => {
+    // Tomb Raider King : douze épisodes, le douzième à venir.
+    expect(isFullyAired(fiche('RELEASING', 12, { episode: 12, airingAt: (NOW + HOUR) / 1000 }), NOW)).toBe(false)
+    expect(isFullyAired(fiche('RELEASING', 12, { episode: 3, airingAt: (NOW + HOUR) / 1000 }), NOW)).toBe(false)
+  })
+
+  it('oui quand le dernier annoncé est sorti, même si leur fiche traîne', () => {
+    expect(isFullyAired(fiche('RELEASING', 12, { episode: 12, airingAt: (NOW - 8 * HOUR) / 1000 }), NOW)).toBe(true)
+  })
+
+  it('non quand elle n’a pas commencé', () => {
+    expect(isFullyAired(fiche('NOT_YET_RELEASED', 12), NOW)).toBe(false)
+  })
+
+  it('non quand elle diffuse sans date annoncée, ou qu’elle est en pause', () => {
+    expect(isFullyAired(fiche('RELEASING', null), NOW)).toBe(false)
+    expect(isFullyAired(fiche('HIATUS', 24), NOW)).toBe(false)
+  })
+
+  it('oui quand on ne sait rien du tout : le doute ne doit pas bloquer', () => {
+    expect(isFullyAired(fiche(null, null), NOW)).toBe(true)
+  })
+})
+
+describe('canComplete', () => {
+  it('refuse d’y entrer trop tôt', () => {
+    const encours = fiche('RELEASING', 12, { episode: 12, airingAt: (NOW + HOUR) / 1000 })
+    expect(canComplete(encours, false, NOW)).toBe(false)
+  })
+
+  it('n’enferme jamais une série déjà marquée terminée', () => {
+    const encours = fiche('RELEASING', 12, { episode: 12, airingAt: (NOW + HOUR) / 1000 })
+    expect(canComplete(encours, true, NOW)).toBe(true)
+  })
+
+  it('laisse faire quand tout est sorti', () => {
+    expect(canComplete(fiche('FINISHED', 12), false, NOW)).toBe(true)
   })
 })

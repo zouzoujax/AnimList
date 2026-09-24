@@ -34,6 +34,7 @@ import {
   type MediaDetail
 } from '@shared/types'
 import { aliasesOf, parseAliases } from '@shared/search'
+import { statusBlocked } from '@/lib/status'
 import { MiniCard } from '@/components/AnimeCard'
 import EpisodeEditor from '@/components/EpisodeEditor'
 import ListPicker from '@/components/ListPicker'
@@ -1323,16 +1324,22 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
                   </button>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
-                    {STATUS_ORDER.map((status) => (
-                      <button
-                        key={status}
-                        data-on={entry.status === status}
-                        className="chip !h-[38px] !px-3"
-                        onClick={() => patch({ status })}
-                      >
-                        {STATUS_LABELS[status]}
-                      </button>
-                    ))}
+                    {STATUS_ORDER.map((status) => {
+                      // On ne termine pas une série qui n'a pas fini de sortir.
+                      const blocked = statusBlocked(status, media, entry)
+                      return (
+                        <button
+                          key={status}
+                          data-on={entry.status === status}
+                          className="chip !h-[38px] !px-3"
+                          disabled={!!blocked}
+                          title={blocked ?? undefined}
+                          onClick={() => patch({ status })}
+                        >
+                          {STATUS_LABELS[status]}
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
 

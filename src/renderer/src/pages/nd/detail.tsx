@@ -16,6 +16,7 @@ import { EpisodeStrip, plural } from '@/components/nd'
 import { Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, titleOf } from '@/lib/format'
+import { statusBlocked } from '@/lib/status'
 import { useApp } from '@/store/app'
 
 const STATUSES: LibraryStatus[] = ['watching', 'planned', 'completed', 'paused', 'dropped']
@@ -113,11 +114,20 @@ export function NdDetailHero(props: DetailHeroProps): React.JSX.Element {
 
             {entry && (
               <div className="nd-seg mt-4" role="group" aria-label="Statut">
-                {STATUSES.map((status) => (
-                  <button key={status} aria-pressed={entry.status === status} onClick={() => props.onStatus(status)}>
-                    {STATUS_LABELS[status]}
-                  </button>
-                ))}
+                {STATUSES.map((status) => {
+                  const blocked = statusBlocked(status, media, entry)
+                  return (
+                    <button
+                      key={status}
+                      aria-pressed={entry.status === status}
+                      disabled={!!blocked}
+                      title={blocked ?? undefined}
+                      onClick={() => props.onStatus(status)}
+                    >
+                      {STATUS_LABELS[status]}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

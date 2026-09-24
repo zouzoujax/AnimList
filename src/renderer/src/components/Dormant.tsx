@@ -1,4 +1,5 @@
 import { Check, Moon, Play, X } from 'lucide-react'
+import { canComplete } from '@shared/airing'
 import { dormantVerdict, sleepLabel } from '@shared/dormant'
 import { Poster, Section } from '@/components/ui'
 import { useDormant, type DormantRow } from '@/lib/dormant'
@@ -20,7 +21,10 @@ function DormantCard({ row }: { row: DormantRow }): React.JSX.Element {
   const toast = useApp((s) => s.toast)
   const { media, series } = row
   const title = titleOf(media, lang)
-  const finish = dormantVerdict(series) === 'finish'
+  // « Terminée » demande deux choses : qu'il ne reste rien à voir, et que la
+  // série ait fini de sortir. Une série en pause dont tous les épisodes
+  // **parus** sont vus n'est pas finie tant que le suivant est annoncé.
+  const finish = dormantVerdict(series) === 'finish' && canComplete(media, false)
 
   const settle = (status: 'watching' | 'completed' | 'dropped', said: string): void => {
     void saveEntry(media.id, { status }).then(() => toast(`${title} · ${said}`, 'ok'))

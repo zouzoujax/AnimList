@@ -9,6 +9,7 @@
 import { useState } from 'react'
 import { CheckCheck, FolderPlus, Heart, HeartOff, Trash2, X } from 'lucide-react'
 import { STATUS_LABELS, type LibraryStatus } from '@shared/types'
+import { statusBlocked } from '@/lib/status'
 import { useApp } from '../store/app'
 import ListPicker from './ListPicker'
 import { Modal } from './ui'
@@ -23,6 +24,7 @@ export default function BulkBar({
   onClear: () => void
 }): React.JSX.Element | null {
   const entries = useApp((s) => s.entries)
+  const media = useApp((s) => s.media)
   const bulkPatch = useApp((s) => s.bulkPatch)
   const bulkRemove = useApp((s) => s.bulkRemove)
   const bulkMarkWatched = useApp((s) => s.bulkMarkWatched)
@@ -73,7 +75,27 @@ export default function BulkBar({
               const status = e.target.value as LibraryStatus
               if (!status) return
               e.target.value = ''
-              void apply(STATUS_LABELS[status], () => bulkPatch(ids, { status }))
+
+              /*
+               * « Terminé » ne s'applique qu'à ce qui a fini de sortir.
+               *
+               * Sur une sélection, le refus ne peut pas être un bouton éteint :
+               * les séries choisies ne sont pas dans le même état. On applique
+               * donc à celles qui le peuvent, et on dit combien sont restées
+               * dehors — les passer en silence serait pire que de les refuser.
+               */
+              const allowed = ids.filter((id) => {
+                const found = media.get(id)
+                return !found || !statusBlocked(status, found, entries.get(id))
+              })
+              const left = ids.length - allowed.length
+
+              if (allowed.length === 0) {
+                toast(`Aucune n’a fini de sortir : « ${STATUS_LABELS[status]} » ne s’applique à aucune.`, 'info')
+                return
+              }
+              const label = left > 0 ? `${STATUS_LABELS[status]} — ${left} encore en diffusion` : STATUS_LABELS[status]
+              void apply(label, () => bulkPatch(allowed, { status }))
             }}
           >
             <option value="" disabled>

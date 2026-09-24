@@ -12,6 +12,7 @@ import {
 import { MangaSheet } from '@/components/MangaSheet'
 import { Modal } from '@/components/ui'
 import { formatLabel, formatTime, seasonLabel, titleOf } from '@/lib/format'
+import { statusBlocked } from '@/lib/status'
 import { useApp } from '@/store/app'
 import { useCatalogue, useForYou, useMangaList, useWeek } from './pages-data'
 import type { DetailHeroProps } from '.'
@@ -369,17 +370,22 @@ export function CarnetDetailHero(props: DetailHeroProps): React.JSX.Element {
             </div>
             {entry && (
               <div className="mt-4 flex flex-wrap gap-2">
-                {STATUSES.map((status, i) => (
-                  <button
-                    key={status}
-                    className="xk-tag !min-h-0 !py-1 !text-[0.75rem]"
-                    style={{ background: INKS[i % INKS.length] }}
-                    data-on={entry.status === status}
-                    onClick={() => props.onStatus(status)}
-                  >
-                    {STATUS_LABELS[status]}
-                  </button>
-                ))}
+                {STATUSES.map((status, i) => {
+                  const blocked = statusBlocked(status, media, entry)
+                  return (
+                    <button
+                      key={status}
+                      className="xk-tag !min-h-0 !py-1 !text-[0.75rem]"
+                      style={{ background: INKS[i % INKS.length] }}
+                      data-on={entry.status === status}
+                      disabled={!!blocked}
+                      title={blocked ?? undefined}
+                      onClick={() => props.onStatus(status)}
+                    >
+                      {STATUS_LABELS[status]}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>

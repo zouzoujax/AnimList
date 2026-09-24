@@ -11,6 +11,7 @@ import {
 import { MangaSheet } from '@/components/MangaSheet'
 import { Modal } from '@/components/ui'
 import { formatLabel, formatTime, seasonLabel, titleOf } from '@/lib/format'
+import { statusBlocked } from '@/lib/status'
 import { useApp } from '@/store/app'
 import { useCatalogue, useForYou, useMangaList, useWeek } from './pages-data'
 import type { DetailHeroProps } from '.'
@@ -359,16 +360,21 @@ export function MagazineDetailHero(props: DetailHeroProps): React.JSX.Element {
           </div>
           {entry && (
             <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1">
-              {STATUSES.map((status) => (
-                <button
-                  key={status}
-                  className="xm-section"
-                  aria-current={entry.status === status ? 'page' : undefined}
-                  onClick={() => props.onStatus(status)}
-                >
-                  {STATUS_LABELS[status]}
-                </button>
-              ))}
+              {STATUSES.map((status) => {
+                const blocked = statusBlocked(status, media, entry)
+                return (
+                  <button
+                    key={status}
+                    className="xm-section"
+                    aria-current={entry.status === status ? 'page' : undefined}
+                    disabled={!!blocked}
+                    title={blocked ?? undefined}
+                    onClick={() => props.onStatus(status)}
+                  >
+                    {STATUS_LABELS[status]}
+                  </button>
+                )
+              })}
             </div>
           )}
         </aside>
