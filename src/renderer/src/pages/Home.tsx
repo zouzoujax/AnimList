@@ -5,6 +5,7 @@ import type { FollowNews, Media } from '@shared/types'
 import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { Soiree } from '@/components/Soiree'
+import { Dormant } from '@/components/Dormant'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
@@ -440,6 +441,10 @@ export default function HomePage(): React.JSX.Element {
             </RowScroller>
           </Section>
         )}
+
+        {/* Après « à rattraper », qui parle des séries qu'on suit encore :
+            celles-ci ne sont plus en cours, la question posée n'est pas la même. */}
+        <Dormant />
 
         {pinned.length > 0 && (
           <Section

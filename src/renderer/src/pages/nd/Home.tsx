@@ -6,6 +6,7 @@ import { AnimeCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { EpisodeStrip, SeriesRow, plural } from '@/components/nd'
 import { Soiree } from '@/components/Soiree'
+import { Dormant } from '@/components/Dormant'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, formatTime, isUnaired, startOfDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
@@ -417,6 +418,10 @@ export default function HomePage(): React.JSX.Element {
             )}
           </Section>
         )}
+
+        {/* Après la file des séries en cours : celles-ci n'en sont plus, et
+            ce qu'on leur demande n'est pas de continuer mais de se refermer. */}
+        <Dormant />
 
         {upcoming.length > 0 && (
           <section id="semaine" className="span-all mb-9">
