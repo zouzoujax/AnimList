@@ -9,6 +9,16 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.9.3 — 25 septembre 2026
+
+### Ajouts
+
+- L'arbre d'une franchise, sur le téléphone : ouvre une série depuis la télécommande, touche « Franchise », et tout ce qui pousse autour se déplie — les saisons, les films, les OVA, les spin-off, les résumés, avec ce que tu as vu de chacun. Le PC accroche les branches à droite d'un rail ; sur un téléphone il n'y a pas de droite, alors les saisons s'empilent et ce qui pousse sur l'une se range dessous, en retrait. Toucher un titre l'ouvre sur le PC, y compris un film que tu ne suis pas — c'est justement l'intérêt de regarder un arbre
+
+### Modifications
+
+- L'arbre d'une franchise s'affiche instantanément au lieu de se faire attendre. Sa structure est désormais gardée d'une fois sur l'autre : Shingeki no Kyojin demandait vingt-deux secondes à chaque redémarrage, il en demande un centième. Passé une demi-journée, l'arbre est servi tel quel et part se relire en arrière-plan, si bien que la saison qui vient d'être annoncée apparaît à la visite suivante. Ce que tu as vu, lui, est toujours recalculé : ce sont les chiffres du moment, jamais ceux d'une ancienne visite
+
 ## 0.9.2 — 25 septembre 2026
 
 ### Corrections
