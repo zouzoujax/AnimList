@@ -66,6 +66,9 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     // espacées, et la rangée n'apparaît qu'une fois le vivier constitué.
     { name: 'decouvrir', route: { name: 'discover' }, settleMs: 7000 },
     { name: 'calendrier', route: { name: 'calendar' }, settleMs: 2200 },
+    // Le tri de la saison interroge AniList sur toute la saison, en deux ou
+    // trois pages : il lui faut plus de temps que les autres.
+    { name: 'saison', route: { name: 'season' }, settleMs: 6000 },
     { name: 'manga', route: { name: 'manga' }, settleMs: 2000 },
     // Les expériences ont leur propre page de badges ; ailleurs, la route
     // retombe sur les Statistiques.
@@ -75,7 +78,10 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },
     // Pas de réseau : la page ne lit que l'historique local, elle est prête tout de suite.
     { name: 'journal', route: { name: 'journal' }, settleMs: 900 },
-    { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 }
+    { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 },
+    // Les interrupteurs et les lignes : le haut de la page n'est fait que de
+    // vignettes de thèmes, qui ne disent rien de la forme des réglages.
+    { name: 'reglages-bas', route: { name: 'settings' }, settleMs: 1000, scrollTo: '#reglages-lecture' }
   ]
 
   // `--shot-only=accueil,fiche` : quelques pages seulement, pour juger un thème

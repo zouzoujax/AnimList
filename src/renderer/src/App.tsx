@@ -35,6 +35,8 @@ const NdHomePage = lazy(() => import('@/pages/nd/Home'))
 const NdLibraryPage = lazy(() => import('@/pages/nd/Library'))
 const NdDiscoverPage = lazy(() => import('@/pages/nd/Discover'))
 const NdCalendarPage = lazy(() => import('@/pages/nd/Calendar'))
+const NdSeasonPage = lazy(() => import('@/pages/nd/Season'))
+const NdSettingsPage = lazy(() => import('@/pages/nd/Settings'))
 const NdMangaPage = lazy(() => import('@/pages/nd/Manga'))
 const NdStatsPage = lazy(() => import('@/pages/nd/Stats'))
 const NdJournalPage = lazy(() => import('@/pages/nd/Journal'))
@@ -94,6 +96,8 @@ export default function App(): React.JSX.Element {
     library: useNewDesign('library'),
     discover: useNewDesign('discover'),
     calendar: useNewDesign('calendar'),
+    season: useNewDesign('season'),
+    settings: useNewDesign('settings'),
     manga: useNewDesign('manga'),
     stats: useNewDesign('stats'),
     journal: useNewDesign('journal'),
@@ -256,8 +260,8 @@ export default function App(): React.JSX.Element {
                     {route.name === 'stats' && (xp?.Stats ? <xp.Stats /> : nd.stats ? <NdStatsPage /> : <StatsPage />)}
                     {route.name === 'badges' &&
                       (xp?.Badges ? <xp.Badges /> : nd.stats ? <NdStatsPage focus="badges" /> : <StatsPage />)}
-                    {route.name === 'settings' && <SettingsPage />}
-                    {route.name === 'season' && <SeasonPage />}
+                    {route.name === 'settings' && (nd.settings ? <NdSettingsPage /> : <SettingsPage />)}
+                    {route.name === 'season' && (nd.season ? <NdSeasonPage /> : <SeasonPage />)}
                     {route.name === 'journal' && (nd.journal ? <NdJournalPage /> : <JournalPage />)}
                     {route.name === 'anime' && <DetailPage id={route.id} />}
                   </Suspense>

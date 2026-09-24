@@ -442,19 +442,32 @@ export type WatchEventPatch = Partial<Pick<WatchEvent, 'at' | 'minutes' | 'note'
 
 /** Les pages que le nouveau design sait refaire, chacune activable à part. */
 export type NewDesignPage =
-  'home' | 'library' | 'discover' | 'calendar' | 'manga' | 'stats' | 'journal' | 'detail' | 'studio' | 'person'
+  | 'home'
+  | 'library'
+  | 'discover'
+  | 'calendar'
+  | 'season'
+  | 'manga'
+  | 'stats'
+  | 'journal'
+  | 'detail'
+  | 'studio'
+  | 'person'
+  | 'settings'
 
 export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string }[] = [
   { id: 'home', label: 'Accueil', hint: 'Frise d’épisodes, file « À regarder », semaine de diffusion' },
   { id: 'library', label: 'Bibliothèque', hint: 'Onglets par statut, une ligne par série avec sa frise' },
   { id: 'discover', label: 'Découvrir', hint: 'Grande recherche, recommandations expliquées' },
   { id: 'calendar', label: 'Calendrier', hint: 'Grille de programme : matin, après-midi, soirée, nuit' },
+  { id: 'season', label: 'Tri de la saison', hint: 'Cartes à trancher, lignes pour celles que tu suis déjà' },
   { id: 'manga', label: 'Manga', hint: 'Origine et sens de lecture en tête, étagères' },
   { id: 'stats', label: 'Statistiques', hint: 'Ton visionnage raconté en phrases, badges en liste' },
   { id: 'journal', label: 'Journal', hint: 'Journées annoncées en toutes lettres, visionnages en lignes' },
   { id: 'detail', label: 'Fiche d’un anime', hint: 'Frise dans l’en-tête, sommaire qui suit la lecture' },
   { id: 'studio', label: 'Studio', hint: 'Ce que tu as vu en lignes, le reste en affiches' },
-  { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' }
+  { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' },
+  { id: 'settings', label: 'Réglages', hint: 'Sommaire à gauche, réglages annoncés par une phrase' }
 ]
 
 export interface Prefs {
@@ -1006,12 +1019,14 @@ export const DEFAULT_PREFS: Prefs = {
     library: true,
     discover: true,
     calendar: true,
+    season: true,
     manga: true,
     stats: true,
     journal: true,
     detail: true,
     studio: true,
-    person: true
+    person: true,
+    settings: true
   },
   defaultRuntime: 24,
   showAdult: false,

@@ -147,6 +147,153 @@
     border-color: color-mix(in oklab, var(--tone) 55%, transparent);
   }
 
+  /* Réglages : des chapitres plutôt que des boîtes de verre. */
+  .nd-set-layout {
+    display: flex;
+    align-items: flex-start;
+    gap: 3rem;
+  }
+  .nd-set-toc {
+    position: sticky;
+    top: 1.75rem;
+    display: none;
+    width: 190px;
+    flex-shrink: 0;
+  }
+  @media (min-width: 1100px) {
+    .nd-set-toc {
+      display: block;
+    }
+  }
+  .nd-set-toc button {
+    display: block;
+    width: 100%;
+    padding: 0.35rem 0 0.35rem 0.85rem;
+    text-align: left;
+    font-size: 0.83rem;
+    color: var(--color-faint);
+    border-left: 2px solid var(--line);
+    transition:
+      color 0.18s,
+      border-color 0.18s;
+  }
+  .nd-set-toc button:hover {
+    color: var(--color-muted);
+  }
+  .nd-set-toc button[aria-current='true'] {
+    color: var(--color-ink);
+    border-left-color: var(--accent);
+  }
+
+  .nd-set-section {
+    scroll-margin-top: 1.25rem;
+    padding-bottom: 2.75rem;
+  }
+  .nd-set-section + .nd-set-section {
+    padding-top: 2.75rem;
+    border-top: 1px solid var(--line);
+  }
+  .nd-set-icon {
+    display: inline-grid;
+    place-items: center;
+    margin-right: 0.55rem;
+    vertical-align: -0.18em;
+    color: var(--color-faint);
+  }
+  .nd-set-icon > svg {
+    display: block;
+  }
+  .nd-set-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 0.85rem 0.15rem;
+    border-top: 1px solid var(--line);
+  }
+  .nd-set-row:first-child {
+    border-top: 0;
+    padding-top: 0.15rem;
+  }
+  .nd-set-badge {
+    flex-shrink: 0;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+    border: 1px solid var(--line-2);
+  }
+
+  /* Un trait qui se remplit : ni halo ni dégradé, l'accent suffit à dire « allumé ». */
+  .nd-switch {
+    position: relative;
+    width: 42px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--panel-2);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+    transition: background-color 0.18s;
+  }
+  .nd-switch[data-on='true'] {
+    background: var(--accent);
+    box-shadow: none;
+  }
+  .nd-switch > span {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: var(--color-ink);
+    transition: transform 0.18s ease;
+  }
+  .nd-switch[data-on='true'] > span {
+    transform: translateX(18px);
+    background: #fff;
+  }
+
+  /* Saison : les cartes de tri, une jaquette et ses trois gestes. */
+  .nd-sort-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    gap: 0.75rem;
+  }
+  .nd-sort-card {
+    position: relative;
+    display: flex;
+    gap: 0.9rem;
+    padding: 0.65rem;
+    border-radius: 16px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    transition: border-color 0.18s;
+  }
+  .nd-sort-card:hover {
+    border-color: color-mix(in oklab, var(--tone) 55%, transparent);
+  }
+  .nd-sort-skip {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 8px;
+    color: var(--color-faint);
+    transition:
+      color 0.18s,
+      background-color 0.18s;
+  }
+  .nd-sort-skip:hover {
+    color: var(--color-ink);
+    background: var(--panel-2);
+  }
+
   .nd-tick {
     display: grid;
     place-items: center;
