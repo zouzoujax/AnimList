@@ -13,6 +13,7 @@ import * as anilist from './anilist'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
 import { exportData, importData, importMal, revealDataFolder } from './backup'
+import { backupStatus, chooseBackupFolder, forgetBackupFolder, revealBackupFolder, runBackup } from './autobackup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
@@ -214,6 +215,13 @@ export function registerIpc(): void {
   ipcMain.handle('data:cancel-tvtime', () => cancelImport())
   ipcMain.handle('data:reset', () => resetAll())
   ipcMain.handle('data:reveal', () => revealDataFolder())
+
+  // ---- sauvegarde automatique ------------------------------------------
+  ipcMain.handle('backup:status', () => backupStatus())
+  ipcMain.handle('backup:choose', (e) => chooseBackupFolder(ownerOf(e)))
+  ipcMain.handle('backup:now', () => runBackup(true))
+  ipcMain.handle('backup:forget', () => forgetBackupFolder())
+  ipcMain.handle('backup:reveal', () => revealBackupFolder())
 
   // ---- lecture chez une plateforme -------------------------------------
   ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null, animeId?: number) => {

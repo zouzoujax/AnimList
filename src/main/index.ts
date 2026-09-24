@@ -16,6 +16,7 @@ import { openTargetFrom, refreshJumpList, releaseMediaKeys } from './taskbar'
 import { quickTick, tickTargetFrom } from './quick-tick'
 import { startUpdateWatcher } from './updater'
 import { startBinge } from './binge'
+import { backupOnLaunch } from './autobackup'
 import { useDevProfile } from './profile'
 
 import { startSequelWatcher } from './sequels'
@@ -219,6 +220,8 @@ void app.whenReady().then(() => {
   stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
   stopBinge = startBinge()
+  // La copie datée du jour, dans le dossier choisi s'il y en a un.
+  backupOnLaunch()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()

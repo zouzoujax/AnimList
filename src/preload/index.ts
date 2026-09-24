@@ -8,6 +8,7 @@ import type {
   ApiStatus,
   AiringEntry,
   AiringItem,
+  BackupStatus,
   BrowseQuery,
   CustomList,
   Entry,
@@ -187,6 +188,15 @@ const api = {
     },
     reset: (): Promise<void> => ipcRenderer.invoke('data:reset'),
     reveal: (): Promise<void> => ipcRenderer.invoke('data:reveal')
+  },
+  /** La sauvegarde automatique datée, dans un dossier hors des données de l'app. */
+  backup: {
+    status: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:status'),
+    /** Ouvre le sélecteur de dossier, puis écrit une première copie. */
+    choose: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:choose'),
+    now: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:now'),
+    forget: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:forget'),
+    reveal: (): Promise<void> => ipcRenderer.invoke('backup:reveal')
   },
   health: {
     /** Ce qui cloche dans la bibliothèque, sans rien réparer. */

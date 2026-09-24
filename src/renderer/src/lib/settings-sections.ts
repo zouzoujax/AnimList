@@ -27,7 +27,7 @@ export const SETTINGS_SECTIONS = [
     id: 'donnees',
     title: 'Mes données',
     keywords:
-      'import export sauvegarde restaurer tv time myanimelist anilist kitsu cache santé raccourcis clavier dossier effacer'
+      'import export sauvegarde automatique copie datée rotation restaurer tv time myanimelist anilist kitsu cache santé raccourcis clavier dossier effacer'
   },
   { id: 'a-propos', title: 'À propos', keywords: 'version mise à jour auteur' }
 ] as const

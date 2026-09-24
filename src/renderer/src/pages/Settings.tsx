@@ -18,6 +18,7 @@ import {
   Layers,
   Palette,
   Search,
+  ShieldCheck,
   X,
   PlayCircle,
   Sparkles,
@@ -35,6 +36,7 @@ import {
   type Follow,
   type ImportReport,
   type LayoutId,
+  type BackupStatus,
   type RemoteStatus,
   type TitleLang
 } from '@shared/types'
@@ -45,7 +47,7 @@ import QrCode from '@/components/QrCode'
 import TvTimeImport from '@/components/TvTimeImport'
 import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
-import { minutesToHuman } from '@/lib/format'
+import { minutesToHuman, pluralize, relativeDay } from '@/lib/format'
 import Health from '@/components/Health'
 import { SETTINGS_SECTIONS, fold, type SettingsSection } from '@/lib/settings-sections'
 import { useApp } from '@/store/app'
@@ -214,6 +216,89 @@ function CacheRow(): React.JSX.Element {
         <Trash2 size={14} />
         Vider
       </button>
+    </Row>
+  )
+}
+
+/**
+ * La sauvegarde automatique : le dossier, la dernière copie, et de quoi en
+ * forcer une.
+ *
+ * Une ligne plutôt qu'un interrupteur : il n'y a rien à allumer, seulement un
+ * dossier à désigner. Tant qu'il n'y en a pas, la ligne le dit — c'est la
+ * seule façon de découvrir que la protection n'existe pas encore.
+ */
+function BackupRow(): React.JSX.Element {
+  const [status, setStatus] = useState<BackupStatus | null>(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useApp((s) => s.toast)
+
+  useEffect(() => {
+    let alive = true
+    void window.api.backup.status().then((next) => alive && setStatus(next))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const run = (action: () => Promise<BackupStatus>, done: string): void => {
+    setBusy(true)
+    void action()
+      .then((next) => {
+        setStatus(next)
+        if (next.error) toast(next.error, 'error')
+        else if (next.folder) toast(done, 'ok')
+      })
+      .finally(() => setBusy(false))
+  }
+
+  const hint = !status
+    ? 'Lecture…'
+    : status.error
+      ? status.error
+      : !status.folder
+        ? 'Aucun dossier choisi : la bibliothèque n’a aucune copie hors du dossier de données.'
+        : status.lastAt
+          ? `Dernière sauvegarde ${relativeDay(status.lastAt).toLowerCase()} · ${pluralize(status.count, 'copie gardée', 'copies gardées')} dans ${status.folder}`
+          : `Aucune copie encore dans ${status.folder}.`
+
+  return (
+    <Row label="Sauvegarde automatique" hint={hint}>
+      <div className="flex flex-wrap items-center justify-end gap-1.5">
+        {status?.folder && (
+          <>
+            <button className="btn" disabled={busy} onClick={() => window.api.backup.reveal()}>
+              <FolderOpen size={14} />
+              Ouvrir
+            </button>
+            <button
+              className="btn"
+              disabled={busy}
+              onClick={() => run(() => window.api.backup.now(), 'Sauvegarde écrite.')}
+            >
+              {busy ? 'Copie…' : 'Sauvegarder'}
+            </button>
+          </>
+        )}
+        <button
+          className={status?.folder ? 'btn' : 'btn btn-primary'}
+          disabled={busy}
+          onClick={() => run(() => window.api.backup.choose(), 'Dossier choisi, première copie écrite.')}
+        >
+          <ShieldCheck size={14} />
+          {status?.folder ? 'Changer' : 'Choisir un dossier'}
+        </button>
+        {status?.folder && (
+          <button
+            className="btn"
+            disabled={busy}
+            title="Ne plus sauvegarder automatiquement. Les copies déjà écrites restent."
+            onClick={() => run(() => window.api.backup.forget(), 'Sauvegarde automatique arrêtée.')}
+          >
+            <X size={14} />
+          </button>
+        )}
+      </div>
     </Row>
   )
 }
@@ -1143,6 +1228,8 @@ export default function SettingsPage(): React.JSX.Element {
         )}
 
         <Card id="donnees" title="Mes données" icon={<Database size={17} />}>
+          <BackupRow />
+
           <Row label="Exporter une sauvegarde" hint="Un fichier JSON avec toute ta bibliothèque et ton historique.">
             <button
               className="btn"

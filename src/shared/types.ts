@@ -583,6 +583,26 @@ export interface Prefs {
   badgesAt: Record<string, number> | null
   /** Un son quand un badge tombe. L'animation, elle, suit `reduceMotion`. */
   badgeSound: boolean
+  /**
+   * Où déposer la sauvegarde automatique, hors du dossier de données.
+   *
+   * `null` tant qu'on n'a rien choisi : personne ne veut d'un dossier décidé à
+   * sa place, et le seul endroit qui vaille — un autre disque, un dossier
+   * synchronisé — ne se devine pas. Les règles sont dans `shared/backups.ts`.
+   */
+  backupFolder: string | null
+  /** Quand la dernière copie a été écrite. Zéro tant qu'il n'y en a pas eu. */
+  backupAt: number
+}
+
+/** Ce que les Réglages montrent de la sauvegarde automatique. */
+export interface BackupStatus {
+  folder: string | null
+  /** La plus récente trouvée dans le dossier, relue depuis son nom. */
+  lastAt: number
+  count: number
+  /** Dossier introuvable, disque plein… : à afficher tel quel. */
+  error: string | null
 }
 
 /** A user-made collection, orthogonal to the five statuses. */
@@ -1017,5 +1037,7 @@ export const DEFAULT_PREFS: Prefs = {
   // `null` et non `{}` : une bibliothèque d'avant a déjà ses badges, et le
   // premier inventaire doit pouvoir les inscrire sans les fêter.
   badgesAt: null,
-  badgeSound: true
+  badgeSound: true,
+  backupFolder: null,
+  backupAt: 0
 }
