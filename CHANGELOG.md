@@ -9,6 +9,24 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.9.0 — 24 septembre 2026
+
+### Ajouts
+
+- Une sauvegarde automatique, dans un dossier que tu choisis : une copie datée de toute ta bibliothèque au démarrage, une par jour au plus, et une rotation qui garde les sept dernières plus une par mois. Jusqu'ici la seule copie du registre vivait à côté du fichier qu'elle protège — ça sauve d'une écriture ratée, pas d'un disque perdu. Le fichier écrit est celui d'« Exporter », donc « Restaurer une sauvegarde » sait déjà le relire. Réglages › Mes données, avec la date de la dernière copie
+- Un calendrier pour ton téléphone : la télécommande sert désormais tes prochaines diffusions au format des agendas (.ics). L'agenda de l'iPhone s'y abonne une fois, et les sorties de la semaine arrivent toutes seules. L'adresse et son QR code sont sous la télécommande dans les réglages, et la page du téléphone porte un lien au bas de son calendrier. Rien ne sort du réseau local : c'est ton téléphone qui vient chercher le fichier
+- Le tri de la saison passe au nouveau design : des cartes quand il s'agit de trancher — affiche, « Je regarde », « Plus tard », et « pas pour moi » au coin — et des lignes avec leur frise d'épisodes pour celles que tu suis déjà
+- « Laissées en plan », sur l'accueil : les séries mises en pause et oubliées depuis plus de deux mois. « Dort depuis 7 mois · il reste 12 épisodes », avec de quoi reprendre ou abandonner pour de bon. Quand tout est vu, c'est « Terminée » qui est proposé. Le but n'est pas de faire reprendre, c'est de refermer
+- La recherche de la bibliothèque tolère les abréviations, les mots dans le désordre et les fautes de frappe : « jjk » trouve Jujutsu Kaisen, « kaisen jujutsu » aussi, et « jujutsu kaisan » ne renvoie plus une page vide. Les réponses franches passent devant les approximatives
+- Des surnoms, donnés depuis la fiche d'une série : « jjk », « le truc des sorciers ». Ce que la recherche ne peut pas deviner, tu peux le lui dire, et ces noms-là passent avant tout le reste
+- Le téléphone montre enfin ton retard : la télécommande s'ouvre sur « À rattraper », du plus gros retard au plus petit, et chaque jaquette porte le nombre d'épisodes sortis sans toi. Un seul épisode en attente n'est pas un retard : c'est le cours normal d'une série qu'on suit
+- Le journal s'exporte, en Markdown ou en CSV : toute l'année ou une seule. Le Markdown se lit tel quel — un titre par journée, une ligne par épisode, tes notes citées dessous — et le CSV s'ouvre dans un tableur pour compter autre chose que ce que l'app compte
+
+### Modifications
+
+- Les Réglages changent de visage, et pour de bon : onze cartes de verre empilées, toutes de la même importance, deviennent des chapitres — un titre qu'on lit de loin, une phrase par réglage, et un sommaire qui marque vraiment la section qu'on lit. C'était la page la plus datée de l'app pendant que tout le reste changeait
+- Le calendrier du téléphone va par jours : le jour s'annonce une fois, et ce qui tombe le même soir se voit d'un coup. Il répétait « jeudi » sur chaque ligne
+
 ## 0.8.4 — 24 septembre 2026
 
 ### Modifications
