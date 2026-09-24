@@ -15,6 +15,7 @@ import { NotebookPen, Pencil, Search, Star, X } from 'lucide-react'
 import { useState } from 'react'
 import { EMOTIONS, type EmotionId } from '@shared/types'
 import EpisodeEditor from '@/components/EpisodeEditor'
+import { JournalExport } from '@/components/JournalExport'
 import { EmptyState, Poster } from '@/components/ui'
 import { formatTime, minutesToHuman, pluralize, relativeDay, titleOf } from '@/lib/format'
 import { JOURNAL_FILTERS, emotionOf, passLabel, useJournal } from '@/lib/journal'
@@ -84,6 +85,7 @@ export default function JournalPage(): React.JSX.Element {
                 {f.label}
               </button>
             ))}
+            <JournalExport rows={j.rows} filtered={j.rows.length !== j.total} />
           </div>
 
           {j.emotionCounts.size > 0 && (

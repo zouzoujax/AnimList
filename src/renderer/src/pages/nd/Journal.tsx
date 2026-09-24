@@ -12,6 +12,7 @@ import { NotebookPen, Pencil, Search, Star } from 'lucide-react'
 import { useState } from 'react'
 import { EMOTIONS, type EmotionId } from '@shared/types'
 import EpisodeEditor from '@/components/EpisodeEditor'
+import { JournalExport } from '@/components/JournalExport'
 import { NdHeader, plural, spokenDuration } from '@/components/nd'
 import { EmptyState, Poster } from '@/components/ui'
 import { formatTime, relativeDay, titleOf } from '@/lib/format'
@@ -91,6 +92,7 @@ export default function NdJournalPage(): React.JSX.Element {
                 </button>
               ))}
             </div>
+            <JournalExport rows={j.rows} filtered={j.rows.length !== j.total} />
           </div>
 
           {j.emotionCounts.size > 0 && (

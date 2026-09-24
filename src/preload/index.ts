@@ -175,6 +175,9 @@ const api = {
     export: (): Promise<ImportReport> => ipcRenderer.invoke('data:export'),
     import: (mode: 'merge' | 'replace'): Promise<ImportReport> => ipcRenderer.invoke('data:import', mode),
     importMal: (): Promise<ImportReport> => ipcRenderer.invoke('data:import-mal'),
+    /** Le journal mis en forme par la fenêtre, écrit où l'utilisateur le dit. */
+    exportJournal: (name: string, text: string): Promise<ImportReport> =>
+      ipcRenderer.invoke('data:export-journal', name, text),
     /** Liste publique AniList, par pseudo : aucun compte ni fichier requis. */
     importAniList: (user: string): Promise<ImportReport> => ipcRenderer.invoke('data:import-anilist', user),
     /** Liste publique Kitsu, par pseudo. Rapprochée via MyAnimeList. */

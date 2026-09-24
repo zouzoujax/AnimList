@@ -28,6 +28,49 @@ export async function exportData(win: BrowserWindow): Promise<ImportReport> {
   }
 }
 
+/**
+ * Écrit le journal mis en forme là où on le demande.
+ *
+ * Le texte arrive tout fait de la fenêtre : la mise en forme est pure et
+ * testée (`shared/journal-export.ts`), et le processus principal n'a que le
+ * dialogue et l'écriture à faire. Il ne relit pas la bibliothèque — ce qui
+ * part est exactement ce que la page montrait, filtres compris.
+ */
+export async function exportJournal(win: BrowserWindow, name: string, text: string): Promise<ImportReport> {
+  const markdown = name.endsWith('.md')
+  const res = await dialog.showSaveDialog(win, {
+    title: 'Exporter mon journal',
+    defaultPath: name,
+    filters: [
+      markdown ? { name: 'Texte Markdown', extensions: ['md'] } : { name: 'Tableur (CSV)', extensions: ['csv'] }
+    ]
+  })
+  if (res.canceled || !res.filePath) {
+    return { ok: false, message: 'Export annulé', added: 0, updated: 0, episodes: 0, skipped: 0 }
+  }
+
+  try {
+    await fs.writeFile(res.filePath, text, 'utf8')
+    return {
+      ok: true,
+      message: `Journal écrit dans ${basename(res.filePath)}`,
+      added: 0,
+      updated: 0,
+      episodes: 0,
+      skipped: 0
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      message: `Écriture impossible : ${(err as Error).message}`,
+      added: 0,
+      updated: 0,
+      episodes: 0,
+      skipped: 0
+    }
+  }
+}
+
 export async function importData(win: BrowserWindow, mode: 'merge' | 'replace'): Promise<ImportReport> {
   const res = await dialog.showOpenDialog(win, {
     title: 'Restaurer une sauvegarde',

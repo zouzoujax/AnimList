@@ -12,7 +12,7 @@ import type {
 import * as anilist from './anilist'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
-import { exportData, importData, importMal, revealDataFolder } from './backup'
+import { exportData, exportJournal, importData, importMal, revealDataFolder } from './backup'
 import { backupStatus, chooseBackupFolder, forgetBackupFolder, revealBackupFolder, runBackup } from './autobackup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
@@ -209,6 +209,7 @@ export function registerIpc(): void {
   ipcMain.handle('data:export', (e) => exportData(ownerOf(e)))
   ipcMain.handle('data:import', (e, mode: 'merge' | 'replace') => importData(ownerOf(e), mode))
   ipcMain.handle('data:import-mal', (e) => importMal(ownerOf(e)))
+  ipcMain.handle('data:export-journal', (e, name: string, text: string) => exportJournal(ownerOf(e), name, text))
   ipcMain.handle('data:import-anilist', (_e, user: string) => importAniList(user))
   ipcMain.handle('data:import-kitsu', (_e, user: string) => importKitsu(user))
   ipcMain.handle('data:import-tvtime', (e, folder?: string | null) => importTvTime(ownerOf(e), folder))
