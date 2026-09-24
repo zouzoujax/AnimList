@@ -526,6 +526,29 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const win = BrowserWindow.getAllWindows()[0]
   if (!win || win.isDestroyed()) return json(res, 409, { error: 'Aucune fenêtre ouverte sur le PC.' })
 
+  /**
+   * `open` : la fiche, sur le PC. Avant la recherche en cache, et c'est tout
+   * l'objet de ce commentaire.
+   *
+   * Ouvrir une fiche ne demande qu'un numéro : c'est la fenêtre qui va
+   * chercher la série chez AniList, et elle sait le faire pour une série qu'on
+   * n'a jamais ouverte. L'exiger en cache refusait tout ce qui vient de
+   * Découvrir — le catalogue n'est pas gardé, seules les séries suivies le
+   * sont —, et le téléphone répondait « Série inconnue » sur la moitié des
+   * jaquettes, au hasard de ce qui traînait déjà dans la bibliothèque.
+   *
+   * Les deux routes qui suivent, elles, ont vraiment besoin de la fiche : la
+   * bande-annonce y prend son identifiant vidéo, et la lecture ses titres pour
+   * retrouver la série chez Anime-Sama. Elles ne sont proposées que sur les
+   * séries de la bibliothèque, toujours en cache.
+   */
+  if (route === 'open') {
+    if (win.isMinimized()) win.restore()
+    win.focus()
+    win.webContents.send('nav:open-anime', id)
+    return json(res, 200, { ok: true })
+  }
+
   const media = snapshot().media.find((m) => m.id === id)
   if (!media) return json(res, 404, { error: 'Série inconnue.' })
 
@@ -559,11 +582,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return json(res, 200, { player: await nowPlaying() })
   }
 
-  // `open` : la fiche, sur le PC.
-  if (win.isMinimized()) win.restore()
-  win.focus()
-  win.webContents.send('nav:open-anime', id)
-  return json(res, 200, { ok: true })
+  return json(res, 404, { error: 'Adresse inconnue.' })
 }
 
 export function remoteStatus(): RemoteStatus {
