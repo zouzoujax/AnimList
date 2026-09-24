@@ -816,6 +816,8 @@ export interface RemoteStatus {
   on: boolean
   /** Adresse à taper sur le téléphone, mot de passe compris. */
   url: string | null
+  /** Adresse du calendrier des diffusions, à donner à un agenda. */
+  ics: string | null
   token: string | null
   port: number
   error: string | null

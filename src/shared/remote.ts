@@ -120,6 +120,7 @@ export type RemoteRoute =
   | 'episodes'
   | 'stats'
   | 'calendar'
+  | 'ics'
   | 'unknown'
 
 /**
@@ -154,6 +155,10 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'stats'
     case '/api/calendar':
       return 'calendar'
+    // Une vraie extension de fichier, et non `/api/…` : c'est l'adresse qu'on
+    // colle dans un agenda, et certains refusent ce qui ne finit pas par .ics.
+    case '/calendrier.ics':
+      return 'ics'
     case '/api/add':
       return 'add'
     case '/api/episodes':
@@ -171,4 +176,14 @@ export function needsToken(route: RemoteRoute): boolean {
 /** Adresse à recopier sur le téléphone. */
 export function remoteUrl(host: string, port: number, token: string): string {
   return `http://${host}:${port}/?t=${token}`
+}
+
+/**
+ * Adresse à donner à un agenda.
+ *
+ * Le mot de passe voyage dans le lien et non dans un en-tête : un agenda qui
+ * s'abonne ne sait rien envoyer d'autre qu'une adresse.
+ */
+export function icsUrl(host: string, port: number, token: string): string {
+  return `http://${host}:${port}/calendrier.ics?t=${token}`
 }

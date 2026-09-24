@@ -32,6 +32,7 @@ import {
   makeToken,
   needsToken,
   REMOTE_PORT,
+  icsUrl,
   remoteUrl,
   routeOf,
   safeEqual,
@@ -43,6 +44,7 @@ import { shouldOfferNext } from '@shared/binge'
 import { playerIndex } from '@shared/as-players'
 import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
+import { buildIcs } from '@shared/ics'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { openTrailerWindow } from './trailer'
 import { openAnimeSamaEpisode, playerChoices, switchPlayer, watchWindow } from './watch-window'
@@ -57,6 +59,8 @@ import { page } from './remote-page'
 export interface RemoteStatus {
   on: boolean
   url: string | null
+  /** Le calendrier des diffusions, à coller dans un agenda. */
+  ics: string | null
   token: string | null
   port: number
   error: string | null
@@ -64,7 +68,7 @@ export interface RemoteStatus {
 
 let server: Server | null = null
 let token = ''
-let status: RemoteStatus = { on: false, url: null, token: null, port: REMOTE_PORT, error: null }
+let status: RemoteStatus = { on: false, url: null, ics: null, token: null, port: REMOTE_PORT, error: null }
 
 /** Le corps d'une requête, plafonné : rien ici n'a besoin d'être gros. */
 async function readBody(req: IncomingMessage, max = 4096): Promise<string> {
@@ -217,6 +221,16 @@ export function localAddresses(): string[] {
   return out
 }
 
+/**
+ * Jusqu'où le calendrier regarde.
+ *
+ * Plus loin que les quinze jours de la page : un agenda se consulte à
+ * l'avance, et rien ne coûte à y porter une date déjà connue. AniList
+ * n'annonce de toute façon que le prochain épisode de chaque série, donc la
+ * fenêtre ne fait qu'éviter d'écarter une reprise lointaine.
+ */
+const ICS_DAYS = 60
+
 async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = req.url ?? '/'
   const pathname = url.split('?')[0]
@@ -313,6 +327,57 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
     if (route === 'stats') return json(res, 200, summarise(data.history, entries, media))
     return json(res, 200, { airing: upcoming(entries, media) })
+  }
+
+  /**
+   * Le calendrier des diffusions, pour l'agenda du téléphone.
+   *
+   * Servi depuis les fiches déjà en cache : un agenda abonné relit son
+   * adresse tout seul, plusieurs fois par jour, et faire partir une requête
+   * chez AniList à chaque fois épuiserait le quota pour rien.
+   *
+   * Le même contenu que le calendrier de la page, mis en forme pour un agenda
+   * plutôt que pour un écran. Tout reste sur le réseau local : c'est le
+   * téléphone qui vient chercher le fichier, rien ne part d'ici.
+   */
+  if (route === 'ics') {
+    const data = snapshot()
+    const media = new Map(
+      data.media.map((m) => [
+        m.id,
+        {
+          id: m.id,
+          title: m.title.english ?? m.title.romaji,
+          cover: m.cover.large,
+          episodes: m.episodes,
+          genres: m.genres,
+          nextAiring: m.nextAiring
+        }
+      ])
+    )
+    const entries = data.entries.map((e) => ({ animeId: e.animeId, status: e.status }))
+    const runtime = new Map(data.media.map((m) => [m.id, m.duration]))
+    const fallback = getPrefs().defaultRuntime
+
+    const body = buildIcs(
+      upcoming(entries, media, Date.now(), ICS_DAYS).map((a) => ({
+        animeId: a.animeId,
+        title: a.title,
+        episode: a.episode,
+        airingAt: a.airingAt,
+        minutes: runtime.get(a.animeId) || fallback
+      }))
+    )
+    res.writeHead(200, {
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Length': Buffer.byteLength(body),
+      // Le nom du fichier sert quand on ouvre l'adresse à la main plutôt que
+      // de s'y abonner : un agenda, lui, ne regarde que le type.
+      'Content-Disposition': 'inline; filename="animelist.ics"',
+      'Cache-Control': 'no-store'
+    })
+    res.end(body)
+    return
   }
 
   if (route === 'discover') {
@@ -521,7 +586,14 @@ export function startRemote(port = REMOTE_PORT): Promise<RemoteStatus> {
 
     const hosts = localAddresses()
     if (!hosts.length) {
-      status = { on: false, url: null, token: null, port, error: 'Aucun réseau local détecté sur cette machine.' }
+      status = {
+        on: false,
+        url: null,
+        ics: null,
+        token: null,
+        port,
+        error: 'Aucun réseau local détecté sur cette machine.'
+      }
       resolve(status)
       return
     }
@@ -535,13 +607,20 @@ export function startRemote(port = REMOTE_PORT): Promise<RemoteStatus> {
 
     next.on('error', (err) => {
       server = null
-      status = { on: false, url: null, token: null, port, error: err.message }
+      status = { on: false, url: null, ics: null, token: null, port, error: err.message }
       resolve(status)
     })
 
     next.listen(port, '0.0.0.0', () => {
       server = next
-      status = { on: true, url: remoteUrl(hosts[0], port, token), token, port, error: null }
+      status = {
+        on: true,
+        url: remoteUrl(hosts[0], port, token),
+        ics: icsUrl(hosts[0], port, token),
+        token,
+        port,
+        error: null
+      }
       resolve(status)
     })
   })
@@ -555,6 +634,6 @@ export function stopRemote(): RemoteStatus {
   // n'ait été choisi dans les réglages — c'est justement ce qu'on demande
   // alors, et le lien mis en favori continue de marcher.
   token = ''
-  status = { on: false, url: null, token: null, port: status.port, error: null }
+  status = { on: false, url: null, ics: null, token: null, port: status.port, error: null }
   return status
 }

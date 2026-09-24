@@ -73,6 +73,7 @@ describe('routeOf', () => {
   it('reconnaît les adresses prévues', () => {
     expect(routeOf('/')).toBe('page')
     expect(routeOf('/api/state')).toBe('state')
+    expect(routeOf('/calendrier.ics')).toBe('ics')
     expect(routeOf('/api/tick')).toBe('tick')
     expect(routeOf('/api/open')).toBe('open')
     expect(routeOf('/api/watch')).toBe('watch')

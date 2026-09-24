@@ -2,6 +2,7 @@ import { humanMessage } from '@shared/api-outage'
 import {
   AtSign,
   Bell,
+  CalendarPlus,
   Smartphone,
   Languages as LanguagesIcon,
   BellOff,
@@ -1016,6 +1017,46 @@ export default function SettingsPage(): React.JSX.Element {
                   }
                 >
                   Copier le lien
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* L'abonnement se prend une fois et travaille tout seul ensuite :
+            les sorties de la semaine arrivent dans l'agenda du téléphone sans
+            ouvrir le PC, et sans que rien ne quitte le réseau local. */}
+          {remote?.on && remote.ics && (
+            <div
+              className="mt-1 flex flex-wrap items-center gap-4 border-t px-1 py-3"
+              style={{ borderColor: 'var(--line)' }}
+            >
+              <QrCode text={remote.ics} label="Adresse du calendrier" />
+              <div className="min-w-[200px] flex-1">
+                <p className="text-[0.84rem] font-semibold">Le calendrier dans ton agenda</p>
+                <p className="mt-1 text-[0.78rem] leading-relaxed text-muted">
+                  Un abonnement à cette adresse pose les prochains épisodes de tes séries dans l’agenda du téléphone.
+                  Sur iPhone : Réglages › Applications › Calendrier › Comptes › Ajouter un compte › Autre › Ajouter un
+                  calendrier avec abonnement. L’agenda vient chercher le fichier ici, donc il ne se met à jour que sur
+                  ton réseau, l’app ouverte et la télécommande allumée — un agenda hébergé ailleurs, comme celui de
+                  Google, ne sait pas joindre une adresse locale.
+                </p>
+                <code
+                  className="mt-2 block break-all rounded-[8px] px-2 py-1.5 text-[0.7rem]"
+                  style={{ background: 'var(--panel-2)', color: 'var(--color-muted)' }}
+                >
+                  {remote.ics}
+                </code>
+                <button
+                  className="chip mt-2"
+                  onClick={() =>
+                    void navigator.clipboard
+                      .writeText(remote.ics as string)
+                      .then(() => toast('Adresse du calendrier copiée.', 'ok'))
+                      .catch(() => toast('Copie refusée.', 'error'))
+                  }
+                >
+                  <CalendarPlus size={13} />
+                  Copier l’adresse
                 </button>
               </div>
             </div>

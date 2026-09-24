@@ -198,6 +198,15 @@ const STYLE = `
     background: rgba(255,176,56,.12); border: 1px solid rgba(255,176,56,.25);
   }
 
+  /* L'abonnement à l'agenda, sous le calendrier : un lien et non un bouton,
+     c'est le téléphone qui décide quoi faire d'un fichier .ics. */
+  .ics {
+    display: block; margin: 14px 2px 4px; padding: 13px; border-radius: 13px; text-align: center;
+    font-size: .82rem; font-weight: 600; color: var(--text); text-decoration: none;
+    background: var(--panel); border: 1px solid var(--line);
+  }
+  .ics span { display: block; margin-top: 4px; font-weight: 400; font-size: .74rem; color: var(--muted); }
+
   /* ---- états ---- */
   .empty, .err { text-align: center; color: var(--muted); padding: 46px 12px; font-size: .9rem; line-height: 1.7; }
   .err { color: #ff9b9b; }
@@ -750,9 +759,12 @@ const SCRIPT = `
     countEl.textContent = airing.length
       ? airing.length + (airing.length > 1 ? ' épisodes annoncés' : ' épisode annoncé')
       : 'Rien d’annoncé'
+    var abonnement = '<a class="ics" href="/calendrier.ics?t=' + encodeURIComponent(token) + '">' +
+      'Mettre ces sorties dans mon agenda' +
+      '<span>Ouvre le calendrier au format .ics. À garder en favori pour s’y abonner.</span></a>'
     if (!airing.length) {
       appEl.innerHTML = '<div class="empty">Aucun épisode annoncé dans les deux semaines qui viennent, ' +
-        'parmi les séries que tu suis.</div>'
+        'parmi les séries que tu suis.</div>' + abonnement
       return
     }
     appEl.innerHTML = airing.map(function (a) {
@@ -763,7 +775,7 @@ const SCRIPT = `
           '<div class="meta"><b>Épisode ' + a.episode + '</b> · ' + esc(quand(a.airingAt)) + '</div>' +
         '</div>' +
       '</div></div>'
-    }).join('')
+    }).join('') + abonnement
   }
 
   function renderStats(s) {
