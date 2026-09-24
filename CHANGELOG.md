@@ -9,6 +9,13 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.9.1 — 24 septembre 2026
+
+### Corrections
+
+- « Terminé » ne se coche plus sur une série qui n'a pas fini de sortir. Tomb Raider King diffuse encore — son douzième épisode est annoncé — et le statut se posait quand même, alors que cocher un épisode à venir était refusé depuis longtemps : la règle n'existait que d'un côté. Le bouton est éteint tant que la série paraît, et dit pourquoi au survol. Une série annulée compte comme finie, le dernier épisode diffusé il y a trois heures aussi, et une série déjà marquée terminée n'est jamais enfermée — la règle interdit d'y entrer, pas d'en sortir
+- Un badge gagné reste gagné. Décocher un épisode éteignait une médaille obtenue des semaines plus tôt, alors que sa date restait inscrite au registre : le mur et le registre se contredisaient à l'écran. Un badge est désormais acquis dès que sa condition a été remplie une fois, et la barre de progression continue de dire où tu en es tant qu'il n'est pas tombé
+
 ## 0.9.0 — 24 septembre 2026
 
 ### Ajouts
