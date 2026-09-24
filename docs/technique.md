@@ -133,20 +133,20 @@ toucher aux thèmes : une phrase en tête de page plutôt qu'un titre et des ét
 capitales, la couleur de chaque série plutôt que l'accent partout, et une frise d'épisodes (un
 trait par épisode : vu, suivant, sorti sans toi, pas encore diffusé). Allumé, il propose un
 interrupteur par page (`newDesignPages`) : accueil, bibliothèque, Découvrir, calendrier, tri de
-la saison, manga, statistiques, journal, fiche, studio, personne, réglages. Les pages vivent
+la saison, manga, statistiques, journal, fiche, studio, personne. Les pages vivent
 dans `pages/nd/`, chacune dans son morceau de code ; leurs pièces communes dans
 `components/nd.tsx` et `nd.css`, et `lib/nd.ts` (`useNewDesign`) dit si une page le prend. La
 fiche passe par le même contrat que les expériences (`DetailHero`, `DetailBody`) ; une
 expérience garde toujours la main sur ses propres pages.
 
-Les **Réglages** font exception, et c'est délibéré : leur contenu — onze sections, une centaine
-de réglages et tout ce qui les fait marcher — n'existe qu'une fois, dans
-`pages/settings/Body.tsx`. Chaque design fournit seulement son habillage (la carte, la ligne,
-l'interrupteur) par le contexte de `pages/settings/chrome.tsx`, et pose sa propre coquille :
-titre, recherche, sommaire. Ajouter un réglage se fait donc dans `Body.tsx`, et il paraît des
-deux côtés — deux copies auraient divergé au premier ajout. La recherche filtre par le DOM
-(`data-settings-section`, `data-keywords`, `data-settings-row`) : c'est le contrat que les deux
-habillages doivent tenir.
+Les **Réglages** n'y figurent pas : leur nouvelle forme — des chapitres plutôt que des cartes de
+verre, une phrase par réglage, un sommaire qui marque la section lue — a quitté le nouveau
+design pour devenir la page, sans interrupteur. Elle tient en deux fichiers :
+`pages/Settings.tsx` pour la coquille (titre, recherche, sommaire) et `pages/settings/Body.tsx`
+pour le contenu, onze sections et une centaine de réglages. Un réglage s'ajoute dans `Body.tsx`.
+La recherche filtre par le DOM (`data-settings-section`, `data-keywords`, `data-settings-row`) :
+c'est le contrat que la page doit tenir, et `filterSettings` vit avec `SETTINGS_SECTIONS` dans
+`lib/settings-sections.ts`.
 
 Un thème ne peut pas figer la couleur d'accent, puisqu'elle est réglable. Sur un fond clair cela
 demande de la prudence : un accent vif peut tomber sous 3:1 comme couleur de texte. La règle

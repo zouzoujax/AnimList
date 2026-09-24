@@ -45,3 +45,38 @@ export function fold(text: string): string {
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
 }
+
+/**
+ * Masque les lignes qui ne répondent pas à la recherche.
+ *
+ * Par le DOM plutôt que par l'état : les cartes mêlent des lignes simples et
+ * des blocs sur mesure, et faire remonter à chacune « je corresponds » aurait
+ * voulu dire réécrire la page. Rend les sections encore visibles.
+ *
+ * Le contrat que la page doit tenir : `data-settings-section` et
+ * `data-keywords` sur chaque section, `data-settings-row` sur chaque ligne.
+ */
+export function filterSettings(root: HTMLElement, query: string): Set<string> | null {
+  const needle = fold(query.trim())
+  const sections = root.querySelectorAll<HTMLElement>('[data-settings-section]')
+  if (!needle) {
+    sections.forEach((section) => {
+      section.hidden = false
+      section.querySelectorAll<HTMLElement>('[data-settings-row]').forEach((row) => (row.hidden = false))
+    })
+    return null
+  }
+  const visible = new Set<string>()
+  sections.forEach((section) => {
+    const whole = fold(section.dataset.keywords ?? '').includes(needle)
+    let any = whole
+    section.querySelectorAll<HTMLElement>('[data-settings-row]').forEach((row) => {
+      const hit = whole || fold(row.textContent ?? '').includes(needle)
+      row.hidden = !hit
+      if (hit) any = true
+    })
+    section.hidden = !any
+    if (any) visible.add(section.dataset.settingsSection ?? '')
+  })
+  return visible
+}

@@ -453,7 +453,6 @@ export type NewDesignPage =
   | 'detail'
   | 'studio'
   | 'person'
-  | 'settings'
 
 export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string }[] = [
   { id: 'home', label: 'Accueil', hint: 'Frise d’épisodes, file « À regarder », semaine de diffusion' },
@@ -466,8 +465,7 @@ export const NEW_DESIGN_PAGES: { id: NewDesignPage; label: string; hint: string 
   { id: 'journal', label: 'Journal', hint: 'Journées annoncées en toutes lettres, visionnages en lignes' },
   { id: 'detail', label: 'Fiche d’un anime', hint: 'Frise dans l’en-tête, sommaire qui suit la lecture' },
   { id: 'studio', label: 'Studio', hint: 'Ce que tu as vu en lignes, le reste en affiches' },
-  { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' },
-  { id: 'settings', label: 'Réglages', hint: 'Sommaire à gauche, réglages annoncés par une phrase' }
+  { id: 'person', label: 'Personnage et doubleur', hint: 'Rôles déjà vus en tête, avec le nom du rôle' }
 ]
 
 export interface Prefs {
@@ -1025,8 +1023,7 @@ export const DEFAULT_PREFS: Prefs = {
     journal: true,
     detail: true,
     studio: true,
-    person: true,
-    settings: true
+    person: true
   },
   defaultRuntime: 24,
   showAdult: false,

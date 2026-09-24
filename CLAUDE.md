@@ -20,7 +20,7 @@ App de bureau Windows pour suivre ses animes. Electron + electron-vite, React 19
 - `experiences/` : 5 expériences (Streaming, Console, Magazine, Cockpit, Carnet), chargées à la demande
 - `pages/nd/` + `components/nd.tsx` + `nd.css` : le nouveau design, activable page par page (`useNewDesign`)
 - Ajouter une page au nouveau design : l'id dans `NewDesignPage` + `NEW_DESIGN_PAGES` (`shared/types.ts`), un `lazy()` et l'aiguillage dans `App.tsx` ; une expérience garde toujours la priorité sur ses pages
-- Un réglage s'ajoute dans `pages/settings/Body.tsx` : le contenu est unique, chaque design ne fournit que son habillage (`pages/settings/chrome.tsx`)
+- Réglages : la coquille est `pages/Settings.tsx`, le contenu `pages/settings/Body.tsx` — un réglage s'ajoute là. Page unique, hors du nouveau design
 - `pages/Home.tsx` est l'accueil classique ; le nouveau est `pages/nd/Home.tsx`
 - Détails : `docs/technique.md`
 

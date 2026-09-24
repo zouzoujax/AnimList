@@ -1,10 +1,10 @@
 /**
  * Le contenu des Réglages : onze sections, et tout ce qui les fait marcher.
  *
- * Rendu à l'identique par l'ancienne page et par la nouvelle — seul
- * l'habillage change, fourni par `chrome.tsx`. Le titre, la recherche et le
- * sommaire restent à la page qui l'affiche : c'est là que les deux designs
- * diffèrent vraiment.
+ * À part de la page pour une raison de taille : mille trois cents lignes de
+ * réglages et de mise en page dans le même fichier, c'est ce qu'était cette
+ * page avant, et on n'y retrouvait plus rien. Ici les réglages ; dans
+ * `pages/Settings.tsx`, le titre, la recherche et le sommaire.
  */
 
 import { humanMessage } from '@shared/api-outage'
@@ -35,7 +35,7 @@ import {
   X,
   Zap
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import {
   DEFAULT_PREFS,
   LAYOUTS,
@@ -58,8 +58,84 @@ import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
 import { minutesToHuman, pluralize, relativeDay } from '@/lib/format'
 import Health from '@/components/Health'
+import { SETTINGS_SECTIONS, type SettingsSection } from '@/lib/settings-sections'
 import { useApp } from '@/store/app'
-import { useChrome } from './chrome'
+
+/**
+ * Une section : son nom en grand, et rien autour.
+ *
+ * La page posait autrefois chaque section dans une carte de verre, avec son
+ * icône en couleur et un titre de la taille d'une ligne. Onze boîtes les unes
+ * sous les autres, toutes de la même importance. Désormais la section s'annonce
+ * comme un chapitre — un titre qu'on lit de loin, un trait, puis les réglages
+ * — et son icône passe en gris : elle accompagne le titre au lieu de le
+ * concurrencer, la navigation étant l'affaire du sommaire.
+ */
+function Card({
+  id,
+  title,
+  icon,
+  children
+}: {
+  id: SettingsSection
+  title: string
+  icon: ReactNode
+  children: ReactNode
+}): React.JSX.Element {
+  const keywords = SETTINGS_SECTIONS.find((section) => section.id === id)?.keywords ?? ''
+  return (
+    <section
+      id={`reglages-${id}`}
+      data-settings-section={id}
+      data-keywords={`${title} ${keywords}`}
+      className="nd-set-section"
+    >
+      <h2 className="title-xl text-[1.32rem] leading-tight">
+        <span className="nd-set-icon" aria-hidden>
+          {icon}
+        </span>
+        {title}
+      </h2>
+      <div className="mt-3.5">{children}</div>
+    </section>
+  )
+}
+
+/** Un réglage : ce qu'il fait à gauche en une phrase, de quoi le changer à droite. */
+function Row({
+  label,
+  hint,
+  badge,
+  children
+}: {
+  label: string
+  hint?: string
+  /** « WIP » et compagnie : dire qu'un réglage n'est pas encore stabilisé. */
+  badge?: string
+  children: ReactNode
+}): React.JSX.Element {
+  return (
+    <div data-settings-row className="nd-set-row">
+      <div className="min-w-0">
+        <p className="flex items-center gap-2 text-[0.88rem] font-semibold">
+          {label}
+          {badge && <span className="nd-set-badge">{badge}</span>}
+        </p>
+        {hint && <p className="mt-1 max-w-[62ch] text-[0.78rem] leading-relaxed text-muted">{hint}</p>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  )
+}
+
+/** L'interrupteur : un trait qui se remplit, sans halo ni dégradé. */
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }): React.JSX.Element {
+  return (
+    <button role="switch" aria-checked={on} onClick={() => onChange(!on)} className="nd-switch" data-on={on}>
+      <span />
+    </button>
+  )
+}
 
 /** Tiny wireframe so the option is legible without trying it. */
 function LayoutPreview({ id }: { id: LayoutId }): React.JSX.Element {
@@ -105,7 +181,6 @@ function LayoutPreview({ id }: { id: LayoutId }): React.JSX.Element {
  * retélécharge à la demande.
  */
 function CacheRow(): React.JSX.Element {
-  const { Row } = useChrome()
   const [stats, setStats] = useState<{ entries: number; bytes: number } | null>(null)
   const toast = useApp((s) => s.toast)
 
@@ -150,7 +225,6 @@ function CacheRow(): React.JSX.Element {
  * seule façon de découvrir que la protection n'existe pas encore.
  */
 function BackupRow(): React.JSX.Element {
-  const { Row } = useChrome()
   const [status, setStatus] = useState<BackupStatus | null>(null)
   const [busy, setBusy] = useState(false)
   const toast = useApp((s) => s.toast)
@@ -226,7 +300,6 @@ function BackupRow(): React.JSX.Element {
 }
 
 export default function SettingsBody(): React.JSX.Element {
-  const { Card, Row, Toggle } = useChrome()
   const prefs = useApp((s) => s.prefs)
   const setHelp = useApp((s) => s.setHelp)
   const [healthOpen, setHealthOpen] = useState(false)
