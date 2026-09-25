@@ -376,10 +376,15 @@ const STYLE = `
   .slot {
     display: flex; gap: .7rem; align-items: center; width: 100%; margin-bottom: .45rem; cursor: pointer;
     padding: .45rem; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); text-align: left;
-    border-left: 3px solid var(--c, var(--line));
   }
   .slot img { width: 2.4rem; height: 3.3rem; border-radius: 7px; object-fit: cover; flex: none; background: var(--panel-2); }
-  .slot .hour { font-variant-numeric: tabular-nums; font-weight: 650; font-size: .85rem; flex: none; min-width: 3.4rem; }
+  /* L'heure sur un fond teinté de la couleur de la série : on reconnaît la
+     série sans que sa couleur ne touche au texte. */
+  .slot .hour {
+    font-variant-numeric: tabular-nums; font-weight: 650; font-size: .85rem; flex: none; min-width: 3.9rem;
+    padding: .25rem .45rem; border-radius: 8px; text-align: center;
+    background: color-mix(in srgb, var(--c, var(--accent)) 20%, transparent);
+  }
   .ics {
     display: block; margin-top: 1.5rem; padding: .9rem 1rem; border-radius: 14px; max-width: 34rem;
     font-size: .88rem; font-weight: 600; color: var(--text); text-decoration: none;
