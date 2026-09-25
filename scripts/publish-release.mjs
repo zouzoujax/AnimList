@@ -22,7 +22,7 @@ const require = createRequire(import.meta.url)
 const { version } = require('../package.json')
 
 const OWNER = 'zouzoujax'
-const REPO = 'AnimList'
+const REPO = 'AnimeList'
 const TAG = `v${version}`
 const DIR = path.join(process.cwd(), 'release')
 const ASSETS = [`AnimeList-${version}-setup.exe`, `AnimeList-${version}-setup.exe.blockmap`, 'latest.yml']

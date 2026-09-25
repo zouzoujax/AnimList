@@ -37,5 +37,5 @@ nsis:
 publish:
   provider: github
   owner: zouzoujax
-  repo: AnimList
+  repo: AnimeList
   releaseType: release
