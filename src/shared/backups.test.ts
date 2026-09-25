@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { KEEP_RECENT, backupName, isDue, listBackups, stampOf, toDelete } from './backups'
+import { KEEP_RECENT, backupName, freshName, isDue, listBackups, stampOf, toDelete } from './backups'
 
 const at = (y: number, mo: number, d: number, hh = 12, mm = 0): number => new Date(y, mo - 1, d, hh, mm).getTime()
 const nom = (y: number, mo: number, d: number, hh = 12, mm = 0): string => backupName(at(y, mo, d, hh, mm))
@@ -77,5 +77,18 @@ describe('isDue', () => {
 
   it('oui le lendemain', () => {
     expect(isDue([nom(2026, 9, 24, 23, 59)], at(2026, 9, 25, 0, 1))).toBe(true)
+  })
+})
+
+describe('freshName', () => {
+  it('ne réutilise jamais le nom d’une copie de la même minute', () => {
+    const t = at(2026, 9, 26, 1, 15) + 7_000
+    const first = freshName([], t)
+    expect(first).toBe('animelist-2026-09-26-0115.json')
+    const second = freshName([first], t)
+    expect(second).toBe('animelist-2026-09-26-011507.json')
+    // Relue à la seconde près, et rangée devant la première.
+    expect(stampOf(second)?.at).toBe(t)
+    expect(listBackups([first, second]).map((s) => s.name)).toEqual([second, first])
   })
 })

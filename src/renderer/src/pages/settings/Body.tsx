@@ -24,6 +24,7 @@ import {
   MessageCircle,
   Stethoscope,
   HardDrive,
+  History,
   Languages,
   Layers,
   Palette,
@@ -58,6 +59,7 @@ import UpdatePanel from '@/components/UpdatePanel'
 import { ACCENT_PRESETS } from '@/lib/color'
 import { minutesToHuman, pluralize, relativeDay } from '@/lib/format'
 import Health from '@/components/Health'
+import RestoreBackup from '@/components/RestoreBackup'
 import { SETTINGS_SECTIONS, type SettingsSection } from '@/lib/settings-sections'
 import { useApp } from '@/store/app'
 
@@ -227,6 +229,7 @@ function CacheRow(): React.JSX.Element {
 function BackupRow(): React.JSX.Element {
   const [status, setStatus] = useState<BackupStatus | null>(null)
   const [busy, setBusy] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const toast = useApp((s) => s.toast)
 
   useEffect(() => {
@@ -267,6 +270,17 @@ function BackupRow(): React.JSX.Element {
               <FolderOpen size={14} />
               Ouvrir
             </button>
+            {status.count > 0 && (
+              <button
+                className="btn"
+                disabled={busy}
+                title="Choisir une copie, voir ce qui changerait, puis restaurer"
+                onClick={() => setRestoring(true)}
+              >
+                <History size={14} />
+                Restaurer…
+              </button>
+            )}
             <button
               className="btn"
               disabled={busy}
@@ -295,6 +309,11 @@ function BackupRow(): React.JSX.Element {
           </button>
         )}
       </div>
+      <RestoreBackup
+        open={restoring}
+        onClose={() => setRestoring(false)}
+        onDone={() => void window.api.backup.status().then(setStatus)}
+      />
     </Row>
   )
 }

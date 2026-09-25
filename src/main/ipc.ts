@@ -13,7 +13,16 @@ import * as anilist from './anilist'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { chromeFor } from '@shared/types'
 import { exportData, exportJournal, importData, importMal, revealDataFolder } from './backup'
-import { backupStatus, chooseBackupFolder, forgetBackupFolder, revealBackupFolder, runBackup } from './autobackup'
+import {
+  backupCopies,
+  backupStatus,
+  chooseBackupFolder,
+  forgetBackupFolder,
+  previewCopy,
+  restoreCopy,
+  revealBackupFolder,
+  runBackup
+} from './autobackup'
 import { cancelImport, importTvTime } from './tvtime/service'
 import { planUpcoming } from './notifications'
 import { checkForUpdates, downloadUpdate, installUpdate, updateStatus } from './updater'
@@ -34,6 +43,7 @@ import { remoteStatus, startRemote, stopRemote } from './remote'
 import { startSoiree } from './soiree-queue'
 import { franchiseTree } from './franchise'
 import { isLang } from '@shared/langs'
+import type { RestoreMode } from '@shared/restore'
 import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
 import { getProgress, rememberLaunch, setLocalWatching, type LocalWatching } from './now'
@@ -71,6 +81,9 @@ function ownerOf(event: Electron.IpcMainInvokeEvent): BrowserWindow {
   if (!win) throw new Error('Fenêtre introuvable')
   return win
 }
+
+/** La fenêtre envoie une chaîne : tout ce qui n'est pas « replace » fusionne, le geste sans perte. */
+const modeOf = (mode: unknown): RestoreMode => (mode === 'replace' ? 'replace' : 'merge')
 
 export function registerIpc(): void {
   // ---- window chrome -------------------------------------------------
@@ -223,6 +236,9 @@ export function registerIpc(): void {
   ipcMain.handle('backup:now', () => runBackup(true))
   ipcMain.handle('backup:forget', () => forgetBackupFolder())
   ipcMain.handle('backup:reveal', () => revealBackupFolder())
+  ipcMain.handle('backup:copies', () => backupCopies())
+  ipcMain.handle('backup:preview', (_e, name: string, mode: RestoreMode) => previewCopy(String(name), modeOf(mode)))
+  ipcMain.handle('backup:restore', (_e, name: string, mode: RestoreMode) => restoreCopy(String(name), modeOf(mode)))
 
   // ---- lecture chez une plateforme -------------------------------------
   ipcMain.handle('watch:open-episode', (_e, url: string, episode: number | null, animeId?: number) => {

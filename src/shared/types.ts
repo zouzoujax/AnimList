@@ -624,6 +624,13 @@ export interface Prefs {
 }
 
 /** Ce que les Réglages montrent de la sauvegarde automatique. */
+/** Une copie du dossier de sauvegarde automatique. */
+export interface BackupCopy {
+  name: string
+  at: number
+  bytes: number
+}
+
 export interface BackupStatus {
   folder: string | null
   /** La plus récente trouvée dans le dossier, relue depuis son nom. */

@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import { mergeSnapshot, type LibraryState } from '@shared/restore'
 import { EventEmitter } from 'node:events'
 import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { promises as fs } from 'node:fs'
@@ -852,46 +853,36 @@ function settleFinished(): number {
   return n
 }
 
+/**
+ * Restaure une sauvegarde, fusionnée ou à la place de tout.
+ *
+ * Le calcul est celui de `shared/restore` : l'aperçu montré avant de
+ * confirmer appelle la même fonction, et annonce donc exactement ceci.
+ */
 export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): void {
   touchJournal()
+  const after = mergeSnapshot(libraryState(), incoming, mode)
   if (mode === 'replace') {
     db = emptyDb()
     db.prefs = { ...DEFAULT_PREFS, ...incoming.prefs }
   }
-  for (const media of incoming.media ?? []) db.media[String(media.id)] = media
-  for (const entry of incoming.entries ?? []) {
-    const current = db.entries[String(entry.animeId)]
-    if (!current || current.updatedAt <= entry.updatedAt) db.entries[String(entry.animeId)] = entry
-  }
-  // Deduplicated per viewing, not per episode: a rewatch legitimately repeats
-  // an episode, and dropping it would lose both its date and its note.
-  const eventKey = (ev: WatchEvent): string => `${ev.animeId}:${ev.episode}:${passOf(ev)}`
-  const known = new Set(db.history.map(eventKey))
-  for (const ev of incoming.history ?? []) {
-    const k = eventKey(ev)
-    if (known.has(k)) continue
-    db.history.push(ev)
-    known.add(k)
-  }
-
-  // Lists merge by id: a restore must not duplicate a list the user already
-  // has, but it should bring across memberships recorded elsewhere.
-  for (const incomingList of incoming.lists ?? []) {
-    const current = db.lists.find((l) => l.id === incomingList.id)
-    if (!current) {
-      db.lists.push(incomingList)
-      continue
-    }
-    if (current.updatedAt < incomingList.updatedAt) {
-      current.name = incomingList.name
-      current.emoji = incomingList.emoji
-      current.updatedAt = incomingList.updatedAt
-    }
-    current.animeIds = [...new Set([...current.animeIds, ...incomingList.animeIds])]
-  }
+  db.media = Object.fromEntries(after.media.map((m) => [String(m.id), m]))
+  db.entries = Object.fromEntries(after.entries.map((e) => [String(e.animeId), e]))
+  db.history = after.history
+  db.lists = after.lists
 
   rebuildIndex()
   changed()
+}
+
+/** Ce qu'une restauration touche, dans la forme qu'attend `shared/restore`. */
+export function libraryState(): LibraryState {
+  return {
+    entries: Object.values(db.entries),
+    media: Object.values(db.media),
+    history: db.history,
+    lists: db.lists
+  }
 }
 
 // ---------------------------------------------------------------- lists

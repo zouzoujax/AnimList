@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { RestoreMode, RestorePreview } from '@shared/restore'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
@@ -8,6 +9,7 @@ import type {
   ApiStatus,
   AiringEntry,
   AiringItem,
+  BackupCopy,
   BackupStatus,
   BrowseQuery,
   CustomList,
@@ -199,7 +201,18 @@ const api = {
     choose: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:choose'),
     now: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:now'),
     forget: (): Promise<BackupStatus> => ipcRenderer.invoke('backup:forget'),
-    reveal: (): Promise<void> => ipcRenderer.invoke('backup:reveal')
+    reveal: (): Promise<void> => ipcRenderer.invoke('backup:reveal'),
+    /** Les copies du dossier, la plus récente d'abord. */
+    copies: (): Promise<BackupCopy[]> => ipcRenderer.invoke('backup:copies'),
+    /** Ce que restaurer changerait, sans rien toucher. */
+    preview: (
+      name: string,
+      mode: RestoreMode
+    ): Promise<{ ok: true; preview: RestorePreview } | { ok: false; error: string }> =>
+      ipcRenderer.invoke('backup:preview', name, mode),
+    /** Écrit d'abord une copie de l'état actuel, puis restaure. */
+    restore: (name: string, mode: RestoreMode): Promise<{ ok: boolean; message: string; safety: string | null }> =>
+      ipcRenderer.invoke('backup:restore', name, mode)
   },
   health: {
     /** Ce qui cloche dans la bibliothèque, sans rien réparer. */

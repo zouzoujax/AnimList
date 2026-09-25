@@ -17,14 +17,22 @@ export const BACKUP_PREFIX = 'animelist-'
 /** Les sauvegardes récentes gardées quoi qu'il arrive. */
 export const KEEP_RECENT = 7
 
-const NAME = /^animelist-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})\.json$/
+/** Les secondes sont facultatives : voir `backupName`. */
+const NAME = /^animelist-(\d{4})-(\d{2})-(\d{2})-(\d{2})(\d{2})(\d{2})?\.json$/
 
 const two = (n: number): string => String(n).padStart(2, '0')
 
-/** `animelist-2026-09-24-1432.json` */
-export function backupName(at: number): string {
+/**
+ * `animelist-2026-09-24-1432.json`, ou `…-143207.json` avec `seconds`.
+ *
+ * Les secondes ne servent qu'à départager deux copies de la même minute :
+ * sauvegarder puis restaurer aussitôt écrivait la copie de sécurité sous le
+ * nom de celle qu'on restaurait, et l'effaçait.
+ */
+export function backupName(at: number, seconds = false): string {
   const d = new Date(at)
-  return `${BACKUP_PREFIX}${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}.json`
+  const s = seconds ? two(d.getSeconds()) : ''
+  return `${BACKUP_PREFIX}${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}-${two(d.getHours())}${two(d.getMinutes())}${s}.json`
 }
 
 export interface BackupStamp {
@@ -42,7 +50,8 @@ export function stampOf(name: string): BackupStamp | null {
   const m = NAME.exec(name)
   if (!m) return null
   const [, y, mo, d, hh, mm] = m.map(Number)
-  const at = new Date(y, mo - 1, d, hh, mm).getTime()
+  const ss = m[6] ? Number(m[6]) : 0
+  const at = new Date(y, mo - 1, d, hh, mm, ss).getTime()
   if (Number.isNaN(at)) return null
   return { name, at, month: `${m[1]}-${m[2]}`, day: `${m[1]}-${m[2]}-${m[3]}` }
 }
@@ -88,4 +97,14 @@ export function toDelete(names: string[], keep = KEEP_RECENT): string[] {
 export function isDue(names: string[], now: number): boolean {
   const today = stampOf(backupName(now))?.day
   return !listBackups(names).some((s) => s.day === today)
+}
+
+/**
+ * Le nom d'une nouvelle copie, qui n'écrase jamais une copie déjà là.
+ *
+ * À la minute près d'ordinaire ; à la seconde si la minute est prise.
+ */
+export function freshName(names: string[], at: number): string {
+  const plain = backupName(at)
+  return names.includes(plain) ? backupName(at, true) : plain
 }
