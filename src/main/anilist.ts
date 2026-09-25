@@ -8,6 +8,7 @@ import { baseAndSeason, compact, seasonNumbers } from '@shared/titles'
 import { applyBudget } from '@shared/cache-budget'
 import { originOf } from '@shared/origin'
 import { matchStreamEpisodes } from '@shared/stream-episodes'
+import { nextProbeDelay, oldestShown, ReplayBook } from '@shared/api-recovery'
 import { createQueue, gapForLimit, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -30,6 +31,8 @@ import type {
 
 const ENDPOINT = 'https://graphql.anilist.co'
 const MIN_GAP_MS = 700
+const FETCH_TIMEOUT_MS = 20_000
+const NETWORK_RETRY_MS = 1500
 const TTL = {
   list: 45 * 60_000,
   detail: 24 * 60_000 * 60,
@@ -291,19 +294,146 @@ let mutedWhy = ''
  */
 let status: ApiStatus = { state: 'ok' }
 
-function setStatus(next: ApiStatus): void {
-  if (next.state === status.state && next.until === status.until) return
-  status = next
+function broadcast(channel: string, payload?: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
-    if (!win.isDestroyed()) win.webContents.send('anilist:status', status)
+    if (!win.isDestroyed()) win.webContents.send(channel, payload)
   }
 }
+
+/** L'état publié : la panne elle-même, plus ce que la reprise sait d'elle. */
+function published(): ApiStatus {
+  if (status.state === 'ok') return status
+  return {
+    ...status,
+    staleAt,
+    pending: replays.size || undefined,
+    probeAt: probeTimer ? probeAt : undefined
+  }
+}
+
+function setStatus(next: ApiStatus): void {
+  const was = status.state
+  if (next.state === status.state && next.until === status.until) return
+  status = next
+  if (was !== 'ok' && next.state === 'ok') recovered()
+  else if (next.state === 'offline' || next.state === 'paused') armProbe()
+  broadcast('anilist:status', published())
+}
+
+/** Republie sans changer d'état : l'âge des données ou le carnet ont bougé. */
+function republish(): void {
+  if (status.state !== 'ok') broadcast('anilist:status', published())
+}
+
+const isOk = (): boolean => status.state === 'ok'
 
 export function apiStatus(): ApiStatus {
   // Le délai écoulé, la pause n'en est plus une, même sans requête pour le dire.
   if (status.until && status.until < Date.now() && status.state !== 'offline') return { state: 'ok' }
-  return status
+  return published()
 }
+
+// ---------------------------------------------------------------- reprise
+
+/**
+ * La plus ancienne réponse servie depuis le cache pendant la panne.
+ * Remise à zéro au retour : ce qu'on affiche alors est de nouveau frais.
+ */
+let staleAt: number | undefined
+
+/** Les réponses qu'on n'a pas pu rafraîchir, rejouées au retour. Voir `shared/api-recovery`. */
+const replays = new ReplayBook<() => Promise<unknown>>()
+
+let probeTimer: NodeJS.Timeout | null = null
+let probeAt = 0
+let probeDelay = 0
+
+/** La plus petite question possible : elle ne sert qu'à savoir si quelqu'un répond. */
+const PROBE_QUERY = `query { Media(id: 1) { id } }`
+
+/**
+ * La sonde : une requête minuscule, de plus en plus espacée, jusqu'au retour.
+ *
+ * Sans elle, le retour ne se constatait qu'au hasard de la requête suivante,
+ * et une page ouverte pendant la panne restait sur ses données d'hier.
+ * Pendant une pause déclarée, elle attend au moins la fin de la pause : on
+ * s'est promis de se taire jusque-là.
+ */
+function armProbe(): void {
+  if (probeTimer) return
+  probeDelay = nextProbeDelay(probeDelay)
+  const wait = Math.max(probeDelay, mutedUntil - Date.now())
+  probeAt = Date.now() + wait
+  probeTimer = setTimeout(() => {
+    probeTimer = null
+    if (status.state === 'ok') return
+    // En file de fond : si une vraie requête passe avant, elle suffit.
+    request(PROBE_QUERY, {}, 'background', 'probe').catch(() => {
+      if (status.state !== 'ok') {
+        armProbe()
+        republish()
+      }
+    })
+  }, wait)
+}
+
+/**
+ * Le service est revenu : on le dit, et on rattrape.
+ *
+ * Les fenêtres reçoivent `anilist:recovered` et relisent ce qu'elles
+ * montraient de périmé. Le carnet repart en file de fond, derrière tout ce
+ * que quelqu'un attend : une page rouverte à la main passe devant.
+ */
+function recovered(): void {
+  if (probeTimer) clearTimeout(probeTimer)
+  probeTimer = null
+  probeDelay = 0
+  staleAt = undefined
+  const todo = replays.drain()
+  // `cached` appelle `request` sans rien attendre avant : le drapeau posé
+  // autour de la boucle suffit à tout envoyer en file de fond, même ce qui
+  // avait été demandé en file interactive le jour de la panne.
+  replaying = true
+  try {
+    for (const [, run] of todo) void run().catch(() => {})
+  } finally {
+    replaying = false
+  }
+  broadcast('anilist:recovered')
+  for (const listener of recoveryListeners) listener()
+}
+
+const recoveryListeners = new Set<() => void>()
+
+/** Prévenir un module du processus principal — la veille des diffusions — au retour d'AniList. */
+export function onApiRecovered(listener: () => void): () => void {
+  recoveryListeners.add(listener)
+  return () => recoveryListeners.delete(listener)
+}
+
+/**
+ * « Réessayer », depuis le témoin : on n'attend pas la sonde.
+ *
+ * La pause qu'on s'était imposée saute aussi — c'est quelqu'un qui demande,
+ * pas une boucle qui insiste. Un échec réarme simplement la sonde.
+ */
+export async function probeNow(): Promise<ApiStatus> {
+  if (status.state === 'ok') return apiStatus()
+  if (probeTimer) clearTimeout(probeTimer)
+  probeTimer = null
+  mutedUntil = 0
+  try {
+    await request(PROBE_QUERY, {}, 'interactive', 'probe')
+  } catch {
+    // Relu par une fonction : `status` a pu changer pendant l'attente, ce que
+    // le rétrécissement de type de TypeScript ignore.
+    if (!isOk()) armProbe()
+  }
+  return apiStatus()
+}
+
+/** Vrai le temps de relancer le carnet. Voir `recovered`. */
+let replaying = false
 
 /** Le message qu'AniList joint à son refus, quand il en joint un. */
 async function apiMessage(res: Response): Promise<string | null> {
@@ -325,9 +455,18 @@ async function raw<T>(query: string, variables: Record<string, unknown>): Promis
       res = await fetch(ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ query, variables })
+        body: JSON.stringify({ query, variables }),
+        // Une connexion qui pend ne doit pas bloquer toute la file derrière elle.
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS)
       })
     } catch (err) {
+      // Un seul nouvel essai, un peu plus tard : un wifi qui se reconnecte ou
+      // un DNS lent passent en une seconde. Au-delà, c'est une vraie coupure,
+      // et la sonde prend le relais.
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, NETWORK_RETRY_MS))
+        continue
+      }
       setStatus({ state: 'offline' })
       throw err
     }
@@ -375,7 +514,7 @@ function request<T>(
   lane: Lane = 'interactive',
   key: string | null = null
 ): Promise<T> {
-  return gate.run(lane, key, () => raw<T>(query, variables))
+  return gate.run(replaying ? 'background' : lane, key, () => raw<T>(query, variables))
 }
 
 /** Serves cache first when fresh; on network failure falls back to stale cache. */
@@ -392,17 +531,30 @@ function request<T>(
  */
 const SHAPE = 'v2'
 
-async function cached<T>(key: string, ttl: number, run: () => Promise<T>): Promise<{ data: T; stale: boolean }> {
+async function cached<T>(
+  key: string,
+  ttl: number,
+  run: () => Promise<T>
+): Promise<{ data: T; stale: boolean; at: number }> {
   const k = `${SHAPE}:${key}`
   const hit = cache.get(k)
-  if (hit && Date.now() - hit.at < ttl) return { data: hit.data as T, stale: false }
+  if (hit && Date.now() - hit.at < ttl) return { data: hit.data as T, stale: false, at: hit.at }
   try {
     const data = await run()
-    cache.set(k, { at: Date.now(), ttl, data })
+    const at = Date.now()
+    cache.set(k, { at, ttl, data })
     persistCache()
-    return { data, stale: false }
+    replays.settle(k)
+    return { data, stale: false, at }
   } catch (err) {
-    if (hit) return { data: hit.data as T, stale: true }
+    // Une panne générale se rattrapera au retour ; une erreur propre à la
+    // requête — une série supprimée chez eux — échouerait de nouveau.
+    if (status.state !== 'ok') {
+      replays.note(k, () => cached(key, ttl, run))
+      if (hit) staleAt = oldestShown(staleAt, hit.at)
+      republish()
+    }
+    if (hit) return { data: hit.data as T, stale: true, at: hit.at }
     throw err
   }
 }
@@ -681,10 +833,10 @@ export async function browse(q: BrowseQuery, showAdult: boolean, lane: Lane = 'i
 
   const ttl = q.kind === 'search' ? TTL.search : TTL.list
   const k = `list:${JSON.stringify(vars)}`
-  const { data, stale } = await cached(k, ttl, () =>
+  const { data, stale, at } = await cached(k, ttl, () =>
     request<{ Page: { pageInfo: PageInfo; media: RawMedia[] } }>(LIST_QUERY, vars, lane, k)
   )
-  return { items: data.Page.media.map(toMedia), pageInfo: data.Page.pageInfo, stale }
+  return { items: data.Page.media.map(toMedia), pageInfo: data.Page.pageInfo, stale, staleAt: stale ? at : undefined }
 }
 
 interface RawDetail extends RawMedia {
@@ -1080,12 +1232,15 @@ export function knownStart(id: number): number | null {
 }
 
 export async function detail(id: number): Promise<MediaDetail & { stale: boolean }> {
-  const { data, stale } = await cached(`detail:${id}`, TTL.detail, () =>
+  const { data, stale, at } = await cached(`detail:${id}`, TTL.detail, () =>
     request<{ Media: RawDetail }>(DETAIL_QUERY, { id }, 'interactive', `detail:${id}`)
   )
   const m = data.Media
   return {
     ...toMedia(m),
+    // Servie depuis le cache, la fiche porte la date de sa réponse et non
+    // celle de l'affichage : c'est elle que la page annonce.
+    ...(stale ? { cachedAt: at } : {}),
     stale,
     tags: (m.tags ?? [])
       .filter((t) => !t.isGeneralSpoiler)

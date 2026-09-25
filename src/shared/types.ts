@@ -362,6 +362,12 @@ export interface ApiStatus {
   state: 'ok' | 'paused' | 'throttled' | 'offline'
   until?: number
   message?: string
+  /** La plus ancienne donnée servie depuis le cache pendant la panne, en millisecondes. */
+  staleAt?: number
+  /** Les requêtes ratées qui repartiront d'elles-mêmes au retour du service. */
+  pending?: number
+  /** Le prochain essai de la sonde, quand elle attend. */
+  probeAt?: number
 }
 
 export interface Entry {
@@ -659,6 +665,8 @@ export interface Paged<T> {
   items: T[]
   pageInfo: PageInfo
   stale: boolean
+  /** Quand `stale` : la date de la réponse gardée qu'on sert à la place. */
+  staleAt?: number
 }
 
 export interface StudioWorks extends Paged<Media> {

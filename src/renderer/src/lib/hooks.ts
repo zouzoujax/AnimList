@@ -67,9 +67,31 @@ interface BrowseResult {
   loadingMore: boolean
   error: string | null
   stale: boolean
+  /** Quand `stale` : la date de la version enregistrée qu'on montre. */
+  staleAt: number | null
   hasMore: boolean
   loadMore: () => void
   retry: () => void
+}
+
+/**
+ * Relit quand AniList revient, si ce qu'on montre en a besoin.
+ *
+ * `needed` est relu au moment du retour, pas à l'abonnement : une page
+ * redevenue fraîche entre-temps n'a rien à relire.
+ */
+export function useOnRecovered(needed: () => boolean, reload: () => void): void {
+  const latest = useRef({ needed, reload })
+  useEffect(() => {
+    latest.current = { needed, reload }
+  })
+  useEffect(
+    () =>
+      window.api.anilist.onRecovered(() => {
+        if (latest.current.needed()) latest.current.reload()
+      }),
+    []
+  )
 }
 
 /** Paginated AniList browse with cancellation on query change. */
@@ -86,9 +108,10 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
     key: string
     items: Media[]
     stale: boolean
+    staleAt: number | null
     hasMore: boolean
     error: string | null
-  }>({ key: '', items: [], stale: false, hasMore: false, error: null })
+  }>({ key: '', items: [], stale: false, staleAt: null, hasMore: false, error: null })
 
   // L'objet requête est recréé à chaque rendu : en dépendance, il relancerait
   // la recherche sans fin. Sa forme est déjà dans la clé, seule la clé décide.
@@ -107,10 +130,18 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
       .browse({ ...current, page: 1 })
       .then((res) => {
         if (!alive) return
-        setHeld({ key, items: res.items, stale: res.stale, hasMore: res.pageInfo.hasNextPage, error: null })
+        setHeld({
+          key,
+          items: res.items,
+          stale: res.stale,
+          staleAt: res.staleAt ?? null,
+          hasMore: res.pageInfo.hasNextPage,
+          error: null
+        })
       })
       .catch((err: Error) => {
-        if (alive) setHeld({ key, items: [], stale: false, hasMore: false, error: humanMessage(err.message) })
+        if (alive)
+          setHeld({ key, items: [], stale: false, staleAt: null, hasMore: false, error: humanMessage(err.message) })
       })
 
     return () => {
@@ -123,6 +154,13 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
   const loading = key !== '' && !fresh
   const error = fresh ? held.error : null
   const stale = fresh && held.stale
+  const staleAt = stale ? held.staleAt : null
+
+  // Au retour d'AniList, une liste périmée ou en erreur se relit d'elle-même.
+  useOnRecovered(
+    () => stale || error !== null,
+    () => setNonce((n) => n + 1)
+  )
   const hasMore = fresh && held.hasMore
 
   const loadMore = useCallback(() => {
@@ -157,14 +195,18 @@ export function useBrowse(query: BrowseQuery | null): BrowseResult {
     loadingMore,
     error,
     stale,
+    staleAt,
     hasMore,
     loadMore,
     retry: () => setNonce((n) => n + 1)
   }
 }
 
+/** Une fiche, et si elle vient du cache faute de réseau. */
+export type LoadedDetail = MediaDetail & { stale?: boolean }
+
 export function useDetail(id: number | null): {
-  data: MediaDetail | null
+  data: LoadedDetail | null
   loading: boolean
   error: string | null
   retry: () => void
@@ -172,7 +214,7 @@ export function useDetail(id: number | null): {
   const [nonce, setNonce] = useState(0)
   // Le nonce entre dans la clé : réessayer, c'est repartir sur une autre clé.
   const key = id === null ? '' : `${id}:${nonce}`
-  const [held, setHeld] = useState<{ key: string; data: MediaDetail | null; error: string | null }>({
+  const [held, setHeld] = useState<{ key: string; data: LoadedDetail | null; error: string | null }>({
     key: '',
     data: null,
     error: null
@@ -191,6 +233,11 @@ export function useDetail(id: number | null): {
   }, [key, id])
 
   const fresh = held.key === key
+  // Une fiche servie depuis le cache, ou pas servie du tout, se relit au retour.
+  useOnRecovered(
+    () => fresh && (held.error !== null || held.data?.stale === true),
+    () => setNonce((n) => n + 1)
+  )
   return {
     data: fresh ? held.data : null,
     loading: key !== '' && !fresh,

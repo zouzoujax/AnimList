@@ -29,6 +29,7 @@ import IdentifyImage from '@/components/IdentifyImage'
 import { ErrorBox, Modal, PosterSkeletons, Spinner } from '@/components/ui'
 import { monthBucket, premiereLabel, premiereOf, premiereSort } from '@/lib/format'
 import { useBrowse, useDebounced, useInView } from '@/lib/hooks'
+import { StaleNote } from '@/components/StaleNote'
 import { useApp } from '@/store/app'
 
 const TABS: { kind: BrowseKind; label: string; icon: typeof Flame }[] = [
@@ -130,7 +131,7 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
     return { kind: tab, perPage: showSchedule ? 50 : 30, ...filters }
   }, [debounced, searching, tab, genre, format, showSchedule])
 
-  const { items, loading, loadingMore, error, stale, hasMore, loadMore, retry } = useBrowse(query)
+  const { items, loading, loadingMore, error, stale, staleAt, hasMore, loadMore, retry } = useBrowse(query)
   const sentinel = useInView(loadMore)
 
   // Split cours resuming after a break are still RELEASING, so the upcoming
@@ -277,9 +278,7 @@ export default function DiscoverPage({ initialSearch }: { initialSearch?: string
         </div>
       </div>
 
-      {stale && (
-        <p className="mb-4 text-[0.76rem] text-amber-300/80">Hors ligne — affichage de la dernière version en cache.</p>
-      )}
+      {stale && <StaleNote at={staleAt} />}
 
       {!searching && tab === 'season' && (
         <button

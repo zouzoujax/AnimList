@@ -216,7 +216,15 @@ const api = {
       const handler = (_e: unknown, status: ApiStatus): void => cb(status)
       ipcRenderer.on('anilist:status', handler)
       return () => ipcRenderer.off('anilist:status', handler)
-    }
+    },
+    /** Le service est revenu : ce qui était périmé ou en erreur peut se relire. */
+    onRecovered: (cb: () => void): (() => void) => {
+      const handler = (): void => cb()
+      ipcRenderer.on('anilist:recovered', handler)
+      return () => ipcRenderer.off('anilist:recovered', handler)
+    },
+    /** Réessayer tout de suite, sans attendre la sonde. */
+    probe: (): Promise<ApiStatus> => ipcRenderer.invoke('anilist:probe')
   },
 
   cache: {

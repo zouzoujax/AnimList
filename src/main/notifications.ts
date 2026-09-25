@@ -16,7 +16,7 @@
 
 import { BrowserWindow, Notification } from 'electron'
 import type { Media, Prefs } from '@shared/types'
-import { airing } from './anilist'
+import { airing, onApiRecovered } from './anilist'
 import { quickTick } from './quick-tick'
 import { getPrefs, setPrefs, snapshot } from './store'
 
@@ -184,8 +184,12 @@ export function startAiringWatcher(win: BrowserWindow): () => void {
 
   const first = setTimeout(kick, 20_000)
   schedule()
+  // Un balayage raté pendant une panne a laissé `lastAiringCheck` en place :
+  // au retour, on rattrape tout de suite plutôt qu'au prochain tour.
+  const offRecovered = onApiRecovered(kick)
 
   return () => {
+    offRecovered()
     clearTimeout(first)
     if (timer) clearInterval(timer)
     clearPlanned()

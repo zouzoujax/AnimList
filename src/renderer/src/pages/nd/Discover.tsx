@@ -18,6 +18,7 @@ import { ErrorBox, Modal, Poster, PosterSkeletons, RowScroller, Spinner } from '
 import { toneAccent } from '@/lib/color'
 import { monthBucket, premiereLabel, premiereOf, premiereSort, titleOf } from '@/lib/format'
 import { useBrowse, useDebounced, useInView } from '@/lib/hooks'
+import { StaleNote } from '@/components/StaleNote'
 import { useApp } from '@/store/app'
 
 const TABS: { id: BrowseKind; label: string }[] = [
@@ -145,7 +146,7 @@ export default function NdDiscoverPage({ initialSearch }: { initialSearch?: stri
     return { kind: tab, perPage: showSchedule ? 50 : 30, ...filters }
   }, [debounced, searching, tab, genre, format, showSchedule])
 
-  const { items, loading, loadingMore, error, stale, hasMore, loadMore, retry } = useBrowse(query)
+  const { items, loading, loadingMore, error, stale, staleAt, hasMore, loadMore, retry } = useBrowse(query)
   const sentinel = useInView(loadMore)
 
   // Les séries qui reprennent après une pause sont encore « en cours » pour
@@ -262,11 +263,7 @@ export default function NdDiscoverPage({ initialSearch }: { initialSearch?: stri
         </button>
       </div>
 
-      {stale && (
-        <p className="mb-4 px-1 text-[0.8rem] text-muted">
-          Pas de connexion à AniList : ce qui suit est la dernière version enregistrée.
-        </p>
-      )}
+      {stale && <StaleNote at={staleAt} />}
 
       {!searching && rec && rec.picks.length > 0 && (
         <section className="mb-10">

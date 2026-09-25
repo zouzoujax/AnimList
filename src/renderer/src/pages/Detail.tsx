@@ -41,6 +41,7 @@ import ListPicker from '@/components/ListPicker'
 import LocalFiles from '@/components/LocalFiles'
 import { MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, ProgressRing, RowScroller, Section, Skeleton, Spinner } from '@/components/ui'
+import { StaleNote } from '@/components/StaleNote'
 import { Franchise } from '@/components/Franchise'
 import { LANG_LABELS, langUrl, type Lang } from '@shared/langs'
 import { originTitle } from '@shared/origin'
@@ -1207,7 +1208,13 @@ export default function DetailPage({ id }: { id: number }): React.JSX.Element {
         )}
       </div>
     ),
-    error: error ? <ErrorBox message={error} onRetry={retry} /> : null
+    // La fiche servie depuis le cache le dit à la place d'une erreur : c'est
+    // la même place, celle d'une réponse qu'AniList n'a pas donnée.
+    error: error ? (
+      <ErrorBox message={error} onRetry={retry} />
+    ) : data?.stale ? (
+      <StaleNote at={data?.cachedAt ?? null} what="cette fiche" />
+    ) : null
   }
 
   const heroProps: DetailHeroProps = {
