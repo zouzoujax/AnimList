@@ -1,343 +1,428 @@
 import { BRANCH_LABELS } from '@shared/franchise'
 
 /**
- * La page servie au téléphone.
+ * La page servie à la télécommande : téléphone, tablette, écran de bureau, TV.
  *
  * Une seule page, sans dépendance et sans build : elle doit s'ouvrir sur un
- * navigateur mobile quelconque, en une requête, sans rien charger d'ailleurs.
+ * navigateur quelconque, en une requête, sans rien charger d'ailleurs.
  *
- * Elle est dessinée pour un pouce, pas pour une souris. D'où les cibles larges,
- * la barre de lecture collée en haut, et l'absence de tout geste qui
- * demanderait de viser : on s'en sert d'une main, dans le noir, en regardant
- * autre chose.
+ * **Une page, quatre écrans.** Elle a d'abord été dessinée pour un pouce, et
+ * bornée à une colonne de téléphone partout ailleurs — ouverte sur une
+ * tablette ou un ordinateur, elle laissait les deux tiers de l'écran vides.
+ * Elle se déplie désormais selon la place :
+ *
+ * - téléphone : une colonne, les onglets en bas sous le pouce, le lecteur collé
+ *   en haut ;
+ * - tablette (700 px) : les onglets passent en rail sur le côté ;
+ * - bureau (1000 px) : la fiche d'une série s'ouvre dans une colonne à droite,
+ *   avec le lecteur, sans quitter la liste qu'on parcourt ;
+ * - grand écran et TV : le texte grandit avec l'écran, et les flèches du
+ *   clavier ou de la télécommande de la TV vont d'un bouton à son voisin.
+ *
+ * **La frise d'épisodes** est la signature, reprise du nouveau design de
+ * l'app : un trait par épisode — vu, sorti sans toi, à venir, le suivant —,
+ * teinté de la couleur de la jaquette. Elle dit d'un coup d'œil où l'on en
+ * est, ce qu'une barre de progression ne dit pas : un trou au milieu, trois
+ * épisodes sortis cette semaine.
  *
  * Le mot de passe arrive par l'adresse — seul moyen de le donner quand on
  * scanne un lien — puis est rangé dans le stockage local et retiré de la barre
- * d'adresse : il n'a pas à rester dans l'historique du téléphone ni à repartir
- * dans le « Referer » d'un lien suivant.
+ * d'adresse : il n'a pas à rester dans l'historique ni à repartir dans le
+ * « Referer » d'un lien suivant.
  *
  * Tout passe par un seul écouteur de clic et des attributs `data-`. Les
  * gestionnaires en ligne obligeaient à imbriquer des guillemets dans un gabarit
  * qui les mange — une faute invisible jusqu'au téléphone, et qui empêche le
- * script entier de se parser.
+ * script entier de se parser. Pour la même raison, le script n'emploie ni
+ * accent grave ni barre oblique inverse : le gabarit TypeScript les
+ * interpréterait.
  */
 
 const STYLE = `
   :root {
     color-scheme: dark;
     --bg: #07080f;
-    --panel: #12141f;
-    --panel-2: #1a1d2b;
-    --line: #232637;
-    --text: #e8eaf2;
+    --panel: #11131d;
+    --panel-2: #181b28;
+    --line: #22263a;
+    --text: #e9ebf3;
     --muted: #9aa1b8;
     --faint: #6b7392;
     --accent: #7c5cff;
     --accent-soft: rgba(124,92,255,.16);
-    --warn: #ffb038;
+    --accent-line: rgba(124,92,255,.45);
+    --amber: #ffb038;
+    --danger: #ff9b9b;
+    --gutter: 16px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { -webkit-text-size-adjust: 100%; }
+
+  /*
+   * Le texte suit l'écran : 15 px sur un téléphone, 16 à 17 sur un portable,
+   * jusqu'à 22 sur une TV vue du canapé. Tout le reste est en rem et suit.
+   */
+  html { font-size: clamp(15px, calc(10px + .42vw), 22px); -webkit-text-size-adjust: 100%; }
   body {
-    margin: 0 auto;
+    margin: 0;
     background: var(--bg);
     color: var(--text);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    padding: 0 14px calc(90px + env(safe-area-inset-bottom));
-    /*
-     * Une colonne de téléphone, même sur un écran large.
-     *
-     * La page est dessinée pour un pouce : cibles hautes, boutons qui prennent
-     * toute la largeur, grille d'épisodes en cases carrées. Sans borne, ouverte
-     * dans un navigateur de bureau, chaque bouton s'étirait sur un tiers de
-     * l'écran et la grille se déroulait sur trente colonnes — la même page,
-     * illisible. La borne vaut aussi pour une tablette tenue en paysage.
-     */
-    max-width: 560px;
+    font: 1rem/1.5 "Segoe UI Variable Text", "SF Pro Text", system-ui, -apple-system, Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
   }
 
-  /* Un halo discret en haut, comme la une de l'app. */
-  body::before {
-    content: '';
-    position: fixed; inset: 0 0 auto; height: 220px; z-index: -1;
-    background: radial-gradient(120% 100% at 50% 0%, rgba(124,92,255,.20), transparent 70%);
+  /* ---------------------------------------------------------------- charpente */
+
+  .shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "player" "main";
+    max-width: 40rem;
+    margin: 0 auto;
+    padding: 0 var(--gutter) calc(6rem + env(safe-area-inset-bottom));
   }
+  /* Sur un téléphone la colonne de droite n'existe pas : ses enfants
+     rejoignent la grille, le lecteur en tête. */
+  .col { display: contents; }
+  #player { grid-area: player; position: sticky; top: 0; z-index: 5; padding-top: .5rem; }
+  #player:empty { padding: 0; }
+  main { grid-area: main; min-width: 0; }
+  #side { display: none; }
 
-  header { padding: calc(18px + env(safe-area-inset-top)) 2px 14px; }
-  h1 { font-size: 1.5rem; margin: 0; letter-spacing: -.03em; font-weight: 700; }
-  h1 span { color: var(--muted); font-weight: 400; }
-  .sub { margin: 4px 0 0; color: var(--muted); font-size: .82rem; }
+  header { padding: calc(1.2rem + env(safe-area-inset-top)) 0 1rem; }
+  .brand { margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.01em; color: var(--muted); }
+  .lede { margin: .25rem 0 0; font-size: 1.45rem; line-height: 1.2; font-weight: 650; letter-spacing: -.025em; max-width: 30ch; }
 
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 18px;
-    padding: 12px;
-    margin-bottom: 12px;
-  }
-
-  /* ---- ce qui joue sur le PC ---- */
-  .player {
-    position: sticky; top: 0; z-index: 5;
-    margin: 0 0 16px;
-    background: linear-gradient(180deg, #1b1a33, #14141f);
-    border: 1px solid rgba(124,92,255,.35);
-    border-radius: 18px;
-    padding: 12px;
-    box-shadow: 0 10px 30px -12px rgba(0,0,0,.9);
-  }
-  .player .top { display: flex; gap: 12px; align-items: center; }
-  .player img { width: 44px; height: 62px; border-radius: 9px; object-fit: cover; flex: none; background: var(--panel-2); }
-  .grow { min-width: 0; flex: 1; }
-  .badge {
-    display: inline-block; font-size: .62rem; font-weight: 700; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
-    padding: 3px 7px; border-radius: 6px;
-  }
-  .player .name { font-weight: 650; font-size: .95rem; margin-top: 4px; line-height: 1.25; }
-  .note { color: var(--faint); font-size: .72rem; margin-top: 4px; line-height: 1.45; }
-
-  /*
-   * Une option de la séance : une case, pas un bouton — elle a un état, et il
-   * doit se lire sans appuyer. Toute la ligne est la cible, pour le pouce.
-   */
-  .opt {
-    display: flex; align-items: center; gap: 10px; margin-top: 12px;
-    padding: 9px 12px; min-height: 42px; border-radius: 12px;
-    background: var(--panel-2); border: 1px solid var(--line);
-    font-size: .82rem; font-weight: 600; color: var(--text); cursor: pointer;
-  }
-  .opt input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
-  .opt small { display: block; color: var(--faint); font-size: .7rem; font-weight: 500; margin-top: 1px; }
-
-  /*
-   * Les lecteurs de leur page, en numéros : jusqu'à huit doivent tenir sur la
-   * largeur d'un téléphone, et chacun rester une cible pour le pouce.
-   */
-  .lecteurs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; }
-  .lecteurs .lab { color: var(--muted); font-size: .78rem; font-weight: 600; margin-right: 4px; }
-  .lecteurs .chip { min-width: 42px; min-height: 38px; padding: 0 10px; justify-content: center; }
-
-  .seekline { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-  .time { color: var(--muted); font-size: .72rem; font-variant-numeric: tabular-nums; flex: none; min-width: 38px; }
-  .time.right { text-align: right; }
-
-  .volline { display: flex; align-items: center; gap: 10px; }
-  .volline svg { flex: none; color: var(--faint); }
-
-  /* Piste haute : on la vise au pouce, pas à la souris. */
-  input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 30px; background: none; margin: 0; }
-  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: #2b2f45; }
-  input[type=range]::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px;
-    border-radius: 50%; background: var(--accent); border: 2px solid #14141f;
-  }
-  input[type=range]::-moz-range-track { height: 6px; border-radius: 99px; background: #2b2f45; }
-  input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 2px solid #14141f; border-radius: 50%; background: var(--accent); }
-
-  /* ---- une série ---- */
-  /* ---- bilan ---- */
-  .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
-  .kpi {
-    background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
-    padding: 14px; display: flex; flex-direction: column; gap: 2px;
-  }
-  .kpi b { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-  .kpi span { color: var(--muted); font-size: .78rem; }
-
-  .row { display: flex; gap: 12px; }
-  .row img { width: 62px; height: 88px; border-radius: 11px; object-fit: cover; flex: none; background: var(--panel-2); }
-  .row .info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-  .title { font-weight: 650; font-size: .94rem; line-height: 1.28; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-  .meta { color: var(--muted); font-size: .76rem; margin-top: 5px; }
-  .meta b { color: var(--text); font-weight: 650; }
-  .soon { color: var(--warn); }
-
-  .bar { height: 4px; border-radius: 99px; background: #262a3d; margin-top: 8px; overflow: hidden; }
-  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
-
-  /* ---- choix de l'épisode ---- */
-  .eps { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .modes { display: flex; gap: 6px; margin-bottom: 10px; }
-  .modes .chip { flex: 1; justify-content: center; }
-  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
-  /* Une case carrée d'au moins quarante-quatre pixels : c'est la taille en
-     dessous de laquelle un pouce vise à côté. */
-  .num {
-    /*
-     * Même piège que pour les onglets : la largeur minimale d'un bouton
-     * ordinaire vaut quatre-vingt-quatre pixels, quand une case de cette
-     * grille en fait cinquante-deux. Les cases débordaient donc sur leurs
-     * voisines et se chevauchaient — deux épisodes vus côte à côte n'en
-     * formaient plus qu'un. La hauteur suffit à faire la cible.
-     */
-    min-width: 0; min-height: 44px; border-radius: 10px; border: 1px solid var(--line);
-    background: var(--panel-2); color: var(--muted);
-    font-size: .82rem; font-weight: 600; font-variant-numeric: tabular-nums;
-    display: inline-flex; align-items: center; justify-content: center;
-  }
-  .num[data-seen='true'] { background: var(--accent-soft); border-color: rgba(124,92,255,.4); color: var(--accent); }
-  .num[data-off='true'] { opacity: .3; }
-  .eps .note { margin-top: 10px; }
-
-  /* ---- boutons ---- */
-  .acts { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 12px; }
-  button {
-    font: inherit; font-size: .82rem; font-weight: 600; color: #fff;
-    border: 0; border-radius: 12px; padding: 0 14px; min-height: 42px;
-    background: var(--accent); display: inline-flex; align-items: center;
-    justify-content: center; gap: 7px; flex: 1 1 auto; min-width: 84px;
-  }
-  button.ghost { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
-  button:active { transform: scale(.97); }
-  button[disabled] { opacity: .45; }
-  button svg { flex: none; }
-
-  .pill {
-    flex: 1 1 auto; min-width: 84px; min-height: 42px; border-radius: 12px;
-    display: inline-flex; align-items: center; justify-content: center; gap: 7px;
-    font-size: .8rem; font-weight: 600; color: var(--warn);
-    background: rgba(255,176,56,.12); border: 1px solid rgba(255,176,56,.25);
-  }
-
-  /* L'abonnement à l'agenda, sous le calendrier : un lien et non un bouton,
-     c'est le téléphone qui décide quoi faire d'un fichier .ics. */
-  .ics {
-    display: block; margin: 14px 2px 4px; padding: 13px; border-radius: 13px; text-align: center;
-    font-size: .82rem; font-weight: 600; color: var(--text); text-decoration: none;
-    background: var(--panel); border: 1px solid var(--line);
-  }
-  .ics span { display: block; margin-top: 4px; font-weight: 400; font-size: .74rem; color: var(--muted); }
-
-  /* L'arbre d'une franchise : les saisons s'empilent, ce qui pousse dessus se
-     range dessous et en retrait. Les traits sont des bordures — sur un
-     téléphone, un dessin qui doit se plier se plie mieux en HTML. */
-  .tree { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
-  .tsea { margin-bottom: 10px; }
-  .tline {
-    display: flex; align-items: center; gap: 9px; width: 100%; min-height: 40px;
-    padding: 6px 9px; border-radius: 11px; text-align: left;
-    background: var(--panel); border: 1px solid var(--line); color: var(--text);
-  }
-  .tline[data-on='true'] { border-color: rgba(124,92,255,.4); }
-  .tnum {
-    flex: none; min-width: 32px; padding: 2px 6px; border-radius: 7px; text-align: center;
-    font-size: .68rem; font-weight: 700; background: var(--panel-2); color: var(--muted);
-  }
-  .tline[data-on='true'] .tnum { background: var(--accent-soft); color: var(--accent); }
-  .ttit { flex: 1; min-width: 0; font-size: .82rem; line-height: 1.3; }
-  .tprog { flex: none; font-size: .7rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-
-  .tbr { margin: 6px 0 0 14px; padding-left: 11px; border-left: 1px solid var(--line); }
-  .tbrn { display: block; font-size: .66rem; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 4px; }
-  .tleaf {
-    display: block; width: 100%; min-height: 36px; margin-bottom: 4px;
-    padding: 7px 9px; border-radius: 9px; text-align: left;
-    font-size: .76rem; line-height: 1.3; color: var(--text);
-    background: transparent; border: 1px solid var(--line);
-  }
-  .tleaf[data-on='true'] { color: var(--accent); border-color: rgba(124,92,255,.3); }
-  .note.alerte { color: var(--warn); }
-
-  /* ---- états ---- */
-  .empty, .err { text-align: center; color: var(--muted); padding: 46px 12px; font-size: .9rem; line-height: 1.7; }
-  .err { color: #ff9b9b; }
-  form { display: flex; gap: 8px; margin-top: 14px; }
-  input[type=text] {
-    flex: 1; font: inherit; min-height: 44px; padding: 0 13px; border-radius: 12px;
-    border: 1px solid var(--line); background: var(--panel); color: var(--text);
-  }
-  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-
-  .flash {
-    position: fixed; left: 50%; transform: translate(-50%, 12px);
-    bottom: calc(86px + env(safe-area-inset-bottom));
-    background: var(--accent); color: #fff; padding: 11px 18px; border-radius: 999px;
-    font-size: .85rem; font-weight: 600; opacity: 0; pointer-events: none;
-    transition: opacity .2s, transform .2s; box-shadow: 0 8px 24px -8px rgba(0,0,0,.8);
-  }
-  .flash.on { opacity: 1; transform: translate(-50%, 0); }
-
-  /* ---- onglets ---- */
-  /* En bas : c'est là que le pouce arrive sans changer la prise en main. */
+  /* Onglets : en bas, là où le pouce arrive sans changer la prise en main. */
   nav {
-    /* Le fond barre l'écran entier, le contenu suit la colonne. */
-    position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 20;
-    width: 100%; max-width: 560px; box-sizing: border-box;
-    display: flex; gap: 4px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-    background: rgba(10,11,20,.92); backdrop-filter: blur(14px);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: flex; gap: 4px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    background: rgba(9,10,18,.94); backdrop-filter: blur(14px);
     border-top: 1px solid var(--line);
   }
   nav button {
-    /*
-     * La largeur minimale des boutons ordinaires est défaite ici.
-     *
-     * Les quatre-vingt-quatre pixels d'un bouton d'action donnent au pouce une
-     * cible sûre ; appliqués aux onglets, ils les empêchaient de rétrécir, et
-     * la barre débordait de soixante-deux pixels dès qu'on est passé de trois
-     * onglets à cinq. Ici c'est la hauteur qui fait la cible, pas la largeur.
-     */
-    flex: 1; min-width: 0; min-height: 50px; border-radius: 14px; background: none; border: 0;
-    color: var(--faint); font-size: .68rem; font-weight: 600; gap: 3px;
-    flex-direction: column; padding: 0 2px;
+    /* La hauteur fait la cible, pas la largeur : cinq onglets doivent tenir. */
+    flex: 1; min-width: 0; min-height: 3.2rem; border: 0; border-radius: 12px; background: none;
+    color: var(--faint); font-size: .7rem; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer;
   }
-  /* Un libellé trop long se coupe plutôt que de pousser ses voisins dehors. */
   nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  nav button[aria-current='true'] { color: var(--accent); background: var(--accent-soft); }
-  nav svg { width: 19px; height: 19px; }
+  nav button[aria-current='true'] { color: var(--text); background: var(--accent-soft); }
+  nav svg { width: 1.25rem; height: 1.25rem; }
 
-  /* ---- filtres de la bibliothèque ---- */
-  .filters { display: flex; gap: 6px; overflow-x: auto; padding: 0 0 12px; margin: 0 -14px; padding-inline: 14px; scrollbar-width: none; }
-  .filters::-webkit-scrollbar { display: none; }
-  .chip {
-    flex: none; min-height: 34px; padding: 0 13px; border-radius: 99px;
-    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
-    font-size: .78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+  /* Tablette : le rail. La page gagne sa largeur, les onglets leur place. */
+  @media (min-width: 700px) {
+    .shell {
+      max-width: none;
+      grid-template-columns: 5.5rem minmax(0, 1fr);
+      grid-template-areas: "nav player" "nav main";
+      grid-template-rows: auto 1fr;
+      column-gap: 1.75rem;
+      /* Pas de marge sous la grille : le rail fait déjà toute la hauteur, et
+         elle ajoutait une barre de défilement à une page qui tient. */
+      padding: 0 1.75rem 0 0;
+    }
+    main { padding-bottom: 2rem; }
+    nav {
+      grid-area: nav; grid-row: 1 / span 2;
+      position: sticky; top: 0; left: auto; right: auto; bottom: auto;
+      height: 100vh; height: 100dvh;
+      flex-direction: column; justify-content: flex-start; gap: .4rem;
+      padding: 1.25rem .6rem; background: none; backdrop-filter: none;
+      border-top: 0; border-right: 1px solid var(--line);
+    }
+    nav button { flex: none; min-height: 4.2rem; }
+    header { padding-top: 1.75rem; }
+    .lede { font-size: 1.75rem; }
   }
-  .chip[aria-pressed='true'] { background: var(--accent-soft); border-color: rgba(124,92,255,.4); color: var(--accent); }
+
+  /* Bureau : la fiche et le lecteur dans leur colonne, la liste reste là. */
+  @media (min-width: 1000px) {
+    .shell {
+      grid-template-columns: 5.5rem minmax(0, 1fr) minmax(21rem, 27rem);
+      grid-template-areas: "nav main col";
+      grid-template-rows: auto;
+    }
+    nav { grid-row: auto; }
+    .col {
+      grid-area: col; display: flex; flex-direction: column; gap: 1rem;
+      position: sticky; top: 0; max-height: 100vh; max-height: 100dvh; overflow-y: auto;
+      padding: 1.75rem 0 1.5rem; scrollbar-width: thin;
+    }
+    #player { position: static; padding: 0; }
+    #side { display: block; }
+    /* Sans fiche possible ni vidéo en cours, la colonne s'efface et rend sa
+       place : un programme ou un catalogue n'ont rien à y mettre. */
+    .shell[data-col='off'] { grid-template-columns: 5.5rem minmax(0, 1fr); grid-template-areas: "nav main"; }
+    .shell[data-col='off'] .col { display: none; }
+  }
+  @media (min-width: 1700px) {
+    .shell { grid-template-columns: 6rem minmax(0, 1fr) minmax(24rem, 31rem); column-gap: 2.5rem; }
+  }
+
+  /* ---------------------------------------------------------------- la frise */
+
   /*
-   * Des étiquettes, pas des filtres.
-   *
-   * Les genres reprenaient le conteneur des filtres de la bibliothèque, qui
-   * défile horizontalement — geste juste pour une liste qu'on parcourt du
-   * pouce, faux pour des chiffres qu'on lit : le quatrième genre était coupé
-   * par le bord de l'écran, sans que rien ne dise qu'il y avait une suite.
+   * Un trait par épisode. La couleur de la série pour ce qui est vu, l'ambre
+   * pour ce qui est sorti sans toi, un trait éteint pour ce qui n'est pas
+   * diffusé, et un contour clair pour le suivant.
    */
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .statuses { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-  .chip small { opacity: .65; font-size: .92em; }
+  .frise { display: flex; align-items: stretch; gap: 2px; height: .7rem; margin-top: .55rem; }
+  .frise i { flex: 1 1 0; min-width: 2px; max-width: .7rem; border-radius: 2px; background: var(--line); }
+  .frise i.s { background: var(--c, var(--accent)); }
+  .frise i.a { background: var(--amber); }
+  .frise i.n { box-shadow: 0 0 0 1.5px var(--text); }
+  .frise.big { height: 1.1rem; gap: 3px; margin-top: 1rem; }
+  .frise.big i { max-width: 1rem; border-radius: 3px; }
+  .legend { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .55rem; color: var(--muted); font-size: .76rem; }
+  .legend span { display: inline-flex; align-items: center; gap: .4rem; }
+  .legend i { width: .55rem; height: .75rem; border-radius: 2px; background: var(--line); display: inline-block; }
+  .legend i.s { background: var(--c, var(--accent)); }
+  .legend i.a { background: var(--amber); }
+  .legend i.n { box-shadow: 0 0 0 1.5px var(--text); }
 
-  /* ---- catalogue ---- */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
-  .tile img { width: 100%; aspect-ratio: 2/3; object-fit: cover; border-radius: 12px; background: var(--panel-2); display: block; }
-  .tile .title { font-size: .78rem; margin-top: 6px; }
-  .tile .meta { font-size: .7rem; margin-top: 2px; }
-  .tile button { width: 100%; margin-top: 6px; min-height: 36px; font-size: .74rem; }
-  .owned { color: var(--accent); font-size: .7rem; font-weight: 600; margin-top: 6px; display: block; text-align: center; min-height: 36px; line-height: 36px; }
+  /* ---------------------------------------------------------------- séries */
 
-  /* Le retard, sur la jaquette : c'est l'information qu'on vient chercher
-     depuis le canapé, et elle doit se voir sans lire la légende. */
-  .tile { position: relative; }
+  .group { margin: 0 0 1.75rem; }
+  .group h2 { margin: 0 0 .15rem; font-size: 1.05rem; font-weight: 650; letter-spacing: -.01em; }
+  .group > p { margin: 0 0 .8rem; color: var(--muted); font-size: .84rem; }
+
+  /* Une série en cours : de quoi choisir, et les deux gestes du soir. */
+  .rows { display: grid; gap: .6rem; }
+  @media (min-width: 1300px) { .rows { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .srow {
+    display: flex; align-items: center; gap: .75rem; padding: .6rem;
+    border-radius: 16px; background: var(--panel); border: 1px solid var(--line);
+  }
+  .srow[aria-current='true'] { border-color: var(--accent-line); background: var(--panel-2); }
+  .srow .pick {
+    flex: 1; min-width: 0; display: flex; align-items: center; gap: .8rem;
+    background: none; border: 0; padding: 0; text-align: left; cursor: pointer; border-radius: 10px;
+  }
+  .srow img { width: 3.2rem; height: 4.5rem; border-radius: 9px; object-fit: cover; flex: none; background: var(--panel-2); }
+  .srow .info { min-width: 0; flex: 1; }
+  .title { font-weight: 650; font-size: .95rem; line-height: 1.28; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .meta { color: var(--muted); font-size: .8rem; margin-top: .2rem; }
+  .meta b { color: var(--text); font-weight: 650; }
+  .soon { color: var(--amber); }
+  .quick { display: flex; gap: .4rem; flex: none; }
+
+  /* Un bouton rond pour un geste sans libellé : cocher, lancer. */
+  .round {
+    width: 2.9rem; height: 2.9rem; border-radius: 50%; flex: none; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+  }
+  .round.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .round svg { width: 1.15rem; height: 1.15rem; }
+  .round:active, .btn:active { transform: scale(.96); }
+  .round[disabled], .btn[disabled] { opacity: .45; }
+
+  /* ---------------------------------------------------------------- grilles */
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.9rem, 1fr)); gap: 1rem .8rem; }
+  .tile {
+    position: relative; display: block; width: 100%; padding: 0; text-align: left;
+    background: none; border: 0; cursor: pointer; border-radius: 12px;
+  }
+  .tile img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--panel-2); display: block; }
+  .tile[aria-current='true'] img { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tile .title { font-size: .8rem; margin-top: .45rem; }
+  .tile .meta { font-size: .72rem; margin-top: .1rem; }
+  .tile .frise { height: .45rem; margin-top: .4rem; gap: 1px; }
+  /* Le retard sur la jaquette : c'est ce qu'on vient chercher depuis le canapé. */
   .tile .late {
-    position: absolute; top: 6px; right: 6px; padding: 3px 7px; border-radius: 99px;
-    font-size: .66rem; font-weight: 700; color: #07080f; background: var(--accent);
+    position: absolute; top: .4rem; right: .4rem; padding: .1rem .45rem; border-radius: 99px;
+    font-size: .7rem; font-weight: 700; color: #1a1204; background: var(--amber);
+  }
+  /* Le bouton au pied de la case, aligné d'une case à l'autre quel que soit
+     le nombre de lignes du titre. */
+  .tile-wrap { display: flex; flex-direction: column; gap: .45rem; }
+  .tile-wrap .btn { margin-top: auto; min-height: 2.3rem; font-size: .76rem; }
+  .owned { color: var(--muted); font-size: .74rem; margin-top: auto; min-height: 2.3rem; display: flex; align-items: center; justify-content: center; }
+
+  /* ---------------------------------------------------------------- boutons */
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+    min-height: 2.75rem; padding: 0 1rem; border-radius: 12px; cursor: pointer;
+    font-size: .85rem; font-weight: 600; border: 1px solid var(--line); background: var(--panel-2); color: var(--text);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn svg { width: 1rem; height: 1rem; flex: none; }
+  .acts { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+  .acts .btn { flex: 1 1 auto; }
+
+  .chips { display: flex; gap: .4rem; overflow-x: auto; padding-bottom: .9rem; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; min-height: 2.3rem; padding: 0 .9rem; border-radius: 99px; cursor: pointer;
+    background: var(--panel); border: 1px solid var(--line); color: var(--muted);
+    font-size: .8rem; font-weight: 600; display: inline-flex; align-items: center; gap: .35rem;
+  }
+  .chip small { opacity: .7; font-weight: 500; }
+  .chip[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--text); }
+  .chip[disabled] { opacity: .4; }
+  .chip.back { margin-bottom: 1rem; }
+
+  /* ---------------------------------------------------------------- fiche */
+
+  .sheet {
+    position: relative; overflow: hidden;
+    border-radius: 20px; background: var(--panel); border: 1px solid var(--line); padding: 1rem;
+  }
+  /* La couleur de la série en halo, derrière la jaquette : discret, mais on
+     sait de qui on parle avant d'avoir lu le titre. */
+  .sheet::before {
+    content: ''; position: absolute; inset: 0 0 auto; height: 9rem; pointer-events: none;
+    background: radial-gradient(90% 100% at 0% 0%, color-mix(in srgb, var(--c, var(--accent)) 26%, transparent), transparent 75%);
+  }
+  .sheet > * { position: relative; }
+  .sheet .top { display: flex; gap: 1rem; align-items: flex-end; }
+  .sheet .top img { width: 5.4rem; height: 7.6rem; border-radius: 12px; object-fit: cover; flex: none; background: var(--panel-2); }
+  .sheet h2 { margin: 0; font-size: 1.2rem; line-height: 1.2; letter-spacing: -.02em; }
+  .sheet .meta { font-size: .84rem; }
+  .part { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+  .part h3 { margin: 0 0 .6rem; font-size: .88rem; font-weight: 650; }
+  .note { color: var(--muted); font-size: .78rem; margin-top: .55rem; line-height: 1.45; }
+  .note.alerte { color: var(--amber); }
+
+  /* Le statut : cinq cases d'un même choix, pas cinq boutons. */
+  .seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.2rem, 1fr)); gap: .35rem; }
+  .seg .chip { justify-content: center; }
+
+  .side-empty {
+    border: 1px dashed var(--line); border-radius: 20px; padding: 2rem 1.25rem;
+    color: var(--muted); font-size: .88rem; line-height: 1.55;
   }
 
-  /* Les groupes d'une liste : « À rattraper », puis le reste. */
-  .sect { margin: 2px 0 10px; display: flex; align-items: baseline; gap: 8px; }
-  .sect h2 { font-size: .92rem; font-weight: 650; }
-  .sect span { color: var(--muted); font-size: .76rem; }
-  .sect + .grid { margin-bottom: 22px; }
+  /* Le choix de l'épisode : des cases carrées, assez grandes pour un pouce. */
+  .modes { display: flex; gap: .35rem; margin-bottom: .7rem; }
+  .modes .chip { flex: 1; justify-content: center; }
+  .nums { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.9rem, 1fr)); gap: .35rem; }
+  .num {
+    min-width: 0; min-height: 2.9rem; border-radius: 10px; border: 1px solid var(--line); cursor: pointer;
+    background: var(--panel-2); color: var(--muted); font-size: .84rem; font-weight: 600; font-variant-numeric: tabular-nums;
+  }
+  .num[data-seen='true'] { background: color-mix(in srgb, var(--c, var(--accent)) 24%, var(--panel-2)); border-color: color-mix(in srgb, var(--c, var(--accent)) 60%, transparent); color: var(--text); }
+  .num[data-off='true'] { opacity: .3; }
 
-  /* Le retour à la grille : posé seul, il ne se confond avec aucun filtre. */
-  .chip.back { margin-bottom: 12px; }
-  .chip.back::before { content: '←'; font-size: .95rem; line-height: 1; }
-  .tile .bar { margin-top: 6px; }
+  /* L'arbre d'une franchise : les saisons s'empilent, ce qui pousse sur l'une
+     se range dessous, en retrait. */
+  .tsea { margin-bottom: .6rem; }
+  .tline {
+    display: flex; align-items: center; gap: .6rem; width: 100%; min-height: 2.6rem; cursor: pointer;
+    padding: .4rem .6rem; border-radius: 11px; text-align: left;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .tline[data-on='true'] { border-color: var(--accent-line); }
+  .tnum { flex: none; min-width: 2.1rem; padding: .1rem .35rem; border-radius: 7px; text-align: center; font-size: .72rem; font-weight: 700; background: var(--bg); color: var(--muted); }
+  .ttit { flex: 1; min-width: 0; font-size: .85rem; line-height: 1.3; }
+  .tprog { flex: none; font-size: .74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .tbr { margin: .4rem 0 0 .9rem; padding-left: .7rem; border-left: 1px solid var(--line); }
+  .tbrn { display: block; font-size: .74rem; color: var(--muted); margin-bottom: .25rem; }
+  .tleaf {
+    display: block; width: 100%; min-height: 2.3rem; margin-bottom: .25rem; cursor: pointer;
+    padding: .4rem .6rem; border-radius: 9px; text-align: left; font-size: .8rem; line-height: 1.3;
+    background: transparent; border: 1px solid var(--line);
+  }
+  .tleaf[data-on='true'] { border-color: var(--accent-line); }
 
-  .search { display: flex; gap: 8px; margin-bottom: 14px; }
+  /* ---------------------------------------------------------------- lecteur */
 
-  .skel { height: 138px; border-radius: 18px; background: var(--panel); margin-bottom: 12px; animation: pulse 1.4s ease-in-out infinite; }
+  .player {
+    border-radius: 18px; padding: .8rem;
+    background: linear-gradient(180deg, #1b1a33, #14141f);
+    border: 1px solid var(--accent-line);
+    box-shadow: 0 10px 30px -12px rgba(0,0,0,.9);
+  }
+  .player .top { display: flex; gap: .75rem; align-items: center; }
+  .player img { width: 2.8rem; height: 3.9rem; border-radius: 8px; object-fit: cover; flex: none; background: var(--panel-2); }
+  .grow { min-width: 0; flex: 1; }
+  .kind { font-size: .74rem; color: var(--muted); }
+  .player .name { font-weight: 650; font-size: .95rem; line-height: 1.25; }
+  .seekline, .volline { display: flex; align-items: center; gap: .6rem; margin-top: .6rem; }
+  .volline svg { flex: none; color: var(--faint); width: 1rem; height: 1rem; }
+  .time { color: var(--muted); font-size: .74rem; font-variant-numeric: tabular-nums; flex: none; min-width: 2.6rem; }
+  .time.right { text-align: right; }
+  input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 1.9rem; background: none; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 99px; background: #2b2f45; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--accent); border: 2px solid #14141f; }
+  input[type=range]::-moz-range-track { height: 6px; border-radius: 99px; background: #2b2f45; }
+  input[type=range]::-moz-range-thumb { width: 20px; height: 20px; border: 2px solid #14141f; border-radius: 50%; background: var(--accent); }
+  .lecteurs { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .75rem; }
+  .lecteurs .lab { color: var(--muted); font-size: .8rem; margin-right: .2rem; }
+  .lecteurs .chip { min-width: 2.6rem; justify-content: center; }
+  .opt {
+    display: flex; align-items: center; gap: .6rem; margin-top: .75rem; cursor: pointer;
+    padding: .55rem .75rem; border-radius: 12px; background: rgba(0,0,0,.2); border: 1px solid var(--line);
+    font-size: .84rem; font-weight: 600;
+  }
+  .opt input { width: 1.2rem; height: 1.2rem; margin: 0; flex: none; accent-color: var(--accent); }
+  .opt small { display: block; color: var(--faint); font-size: .74rem; font-weight: 500; }
+
+  /* ---------------------------------------------------------------- calendrier */
+
+  /* Jour par jour : une colonne par jour dès qu'il y a la place, comme un
+     programme ; sur un téléphone, les jours s'empilent. */
+  .days { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.4rem 1.2rem; align-items: start; }
+  .day h2 { margin: 0 0 .6rem; font-size: 1rem; font-weight: 650; }
+  .day h2 small { color: var(--muted); font-weight: 500; font-size: .8rem; margin-left: .4rem; }
+  .slot {
+    display: flex; gap: .7rem; align-items: center; width: 100%; margin-bottom: .45rem; cursor: pointer;
+    padding: .45rem; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); text-align: left;
+    border-left: 3px solid var(--c, var(--line));
+  }
+  .slot img { width: 2.4rem; height: 3.3rem; border-radius: 7px; object-fit: cover; flex: none; background: var(--panel-2); }
+  .slot .hour { font-variant-numeric: tabular-nums; font-weight: 650; font-size: .85rem; flex: none; min-width: 3.4rem; }
+  .ics {
+    display: block; margin-top: 1.5rem; padding: .9rem 1rem; border-radius: 14px; max-width: 34rem;
+    font-size: .88rem; font-weight: 600; color: var(--text); text-decoration: none;
+    background: var(--panel); border: 1px solid var(--line);
+  }
+  .ics span { display: block; margin-top: .2rem; font-weight: 400; font-size: .8rem; color: var(--muted); }
+
+  /* ---------------------------------------------------------------- bilan */
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr)); gap: .6rem; margin-bottom: 1.4rem; }
+  .kpi { border-radius: 16px; padding: .9rem 1rem; background: var(--panel); border: 1px solid var(--line); }
+  .kpi b { display: block; font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; letter-spacing: -.02em; }
+  .kpi span { color: var(--muted); font-size: .8rem; }
+  .bars { display: grid; gap: .5rem; max-width: 34rem; }
+  .bar-row { display: grid; grid-template-columns: 8rem 1fr 2.5rem; align-items: center; gap: .6rem; font-size: .85rem; }
+  .bar-row .track { height: .55rem; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+  .bar-row .track i { display: block; height: 100%; border-radius: 99px; background: var(--accent); }
+  .bar-row .n { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ---------------------------------------------------------------- divers */
+
+  .search { display: flex; gap: .5rem; margin-bottom: .9rem; max-width: 36rem; }
+  input[type=text] {
+    flex: 1; min-width: 0; min-height: 2.75rem; padding: 0 .9rem; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+  }
+  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  form { display: flex; gap: .5rem; margin-top: 1rem; max-width: 26rem; }
+
+  .empty, .err { color: var(--muted); padding: 2.5rem 0; font-size: .95rem; line-height: 1.6; max-width: 34rem; }
+  .err { color: var(--danger); }
+  .skel { height: 5.8rem; border-radius: 16px; background: var(--panel); margin-bottom: .6rem; animation: pulse 1.4s ease-in-out infinite; }
   @keyframes pulse { 50% { opacity: .5 } }
+
+  .flash {
+    position: fixed; left: 50%; transform: translate(-50%, 12px); z-index: 30;
+    bottom: calc(5.5rem + env(safe-area-inset-bottom));
+    background: var(--text); color: var(--bg); padding: .7rem 1.1rem; border-radius: 999px;
+    font-size: .88rem; font-weight: 600; opacity: 0; pointer-events: none; max-width: calc(100vw - 32px);
+    transition: opacity .2s, transform .2s; box-shadow: 0 8px 24px -8px rgba(0,0,0,.8);
+  }
+  .flash.on { opacity: 1; transform: translate(-50%, 0); }
+  @media (min-width: 700px) { .flash { bottom: 1.5rem; } }
 `
 
 const SCRIPT = `
@@ -347,13 +432,14 @@ const SCRIPT = `
   if (fromUrl) {
     localStorage.setItem(KEY, fromUrl)
     // Retiré de la barre d'adresse : sinon le mot de passe reste dans
-    // l'historique du téléphone et part dans le « Referer » du lien suivant.
+    // l'historique et part dans le « Referer » du lien suivant.
     url.searchParams.delete('t')
     history.replaceState(null, '', url.pathname)
   }
   var token = localStorage.getItem(KEY) || ''
 
   var appEl = document.getElementById('app')
+  var sideEl = document.getElementById('side')
   var playerEl = document.getElementById('player')
   var countEl = document.getElementById('count')
   var flashEl = document.getElementById('flash')
@@ -363,13 +449,29 @@ const SCRIPT = `
   var dragging = false
   var flashTimer = null
 
+  /**
+   * Assez de place pour ouvrir la fiche à côté de la liste plutôt qu'à sa
+   * place. Le seuil est celui de la colonne de droite dans la feuille de style.
+   */
+  var wideQuery = window.matchMedia('(min-width: 1000px)')
+  function isWide() { return wideQuery.matches }
+
+  /** La colonne de droite n'a lieu d'être que pour une fiche ou une vidéo. */
+  var shellEl = document.querySelector('.shell')
+  function layout() {
+    var utile = tab === 'home' || tab === 'library' || !!playerEl.innerHTML
+    shellEl.setAttribute('data-col', utile ? 'on' : 'off')
+  }
+
   // ---------------------------------------------------------------- outils
 
   function esc(text) {
-    return String(text).replace(/[&<>"']/g, function (c) {
+    return String(text == null ? '' : text).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
     })
   }
+
+  function plural(n, one, many) { return n + ' ' + (n > 1 ? many : one) }
 
   function mmss(total) {
     total = Math.max(0, Math.floor(total || 0))
@@ -379,7 +481,7 @@ const SCRIPT = `
   }
 
   // « dans 2 j », « dans 5 h » : de quoi savoir s'il faut attendre ce soir ou
-  // la semaine prochaine, sans embarquer de bibliothèque de dates.
+  // la semaine prochaine.
   function when(airingAt) {
     if (!airingAt) return 'pas encore sorti'
     var left = airingAt * 1000 - Date.now()
@@ -389,6 +491,27 @@ const SCRIPT = `
     var hours = Math.floor(left / 3600000)
     if (hours >= 1) return 'dans ' + hours + ' h'
     return 'dans ' + Math.max(1, Math.floor(left / 60000)) + ' min'
+  }
+
+  /**
+   * La couleur d'une série, rendue lisible sur le fond de nuit.
+   *
+   * AniList donne la teinte dominante de la jaquette, parfois presque noire :
+   * un trait « vu » de cette couleur disparaîtrait. On l'éclaircit alors
+   * jusqu'à ce qu'elle se voie, sans changer sa teinte.
+   */
+  function tone(hex) {
+    if (!hex || hex.charAt(0) !== '#' || hex.length !== 7) return ''
+    var r = parseInt(hex.substr(1, 2), 16), g = parseInt(hex.substr(3, 2), 16), b = parseInt(hex.substr(5, 2), 16)
+    var l = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
+    if (l >= 0.45) return hex
+    var k = (0.45 - l) / (1 - l)
+    function mix(c) { return Math.round(c + (255 - c) * k) }
+    return 'rgb(' + mix(r) + ',' + mix(g) + ',' + mix(b) + ')'
+  }
+  function colorStyle(hex) {
+    var c = tone(hex)
+    return c ? ' style="--c:' + c + '"' : ''
   }
 
   // Des icônes en ligne : une police d'icônes serait une requête vers
@@ -417,13 +540,13 @@ const SCRIPT = `
     branch: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM15 6a9 9 0 0 1-9 9'
   }
   function icon(name) {
-    return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
       'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="' +
       PATHS[name] + '"/></svg>'
   }
 
   function btn(attrs, label, name, klass) {
-    return '<button class="' + (klass || '') + '" ' + attrs + '>' + (name ? icon(name) : '') + label + '</button>'
+    return '<button class="btn ' + (klass || '') + '" ' + attrs + '>' + (name ? icon(name) : '') + label + '</button>'
   }
 
   function say(text) {
@@ -450,15 +573,51 @@ const SCRIPT = `
     return answer
   }
 
+  // ---------------------------------------------------------------- la frise
+
+  /**
+   * La frise d'une série, un trait par épisode.
+   *
+   * Au-delà d'une cinquantaine d'épisodes, un trait en regroupe plusieurs :
+   * sorti sans toi s'il en manque un, à venir si aucun n'est vu, vu sinon. Le
+   * suivant garde son contour, où qu'il tombe.
+   */
+  function frise(s, big) {
+    var strip = s.strip || ''
+    if (!strip) return ''
+    var per = Math.max(1, Math.ceil(strip.length / (big ? 90 : 48)))
+    var next = s.episode ? s.episode - 1 : -1
+    var counts = { s: 0, a: 0, u: 0 }
+    for (var k = 0; k < strip.length; k++) counts[strip.charAt(k)] = (counts[strip.charAt(k)] || 0) + 1
+    var html = ''
+    for (var i = 0; i < strip.length; i += per) {
+      var part = strip.substr(i, per)
+      var st = part.indexOf('a') >= 0 ? 'a' : part.indexOf('s') < 0 ? 'u' : 's'
+      var isNext = next >= i && next < i + per
+      html += '<i class="' + st + (isNext ? ' n' : '') + '"></i>'
+    }
+    var label = plural(counts.s, 'épisode vu', 'épisodes vus') +
+      (counts.a ? ', ' + plural(counts.a, 'sorti sans toi', 'sortis sans toi') : '') +
+      (counts.u ? ', ' + counts.u + ' à venir' : '')
+    return '<span class="frise' + (big ? ' big' : '') + '" role="img" aria-label="' + esc(label) + '">' + html + '</span>'
+  }
+
+  function legend() {
+    return '<div class="legend">' +
+      '<span><i class="s"></i>Vu</span><span><i class="a"></i>Sorti sans toi</span>' +
+      '<span><i></i>À venir</span><span><i class="n"></i>Le suivant</span></div>'
+  }
+
   // ---------------------------------------------------------------- rendu
 
   function askToken(message) {
     playerEl.innerHTML = ''
-    countEl.textContent = ''
+    sideEl.innerHTML = ''
+    countEl.textContent = 'Mot de passe'
     appEl.innerHTML =
-      '<div class="err">' + esc(message) + '</div>' +
-      '<form id="f"><input type="text" id="t" placeholder="mot de passe" autocapitalize="off" ' +
-      'autocomplete="off" spellcheck="false"><button>Entrer</button></form>'
+      '<div class="err">' + esc(message) + ' Il est affiché sous le QR code, dans les réglages de l’app sur le PC.</div>' +
+      '<form id="f"><input type="text" id="t" placeholder="Mot de passe" autocapitalize="off" ' +
+      'autocomplete="off" spellcheck="false" aria-label="Mot de passe"><button class="btn primary">Entrer</button></form>'
     document.getElementById('f').onsubmit = function (e) {
       e.preventDefault()
       token = document.getElementById('t').value.trim()
@@ -468,38 +627,31 @@ const SCRIPT = `
   }
 
   function renderPlayer(p) {
-    if (!p) { playerEl.innerHTML = ''; return }
+    if (!p) { playerEl.innerHTML = ''; layout(); return }
     if (dragging) return
 
     var cover = p.cover ? '<img src="' + esc(p.cover) + '" alt="">' : ''
-    var label = p.kind === 'trailer' ? 'Bande-annonce' : 'Anime-Sama'
-    var sub = p.episode ? '<div class="note">Épisode ' + p.episode + '</div>' : ''
-    // Un lecteur hors d'atteinte le dit, plutôt que d'afficher des boutons muets.
+    var label = p.kind === 'trailer' ? 'Bande-annonce sur le PC' : 'En lecture sur le PC'
+    var sub = p.episode ? '<div class="kind">Épisode ' + p.episode + '</div>' : ''
     // Tant qu'aucune vidéo n'a été trouvée dans la page, il n'y a rien à
     // piloter : le lecteur charge encore, ou la page n'en contient pas.
     var limit = p.canSeek
       ? ''
-      : '<div class="note">Lecteur pas encore prêt : les commandes apparaîtront dès que la vidéo démarre.</div>'
+      : '<div class="note">Le lecteur charge : les commandes apparaîtront dès que la vidéo démarre.</div>'
 
-    // Ce que le moment propose, et qui s'en va avec lui.
-    //
     // Passer le générique : le libellé est le leur — c'est ce qui est écrit
     // sur l'écran d'en face, et deux formulations pour un même bouton feraient
     // douter de ce qu'on presse.
-    var skipBtn = p.skip ? '<button data-act="skip">' + icon('skip') + esc(p.skip) + '</button>' : ''
-    // Enchaîner : proposé quand le générique de fin est bien engagé. Un bouton
-    // et pas un départ automatique — le PC ne décide pas à la place du canapé.
+    var skipBtn = p.skip ? '<button class="btn primary" data-act="skip">' + icon('skip') + esc(p.skip) + '</button>' : ''
+    // Enchaîner : un bouton et pas un départ automatique — le PC ne décide pas
+    // à la place du canapé.
     var nextBtn = p.offerNext
-      ? '<button data-act="next" data-id="' + Number(p.animeId) + '" data-ep="' + Number(p.offerNext) + '">' +
+      ? '<button class="btn primary" data-act="next" data-id="' + Number(p.animeId) + '" data-ep="' + Number(p.offerNext) + '">' +
         icon('next') + 'Épisode ' + Number(p.offerNext) + '</button>'
       : ''
-    // Une seule rangée : deux offres à la fois se partagent la largeur plutôt
-    // que de faire grandir la carte sous les doigts.
     var offers = skipBtn || nextBtn ? '<div class="acts">' + skipBtn + nextBtn + '</div>' : ''
 
-    // Changer de lecteur chez eux : même épisode, autre hébergeur. C'est quand
-    // la vidéo ne vient pas qu'on en a besoin — la carte est alors là quand
-    // même, sans commandes —, d'où la ligne d'aide tant qu'aucune n'a démarré.
+    // Changer de lecteur chez eux : même épisode, autre hébergeur.
     var pl = p.players
     var lecteurs = pl
       ? '<div class="lecteurs"><span class="lab">Lecteur</span>' +
@@ -511,9 +663,6 @@ const SCRIPT = `
         (p.canSeek ? '' : '<div class="note">La vidéo ne vient pas ? Essaie un autre lecteur.</div>')
       : ''
 
-    // Passer les génériques sans rien demander. Cochée comme les réglages au
-    // départ ; la changer ici vaut pour la séance et ne les touche pas, ce que
-    // la ligne dit sous le libellé. Absente sur une bande-annonce.
     var sk = p.autoSkip
     var autoSkip = sk
       ? '<label class="opt"><input type="checkbox" data-act="autoskip"' + (sk.on ? ' checked' : '') + '>' +
@@ -536,28 +685,27 @@ const SCRIPT = `
         '</div>'
       : ''
 
-
     playerEl.innerHTML =
-      '<div class="player">' +
+      '<section class="player" aria-label="Lecture en cours">' +
         '<div class="top">' + cover +
           '<div class="grow">' +
-            '<span class="badge">' + label + '</span>' +
+            '<div class="kind">' + label + '</div>' +
             '<div class="name">' + esc(p.title) + '</div>' + sub +
           '</div>' +
         '</div>' +
         limit + seek + offers +
         '<div class="acts">' +
           (p.canSeek
-            ? btn('data-act="' + (p.playing ? 'pause' : 'play') + '"', p.playing ? 'Pause' : 'Lecture',
-                  p.playing ? 'pause' : 'play', '')
+            ? '<button class="btn primary" data-act="' + (p.playing ? 'pause' : 'play') + '">' +
+              icon(p.playing ? 'pause' : 'play') + (p.playing ? 'Pause' : 'Lecture') + '</button>'
             : '') +
-          btn('data-act="' + (p.fullscreen ? 'windowed' : 'fullscreen') + '"',
-              p.fullscreen ? 'Fenêtre' : 'Plein écran', p.fullscreen ? 'shrink' : 'expand', 'ghost') +
-          btn('data-act="close"', 'Fermer', 'close', 'ghost') +
+          '<button class="btn" data-act="' + (p.fullscreen ? 'windowed' : 'fullscreen') + '">' +
+            icon(p.fullscreen ? 'shrink' : 'expand') + (p.fullscreen ? 'Fenêtre' : 'Plein écran') + '</button>' +
+          btn('data-act="close"', 'Fermer', 'close', '') +
         '</div>' +
         lecteurs +
         autoSkip +
-      '</div>'
+      '</section>'
 
     var seekEl = document.getElementById('seek')
     if (seekEl) {
@@ -569,24 +717,25 @@ const SCRIPT = `
       volEl.addEventListener('input', function () { dragging = true })
       volEl.addEventListener('change', function () { dragging = false; control('volume', Number(volEl.value)) })
     }
+    layout()
   }
 
   /**
-   * Le choix d'épisode, déplié dans la carte de sa série.
+   * Le choix d'épisode, déplié dans la fiche.
    *
-   * Une seule à la fois : deux grilles ouvertes sur un écran de téléphone, on
-   * ne sait plus laquelle on touche.
+   * Une seule grille à la fois : deux ouvertes, on ne sait plus laquelle on
+   * touche.
    */
   var eps = { id: 0, data: null, mode: 'watch' }
 
   function renderEpisodes(s) {
     if (eps.id !== s.id) return ''
-    if (!eps.data) return '<div class="eps"><div class="note">Chargement des épisodes…</div></div>'
+    if (!eps.data) return '<div class="part"><div class="note">Chargement des épisodes…</div></div>'
 
     var seen = {}
     eps.data.watched.forEach(function (n) { seen[n] = true })
     var total = eps.data.total || eps.data.lastAired || 0
-    if (!total) return '<div class="eps"><div class="note">Aucun épisode connu pour cette série.</div></div>'
+    if (!total) return '<div class="part"><div class="note">Aucun épisode connu pour cette série.</div></div>'
 
     var nums = ''
     for (var n = 1; n <= total; n++) {
@@ -609,7 +758,8 @@ const SCRIPT = `
     }).join('')
     var hint = (MODES.find(function (m) { return m[0] === eps.mode }) || MODES[0])[2]
 
-    return '<div class="eps">' +
+    return '<div class="part">' +
+      '<h3>Épisodes</h3>' +
       '<div class="modes">' + modes + '</div>' +
       '<div class="nums">' + nums + '</div>' +
       '<div class="note">' + hint + '</div>' +
@@ -620,30 +770,27 @@ const SCRIPT = `
   var BRANCHES = ${JSON.stringify(BRANCH_LABELS)}
 
   /**
-   * L'arbre d'une franchise, déplié dans la carte — ESSAI, comme sur le PC.
+   * L'arbre d'une franchise, déplié dans la fiche — ESSAI, comme sur le PC.
    *
-   * Le PC dessine un rail vertical et accroche les branches à droite du nœud.
-   * Sur un téléphone il n'y a pas de droite : les saisons s'empilent, et ce qui
-   * pousse sur l'une se range dessous, en retrait. Le même arbre, lu de haut
-   * en bas.
-   *
-   * Toucher un titre l'ouvre sur le PC — y compris un film qui n'est pas dans
-   * la bibliothèque, ce qui est justement l'intérêt de regarder un arbre.
+   * Le PC dessine un rail et accroche les branches à droite. Ici il n'y a pas
+   * toujours de droite : les saisons s'empilent, et ce qui pousse sur l'une se
+   * range dessous, en retrait. Toucher un titre l'ouvre sur le PC — y compris
+   * un film qui n'est pas dans la bibliothèque.
    */
   function renderTree(s) {
     if (tree.id !== s.id) return ''
     if (!tree.data) {
-      return '<div class="tree"><div class="note">Lecture de la franchise… ' +
+      return '<div class="part"><div class="note">Lecture de la franchise… ' +
         'plusieurs requêtes, cela peut prendre quelques secondes.</div></div>'
     }
 
     var t = tree.data
     if (!t.trunk || !t.trunk.length) {
-      return '<div class="tree"><div class="note">Aucune franchise trouvée pour cette série.</div></div>'
+      return '<div class="part"><div class="note">Aucune franchise trouvée pour cette série.</div></div>'
     }
 
-    var tete = t.count + (t.count > 1 ? ' séries' : ' série') + ' · ' + t.tracked + ' dans ta liste' +
-      (t.total ? ' · ' + t.seen + ' épisodes vus sur ' + t.total : '')
+    var tete = plural(t.count, 'série', 'séries') + ', dont ' + t.tracked + ' dans ta liste' +
+      (t.total ? '. ' + t.seen + ' épisodes vus sur ' + t.total + '.' : '.')
 
     var corps = t.trunk.map(function (saison) {
       var num = 'S' + saison.number + (saison.part ? '.' + saison.part : '')
@@ -657,7 +804,7 @@ const SCRIPT = `
 
       var branches = (saison.branches || []).map(function (b) {
         var feuilles = b.nodes.map(function (n) {
-          var p = n.total ? ' · ' + n.seen + '/' + n.total : ''
+          var p = n.total ? ' (' + n.seen + '/' + n.total + ')' : ''
           var complet = n.total > 0 && n.seen >= n.total
           return '<button class="tleaf" data-act="open" data-id="' + n.id + '" data-on="' + complet + '">' +
             esc(n.title) + p + '</button>'
@@ -668,15 +815,16 @@ const SCRIPT = `
       return '<div class="tsea">' + ligne + branches + '</div>'
     }).join('')
 
-    return '<div class="tree">' +
+    return '<div class="part">' +
+      '<h3>Franchise</h3>' +
       '<div class="note">' + tete + '</div>' +
       (t.partial ? '<div class="note alerte">Une partie n’a pas pu être lue : l’arbre est peut-être incomplet.</div>' : '') +
-      corps +
+      '<div style="margin-top:.7rem">' + corps + '</div>' +
       '<div class="note">Touche un titre pour l’ouvrir sur le PC.</div>' +
     '</div>'
   }
 
-  /** Les mots de l'app pour chaque statut, employés par la carte et par les filtres. */
+  /** Les mots de l'app pour chaque statut, employés par la fiche et par les filtres. */
   var STATUS = {
     watching: 'En cours',
     planned: 'À voir',
@@ -685,64 +833,13 @@ const SCRIPT = `
     dropped: 'Abandonné'
   }
 
-  function card(s) {
+  /** Ce que dit une série en une ligne : où l'on en est, et ce qui attend. */
+  function metaLine(s) {
     var total = s.total || 0
-    var done = total ? Math.round((s.seen / total) * 100) : 0
-    // Trois cas, et le premier n'existe que dans l'onglet Bibliothèque : une
-    // série dont tout est vu n'a plus d'épisode suivant. Sans ce cas, la carte
-    // annonçait « Épisode null » et offrait un bouton qui partait en erreur.
-    var meta = s.episode === null
-      ? STATUS[s.status] + ' · ' + s.seen + (s.seen > 1 ? ' épisodes vus' : ' épisode vu')
-      : s.unaired
-        ? '<span class="soon">Épisode ' + s.episode + ' ' + when(s.airingAt) + '</span>'
-        : '<b>Épisode ' + s.episode + '</b>' + (total ? ' sur ' + total : '') + ' · ' + s.seen + ' vus'
-
-    // Un épisode à venir ne se coche pas : la place du bouton dit pourquoi,
-    // plutôt que de laisser essayer et refuser après coup.
-    var first = s.episode === null
-      ? ''
-      : s.unaired
-        ? '<span class="pill">' + icon('clock') + 'À venir</span>'
-        : btn('data-act="tick" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Vu', 'check', '')
-
-    // La bande-annonce n'apparaît que s'il y en a une : un bouton qui répond
-    // « il n'y en a pas » ne valait pas la place qu'il prend.
-    var ba = s.trailer
-      ? btn('data-act="trailer" data-id="' + s.id + '"', 'Bande-annonce', 'film', 'ghost')
-      : ''
-
-    /**
-     * « Regarder » lance l'épisode suivant quand il y en a un à lancer.
-     *
-     * Quand il n'y en a pas — tout est vu, ou le suivant n'est pas encore
-     * sorti — le bouton ouvre la liste plutôt que de ne rien faire : c'est
-     * exactement le moment où l'on veut choisir soi-même.
-     */
-    var lancable = s.episode !== null && !s.unaired
-    var regarder = lancable
-      ? btn('data-act="watch" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Regarder', 'play', 'ghost')
-      : total
-        ? btn('data-act="eps" data-id="' + s.id + '"', 'Choisir', 'play', 'ghost')
-        : ''
-
-    return '<div class="card">' +
-      '<div class="row">' +
-        '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
-        '<div class="info">' +
-          '<div class="title">' + esc(s.title) + '</div>' +
-          '<div class="meta">' + meta + '</div>' +
-          (total ? '<div class="bar"><i style="width:' + done + '%"></i></div>' : '') +
-        '</div>' +
-      '</div>' +
-      '<div class="acts">' + first + regarder + ba +
-        btn('data-act="open" data-id="' + s.id + '"', 'Fiche', 'info', 'ghost') +
-        (lancable && total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
-        btn('data-act="tree" data-id="' + s.id + '"', 'Franchise', 'branch', 'ghost') +
-      '</div>' +
-      statusRow(s) +
-      renderEpisodes(s) +
-      renderTree(s) +
-    '</div>'
+    if (s.episode === null) return STATUS[s.status] + ', ' + plural(s.seen, 'épisode vu', 'épisodes vus')
+    if (s.unaired) return '<span class="soon">Épisode ' + s.episode + ' ' + when(s.airingAt) + '</span>'
+    var rest = s.behind > 1 ? ', ' + s.behind + ' sortis sans toi' : total ? ' sur ' + total : ''
+    return '<b>Épisode ' + s.episode + '</b>' + rest
   }
 
   /**
@@ -757,61 +854,129 @@ const SCRIPT = `
       return '<button class="chip" data-act="status" data-id="' + s.id + '" data-status="' + k + '" aria-pressed="' +
         (s.status === k) + '"' + (off ? ' disabled' : '') + '>' + STATUS[k] + '</button>'
     }).join('')
-    return '<div class="statuses">' + chips + '</div>' +
-      (s.finishable ? '' : '<div class="note">« Terminé » attend la fin de la diffusion.</div>')
+    return '<div class="part"><h3>Statut</h3><div class="seg" role="group" aria-label="Statut">' + chips + '</div>' +
+      (s.finishable ? '' : '<div class="note">« Terminé » attend la fin de la diffusion.</div>') + '</div>'
   }
 
+  /** La fiche d'une série : tout ce qu'on peut en faire depuis le canapé. */
+  function card(s) {
+    var total = s.total || 0
+    // Un épisode à venir ne se coche pas : la place du bouton dit pourquoi.
+    var lancable = s.episode !== null && !s.unaired
+    var first = lancable
+      ? btn('data-act="tick" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Cocher l’épisode ' + s.episode, 'check', 'primary')
+      : ''
+    // « Regarder » lance le suivant ; sans suivant, il ouvre la liste : c'est
+    // exactement le moment où l'on veut choisir soi-même.
+    var regarder = lancable
+      ? btn('data-act="watch" data-id="' + s.id + '" data-ep="' + s.episode + '"', 'Regarder sur le PC', 'play', '')
+      : total
+        ? btn('data-act="eps" data-id="' + s.id + '"', 'Choisir un épisode', 'play', '')
+        : ''
+    var ba = s.trailer ? btn('data-act="trailer" data-id="' + s.id + '"', 'Bande-annonce', 'film', '') : ''
+
+    return '<article class="sheet"' + colorStyle(s.color) + '>' +
+      '<div class="top">' +
+        '<img src="' + esc(s.cover) + '" alt="">' +
+        '<div class="grow">' +
+          '<h2>' + esc(s.title) + '</h2>' +
+          '<div class="meta">' + metaLine(s) + '</div>' +
+        '</div>' +
+      '</div>' +
+      frise(s, true) + legend() +
+      (first || regarder ? '<div class="acts">' + first + regarder + '</div>' : '') +
+      '<div class="acts">' + ba +
+        btn('data-act="open" data-id="' + s.id + '"', 'Fiche sur le PC', 'info', '') +
+        (lancable && total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', '') : '') +
+        btn('data-act="tree" data-id="' + s.id + '"', 'Franchise', 'branch', '') +
+      '</div>' +
+      statusRow(s) +
+      renderEpisodes(s) +
+      renderTree(s) +
+    '</article>'
+  }
+
+  var SIDE_EMPTY = '<div class="side-empty">Choisis une série : sa fiche s’ouvre ici, sans quitter la liste. ' +
+    'Tu pourras la cocher, la lancer sur le PC ou changer son statut.</div>'
+
   /**
-   * La fiche d'une série, ouverte depuis une grille.
+   * La fiche de la série choisie.
    *
-   * Rendue par les deux onglets qui listent des séries : le geste — choisir
-   * une jaquette, puis agir — doit être le même à l'accueil et dans la liste.
-   * Faux quand la série n'est plus là, pour que l'appelant retombe sur sa
-   * grille au lieu d'afficher une page vide.
+   * Sur un grand écran elle va dans la colonne de droite et la liste reste
+   * là ; ailleurs elle prend la place de la liste, avec un retour. Rend vrai
+   * quand elle a pris la place — l'appelant n'a alors plus rien à dessiner.
    */
   function renderSheet(rows, retour) {
-    var seule = rows.filter(function (r) { return r.id === sheet })[0]
-    if (!seule) { sheet = 0; return false }
+    var seule = sheet ? rows.filter(function (r) { return r.id === sheet })[0] : null
+    if (sheet && !seule) sheet = 0
+    if (isWide()) {
+      sideEl.innerHTML = seule ? card(seule) : SIDE_EMPTY
+      return false
+    }
+    sideEl.innerHTML = ''
+    if (!seule) return false
     countEl.textContent = STATUS[seule.status] || ''
-    appEl.innerHTML = '<button class="chip back" data-act="back">' + retour + '</button>' + card(seule)
+    appEl.innerHTML = '<button class="chip back" data-act="back">← ' + retour + '</button>' + card(seule)
     return true
+  }
+
+  /** Une série en cours : la choisir, ou la cocher et la lancer sans détour. */
+  function seriesRow(s) {
+    var lancable = s.episode !== null && !s.unaired
+    var quick = lancable
+      ? '<div class="quick">' +
+          '<button class="round" data-act="tick" data-id="' + s.id + '" data-ep="' + s.episode + '" aria-label="Cocher l’épisode ' + s.episode + '">' + icon('check') + '</button>' +
+          '<button class="round go" data-act="watch" data-id="' + s.id + '" data-ep="' + s.episode + '" aria-label="Regarder l’épisode ' + s.episode + ' sur le PC">' + icon('play') + '</button>' +
+        '</div>'
+      : ''
+    return '<article class="srow"' + colorStyle(s.color) + ' aria-current="' + (sheet === s.id) + '">' +
+      '<button class="pick" data-act="pick" data-id="' + s.id + '">' +
+        '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' +
+        '<span class="info">' +
+          '<span class="title">' + esc(s.title) + '</span>' +
+          '<span class="meta" style="display:block">' + metaLine(s) + '</span>' +
+          frise(s, false) +
+        '</span>' +
+      '</button>' + quick +
+    '</article>'
   }
 
   function render(state) {
     renderPlayer(state.player)
     if (tab !== 'home') return
-    if (sheet && renderSheet(state.series, 'Tout ce qui est en cours')) return
+    if (renderSheet(state.series, 'Tout ce qui est en cours')) return
 
     var n = state.series.length
-    countEl.textContent = n ? n + (n > 1 ? ' séries en cours' : ' série en cours') : 'Rien en cours'
     if (!n) {
-      appEl.innerHTML = '<div class="empty">Rien à reprendre.<br>Commence une série sur le PC, elle apparaîtra ici.</div>'
+      countEl.textContent = 'Rien en cours'
+      appEl.innerHTML = '<div class="empty">Commence une série sur le PC : elle apparaîtra ici, prête à reprendre.</div>'
       return
     }
 
     /*
-     * Deux groupes, et le retard d'abord.
-     *
-     * L'app pose la question à son accueil — « qu'est-ce qui est sorti que je
-     * n'ai pas vu ? » — et c'est encore plus vrai depuis le canapé, où l'on
-     * ouvre la télécommande pour lancer quelque chose maintenant. Une liste
-     * rangée par date de dernière séance y répondait de travers : la série
-     * touchée hier passait devant les cinq épisodes en attente.
+     * Deux groupes, et le retard d'abord : « qu'est-ce qui est sorti que je
+     * n'ai pas vu ? » est la question qu'on pose depuis le canapé. Une liste
+     * rangée par dernière séance y répondait de travers.
      */
     var retard = state.series.filter(function (s) { return s.behind > 1 })
       .sort(function (a, b) { return b.behind - a.behind })
     var reste = state.series.filter(function (s) { return s.behind <= 1 })
-
     var total = retard.reduce(function (sum, s) { return sum + s.behind }, 0)
+
+    countEl.textContent = total
+      ? plural(total, 'épisode sorti t’attend', 'épisodes sortis t’attendent') + '.'
+      : 'Tout est à jour. Voici ce que tu suis.'
+
     var html = ''
     if (retard.length) {
-      html += '<div class="sect"><h2>À rattraper</h2><span>' + total + ' épisode' + (total > 1 ? 's' : '') +
-        ' déjà sorti' + (total > 1 ? 's' : '') + '</span></div>' +
-        '<div class="grid">' + retard.map(seriesTile).join('') + '</div>'
+      html += '<section class="group"><h2>À rattraper</h2>' +
+        '<p>Les séries où plusieurs épisodes sont sortis sans toi, la plus en retard d’abord.</p>' +
+        '<div class="rows">' + retard.map(seriesRow).join('') + '</div></section>'
     }
     if (reste.length) {
-      if (retard.length) html += '<div class="sect"><h2>Le reste</h2><span>à jour, ou presque</span></div>'
-      html += '<div class="grid">' + reste.map(seriesTile).join('') + '</div>'
+      html += '<section class="group">' +
+        (retard.length ? '<h2>Le reste</h2><p>À jour, ou presque.</p>' : '') +
+        '<div class="rows">' + reste.map(seriesRow).join('') + '</div></section>'
     }
     appEl.innerHTML = html
   }
@@ -821,12 +986,9 @@ const SCRIPT = `
   var tab = 'home'
   var filter = 'all'
   /**
-   * La série ouverte, à l'accueil comme dans « Ma liste ».
-   *
-   * L'app montre une grille de jaquettes et n'ouvre les actions qu'une fois la
-   * série choisie. La liste du téléphone empilait au contraire cinq boutons par
-   * série : sur cent cinq séries, un mur de boutons où plus rien ne se
-   * distingue. La grille sert à choisir, la fiche à agir.
+   * La série ouverte, à l'accueil comme dans « Ma liste ». La liste sert à
+   * choisir, la fiche à agir : cinq boutons sous chacune des cent séries
+   * feraient un mur où plus rien ne se distingue.
    */
   var sheet = 0
   /** La franchise dépliée, et son arbre une fois arrivé. Voir renderTree. */
@@ -838,7 +1000,7 @@ const SCRIPT = `
     { id: 'home', label: 'Accueil', icon: 'home' },
     { id: 'library', label: 'Ma liste', icon: 'books' },
     { id: 'calendar', label: 'Calendrier', icon: 'calendar' },
-    { id: 'stats', label: 'Stats', icon: 'chart' },
+    { id: 'stats', label: 'Bilan', icon: 'chart' },
     { id: 'discover', label: 'Découvrir', icon: 'compass' }
   ]
 
@@ -849,24 +1011,25 @@ const SCRIPT = `
     }).join('')
   }
 
-  /** Une jaquette, son avancement, rien d'autre : on est en train de choisir. */
+  /** Une jaquette, sa frise, rien d'autre : on est en train de choisir. */
   function seriesTile(s) {
     var total = s.total || 0
-    var done = total ? Math.round((s.seen / total) * 100) : 0
-    // Un seul épisode en attente n'est pas un retard : c'est le cours normal
-    // d'une série qu'on suit. Au-delà, ça s'accumule, et ça se dit.
-    var late = s.behind > 1 ? '<span class="late">' + s.behind + '</span>' : ''
-    return '<div class="tile" data-act="pick" data-id="' + s.id + '">' +
+    // Un seul épisode en attente est le cours normal d'une série qu'on suit.
+    // Au-delà, ça s'accumule, et ça se dit.
+    // Seulement pour une série en cours : sur une série « à voir », tout est
+    // sorti sans toi par définition, et le chiffre ne dirait rien.
+    var late = s.behind > 1 && s.status === 'watching' ? '<span class="late">' + s.behind + '</span>' : ''
+    return '<button class="tile" data-act="pick" data-id="' + s.id + '"' + colorStyle(s.color) +
+      ' aria-current="' + (sheet === s.id) + '">' +
       '<img src="' + esc(s.cover) + '" alt="" loading="lazy">' + late +
-      '<div class="title">' + esc(s.title) + '</div>' +
-      '<div class="meta">' + (total ? s.seen + ' / ' + total : STATUS[s.status]) + '</div>' +
-      (total ? '<div class="bar"><i style="width:' + done + '%"></i></div>' : '') +
-    '</div>'
+      '<span class="title">' + esc(s.title) + '</span>' +
+      '<span class="meta" style="display:block">' + (total ? s.seen + ' / ' + total : STATUS[s.status]) + '</span>' +
+      frise(s, false) +
+    '</button>'
   }
 
   function renderLibrary(rows) {
-    // Une série choisie : sa fiche prend toute la place, avec ses actions.
-    if (sheet && renderSheet(rows, 'Toutes les séries')) return
+    if (renderSheet(rows, 'Toutes les séries')) return
 
     var counts = {}
     rows.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1 })
@@ -879,11 +1042,11 @@ const SCRIPT = `
       }).join('')
 
     var shown = filter === 'all' ? rows : rows.filter(function (r) { return r.status === filter })
-    countEl.textContent = rows.length + (rows.length > 1 ? ' séries suivies' : ' série suivie')
-    appEl.innerHTML = '<div class="filters">' + chips + '</div>' +
+    countEl.textContent = plural(rows.length, 'série suivie', 'séries suivies') + '.'
+    appEl.innerHTML = '<div class="chips" role="group" aria-label="Filtrer par statut">' + chips + '</div>' +
       (shown.length
         ? '<div class="grid">' + shown.map(seriesTile).join('') + '</div>'
-        : '<div class="empty">Rien dans cette liste.</div>')
+        : '<div class="empty">Aucune série avec ce statut.</div>')
   }
 
   /** « 3 h 04 », comme la barre latérale de l'app. */
@@ -896,13 +1059,9 @@ const SCRIPT = `
   var JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi']
 
   /**
-   * Le jour d'une diffusion, dit comme on le dirait.
-   *
-   * « Jeudi 18 h 15 » se comprend d'un coup d'œil ; une date complète demande
-   * de compter. Au-delà d'une semaine le nom du jour ne suffit plus à situer,
-   * et la date reprend sa place.
+   * « Aujourd'hui », « Demain », « Jeudi », puis la date au-delà d'une
+   * semaine : le jour se comprend d'un coup d'œil, une date demande de compter.
    */
-  /** « Aujourd'hui », « Demain », « Jeudi 2 octobre » : l'intertitre d'un jour. */
   function jour(ms) {
     var d = new Date(ms)
     var n = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000)
@@ -921,24 +1080,22 @@ const SCRIPT = `
   }
 
   function renderCalendar(airing) {
+    sideEl.innerHTML = ''
     countEl.textContent = airing.length
-      ? airing.length + (airing.length > 1 ? ' épisodes annoncés' : ' épisode annoncé')
-      : 'Rien d’annoncé'
+      ? plural(airing.length, 'épisode annoncé', 'épisodes annoncés') + ' dans les deux semaines.'
+      : 'Rien d’annoncé pour l’instant.'
     var abonnement = '<a class="ics" href="/calendrier.ics?t=' + encodeURIComponent(token) + '">' +
       'Mettre ces sorties dans mon agenda' +
-      '<span>Ouvre le calendrier au format .ics. À garder en favori pour s’y abonner.</span></a>'
+      '<span>Ouvre le calendrier au format .ics, avec une alarme par épisode. À garder en favori pour s’y abonner.</span></a>'
     if (!airing.length) {
       appEl.innerHTML = '<div class="empty">Aucun épisode annoncé dans les deux semaines qui viennent, ' +
         'parmi les séries que tu suis.</div>' + abonnement
       return
     }
     /*
-     * La semaine, jour par jour.
-     *
-     * Une liste à plat répétait « jeudi » sur chaque ligne et laissait
-     * compter soi-même combien de choses tombaient le même soir. Le jour
-     * s'annonce donc une fois, et ce qui suit lui appartient — c'est la
-     * question qu'on pose au calendrier : qu'est-ce qui sort ce soir ?
+     * La semaine, jour par jour : le jour s'annonce une fois, et ce qui suit
+     * lui appartient. Sur un grand écran, une colonne par jour, comme un
+     * programme télé.
      */
     var jours = []
     var parJour = {}
@@ -952,79 +1109,82 @@ const SCRIPT = `
       parJour[cle].push(a)
     })
 
-    appEl.innerHTML = jours.map(function (j) {
+    appEl.innerHTML = '<div class="days">' + jours.map(function (j) {
       var n = parJour[j.cle].length
-      return '<div class="sect"><h2>' + esc(jour(j.at)) + '</h2><span>' + n + ' épisode' + (n > 1 ? 's' : '') +
-        '</span></div>' +
+      return '<section class="day"><h2>' + esc(jour(j.at)) + '<small>' + plural(n, 'épisode', 'épisodes') + '</small></h2>' +
         parJour[j.cle].map(function (a) {
-          return '<div class="card"><div class="row">' +
-            '<img src="' + esc(a.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + a.animeId + '">' +
-            '<div class="info">' +
-              '<div class="title">' + esc(a.title) + '</div>' +
-              '<div class="meta"><b>Épisode ' + a.episode + '</b> · ' + esc(heure(a.airingAt)) + '</div>' +
-            '</div>' +
-          '</div></div>'
-        }).join('')
-    }).join('') + abonnement
+          return '<button class="slot" data-act="open" data-id="' + a.animeId + '"' + colorStyle(a.color) + '>' +
+            '<img src="' + esc(a.cover) + '" alt="" loading="lazy">' +
+            '<span class="hour">' + esc(heure(a.airingAt)) + '</span>' +
+            '<span class="grow"><span class="title">' + esc(a.title) + '</span>' +
+            '<span class="meta" style="display:block">Épisode ' + a.episode + '</span></span>' +
+          '</button>'
+        }).join('') + '</section>'
+    }).join('') + '</div>' + abonnement
   }
 
   function renderStats(s) {
-    countEl.textContent = s.series + (s.series > 1 ? ' séries suivies' : ' série suivie')
+    sideEl.innerHTML = ''
+    countEl.textContent = s.week.episodes
+      ? plural(s.week.episodes, 'épisode vu', 'épisodes vus') + ' ces 7 jours, soit ' + heures(s.week.minutes) + '.'
+      : 'Rien de vu ces 7 derniers jours.'
 
     var kpis = [
-      [s.episodes, 'épisodes vus'],
+      [s.episodes, 'épisodes vus en tout'],
       [heures(s.minutes), 'de visionnage'],
       [s.finished, 'séries finies'],
-      [s.watching, 'en cours']
+      [s.watching, 'séries en cours']
     ].map(function (k) {
       return '<div class="kpi"><b>' + k[0] + '</b><span>' + k[1] + '</span></div>'
     }).join('')
 
+    // Les genres en barres : des chiffres qu'on compare, pas des filtres.
+    var top = s.genres.length ? s.genres[0].count : 0
     var genres = s.genres.length
-      ? '<div class="tags">' + s.genres.map(function (g) {
-          return '<span class="chip">' + esc(g.name) + ' <small>' + g.count + '</small></span>'
-        }).join('') + '</div>'
+      ? '<section class="group"><h2>Tes genres</h2><p>Comptés en épisodes vus.</p><div class="bars">' +
+        s.genres.map(function (g) {
+          return '<div class="bar-row"><span>' + esc(g.name) + '</span>' +
+            '<span class="track"><i style="width:' + Math.max(4, Math.round((g.count / top) * 100)) + '%"></i></span>' +
+            '<span class="n">' + g.count + '</span></div>'
+        }).join('') + '</div></section>'
       : ''
 
-    appEl.innerHTML = '<div class="kpis">' + kpis + '</div>' +
-      '<div class="card"><div class="sub">Ces 7 jours</div>' +
-      '<div class="title">' + s.week.episodes + ' épisode' + (s.week.episodes > 1 ? 's' : '') +
-      ' · ' + heures(s.week.minutes) + '</div></div>' +
-      genres
+    appEl.innerHTML = '<div class="kpis">' + kpis + '</div>' + genres
   }
 
   function tile(m) {
-    var meta = [m.year, m.episodes ? m.episodes + ' ép.' : '', m.score ? m.score + ' %' : '']
-      .filter(Boolean).join(' · ')
-    // Une série déjà suivie le dit, plutôt que d'offrir un bouton qui ferait
-    // doublon avec ce qu'on a déjà.
+    var meta = [m.year, m.episodes ? m.episodes + ' ép.' : '', m.score ? m.score + ' %' : ''].filter(Boolean).join(', ')
+    // Une série déjà suivie le dit, plutôt que d'offrir un doublon.
     var action = m.owned
-      ? '<span class="owned">Déjà suivie</span>'
-      : btn('data-act="add" data-id="' + m.id + '"', 'Ajouter', 'plus', 'ghost')
-    return '<div class="tile">' +
-      '<img src="' + esc(m.cover) + '" alt="" loading="lazy" data-act="open" data-id="' + m.id + '">' +
-      '<div class="title">' + esc(m.title) + '</div>' +
-      (meta ? '<div class="meta">' + meta + '</div>' : '') +
+      ? '<span class="owned">Déjà dans ta liste</span>'
+      : btn('data-act="add" data-id="' + m.id + '"', 'Ajouter', 'plus', '')
+    return '<div class="tile-wrap"' + colorStyle(m.color) + '>' +
+      '<button class="tile" data-act="open" data-id="' + m.id + '" aria-label="Ouvrir ' + esc(m.title) + ' sur le PC">' +
+        '<img src="' + esc(m.cover) + '" alt="" loading="lazy">' +
+        '<span class="title">' + esc(m.title) + '</span>' +
+        (meta ? '<span class="meta" style="display:block">' + meta + '</span>' : '') +
+      '</button>' +
       action +
     '</div>'
   }
 
   function renderDiscover(items) {
+    sideEl.innerHTML = ''
     var tabs = [['trending', 'Tendances'], ['season', 'Cette saison']].map(function (t) {
       return '<button class="chip" data-act="dtab" data-tab="' + t[0] + '" aria-pressed="' +
         (!query && discoverTab === t[0]) + '">' + t[1] + '</button>'
     }).join('')
 
-    countEl.textContent = query ? 'Résultats pour « ' + query + ' »' : 'Le catalogue AniList'
+    countEl.textContent = query ? 'Résultats pour « ' + query + ' ».' : 'Le catalogue AniList. Choisis une jaquette pour l’ouvrir sur le PC.'
     appEl.innerHTML =
       '<div class="search">' +
-        '<input type="text" id="q" placeholder="Rechercher un titre…" value="' + esc(query) + '" ' +
-        'autocapitalize="off" autocomplete="off">' +
-        btn('data-act="search"', '', 'search', 'ghost') +
+        '<input type="text" id="q" placeholder="Rechercher un titre" value="' + esc(query) + '" ' +
+        'autocapitalize="off" autocomplete="off" aria-label="Rechercher un titre">' +
+        btn('data-act="search" aria-label="Rechercher"', '', 'search', '') +
       '</div>' +
-      '<div class="filters">' + tabs + '</div>' +
+      '<div class="chips">' + tabs + '</div>' +
       (items.length ? '<div class="grid">' + items.map(tile).join('') + '</div>'
-                    : '<div class="empty">Aucun titre ne correspond.</div>')
+                    : '<div class="empty">Aucun titre ne correspond. Essaie le titre anglais ou japonais.</div>')
 
     var q = document.getElementById('q')
     q.addEventListener('keydown', function (e) {
@@ -1039,9 +1199,7 @@ const SCRIPT = `
     for (var k in extra) payload[k] = extra[k]
     try {
       var answer = await call('/api/control', payload)
-      // Un clic ou une touche ne change pas la barre : la redessiner ferait
-      // se replier le pavé qu'on est en train d'utiliser.
-      if (answer.player && action !== 'click' && action !== 'key') renderPlayer(answer.player)
+      if (answer.player) renderPlayer(answer.player)
     } catch (err) {
       say(err.message)
       load()
@@ -1063,13 +1221,22 @@ const SCRIPT = `
     var id = Number(el.getAttribute('data-id'))
     var ep = Number(el.getAttribute('data-ep'))
 
-    // Changer de vue ne demande rien au PC tant qu'on n'a pas les données.
     // Ouvrir une série de la liste, et en revenir.
     if (action === 'pick') {
-      sheet = Number(el.getAttribute('data-id'))
+      sheet = id
       eps = { id: 0, data: null, mode: eps.mode }
       tree = { id: 0, data: null }
-      return load()
+      await load()
+      // Sur un téléphone la fiche remplace la liste : on remonte la voir.
+      if (!isWide()) window.scrollTo(0, 0)
+      // Ouverte au clavier ou à la télécommande d'une TV (un clic sans
+      // pointeur a un « detail » nul) : le focus suit dans la fiche, sinon il
+      // retombe au début de la page à chaque série ouverte.
+      if (e.detail === 0) {
+        var premier = (isWide() ? sideEl : appEl).querySelector('.sheet button, .back')
+        if (premier) premier.focus()
+      }
+      return
     }
     if (action === 'back') { sheet = 0; tree = { id: 0, data: null }; return load() }
 
@@ -1079,18 +1246,17 @@ const SCRIPT = `
       appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
       return load()
     }
-    if (action === 'filter') { filter = el.getAttribute('data-filter'); sheet = 0; return load() }
+    if (action === 'filter') { filter = el.getAttribute('data-filter'); return load() }
 
     // Déplier, ou replier si c'était déjà celle-là.
     if (action === 'eps') {
-      var wanted = Number(el.getAttribute('data-id'))
-      if (eps.id === wanted) { eps = { id: 0, data: null, mode: eps.mode }; return load() }
-      eps = { id: wanted, data: null, mode: eps.mode }
+      if (eps.id === id) { eps = { id: 0, data: null, mode: eps.mode }; return load() }
+      eps = { id: id, data: null, mode: eps.mode }
       load()
       try {
-        var got = await call('/api/episodes?id=' + wanted)
+        var got = await call('/api/episodes?id=' + id)
         // La grille a pu être refermée, ou une autre ouverte, pendant l'attente.
-        if (eps.id === wanted) { eps.data = got; load() }
+        if (eps.id === id) { eps.data = got; load() }
       } catch (err) {
         say(err.message)
       }
@@ -1100,17 +1266,16 @@ const SCRIPT = `
     if (action === 'epmode') { eps.mode = el.getAttribute('data-mode'); return load() }
 
     // L'arbre d'une franchise : plusieurs requêtes chez AniList, donc on le
-    // demande une fois et on le garde tant que la carte reste ouverte.
+    // demande une fois et on le garde tant que la fiche reste ouverte.
     if (action === 'tree') {
-      var voulu = Number(el.getAttribute('data-id'))
-      if (tree.id === voulu) { tree = { id: 0, data: null }; return load() }
-      tree = { id: voulu, data: null }
+      if (tree.id === id) { tree = { id: 0, data: null }; return load() }
+      tree = { id: id, data: null }
       load()
       try {
-        var arbre = await call('/api/franchise?id=' + voulu)
-        if (tree.id === voulu) { tree.data = arbre; load() }
+        var arbre = await call('/api/franchise?id=' + id)
+        if (tree.id === id) { tree.data = arbre; load() }
       } catch (err) {
-        if (tree.id === voulu) tree = { id: 0, data: null }
+        if (tree.id === id) tree = { id: 0, data: null }
         say(err.message)
         load()
       }
@@ -1118,27 +1283,25 @@ const SCRIPT = `
     }
 
     if (action === 'ep') {
-      var epId = Number(el.getAttribute('data-id'))
-      var epNo = Number(el.getAttribute('data-ep'))
       el.disabled = true
       try {
         if (eps.mode === 'watch') {
-          renderPlayer((await call('/api/watch', { id: epId, episode: epNo })).player)
-          say('Épisode ' + epNo + ' ouvert sur le PC')
-          // La grille se replie : le choix est fait, elle n'a plus rien à dire.
+          renderPlayer((await call('/api/watch', { id: id, episode: ep })).player)
+          say('Épisode ' + ep + ' ouvert sur le PC')
+          // La grille se replie : le choix est fait.
           eps = { id: 0, data: null, mode: eps.mode }
         } else {
           var isSeen = el.getAttribute('data-seen') === 'true'
           await call('/api/tick', {
-            id: epId,
-            episode: epNo,
+            id: id,
+            episode: ep,
             // En mode « cocher », toucher un épisode déjà vu le retire : c'est
             // le seul moyen de corriger une erreur depuis le téléphone.
             watched: eps.mode === 'upto' ? true : !isSeen,
             upTo: eps.mode === 'upto'
           })
-          say(eps.mode === 'upto' ? 'Vus jusqu’à l’épisode ' + epNo : (isSeen ? 'Épisode ' + epNo + ' décoché' : 'Épisode ' + epNo + ' coché'))
-          eps.data = await call('/api/episodes?id=' + epId)
+          say(eps.mode === 'upto' ? 'Vus jusqu’à l’épisode ' + ep : (isSeen ? 'Épisode ' + ep + ' décoché' : 'Épisode ' + ep + ' coché'))
+          eps.data = await call('/api/episodes?id=' + id)
         }
       } catch (err) {
         say(err.message)
@@ -1147,6 +1310,7 @@ const SCRIPT = `
       }
       return load()
     }
+
     if (action === 'status') {
       var voulu = el.getAttribute('data-status')
       el.disabled = true
@@ -1160,7 +1324,7 @@ const SCRIPT = `
       return load()
     }
     if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }
-    if (action === 'search') { query = (document.getElementById('q') || {}).value || ''; return load() }
+    if (action === 'search') { query = ((document.getElementById('q') || {}).value || '').trim(); return load() }
 
     // Enchaîner sur le suivant. La fenêtre est déjà ouverte sur la bonne
     // saison : le PC change d'épisode dans son menu, sans tout recharger.
@@ -1194,14 +1358,13 @@ const SCRIPT = `
     // Une case : son nouvel état est déjà posé quand le clic arrive. La
     // réponse redessine la carte avec ce que le PC applique vraiment.
     if (action === 'autoskip') {
-      var voulu = el.checked
+      var coche = el.checked
       el.disabled = true
       try {
-        renderPlayer((await call('/api/control', { action: 'autoskip', value: voulu ? 1 : 0 })).player)
-        say(voulu ? 'Intro et ending passés tout seuls' : 'Plus de saut automatique')
+        renderPlayer((await call('/api/control', { action: 'autoskip', value: coche ? 1 : 0 })).player)
+        say(coche ? 'Intro et ending passés tout seuls' : 'Plus de saut automatique')
       } catch (err) {
-        // Refusé : la case reprend l'état que le PC applique toujours.
-        el.checked = !voulu
+        el.checked = !coche
         el.disabled = false
         say(err.message)
       }
@@ -1217,14 +1380,13 @@ const SCRIPT = `
 
     // Le bouton s'éteint le temps de la réponse : « Regarder » interroge
     // Anime-Sama et prend parfois deux secondes ; sans retour, on tape trois fois.
-    var before = el.innerHTML
     el.disabled = true
-    el.innerHTML = '…'
+    el.setAttribute('aria-busy', 'true')
     try {
       if (action === 'tick') {
-        render(await call('/api/tick', { id: id, episode: ep }))
+        await call('/api/tick', { id: id, episode: ep })
         say('Épisode ' + ep + ' coché')
-        return
+        return load()
       }
       if (action === 'add') {
         await call('/api/add', { id: id })
@@ -1233,10 +1395,10 @@ const SCRIPT = `
       }
       if (action === 'watch') {
         renderPlayer((await call('/api/watch', { id: id, episode: ep })).player)
-        say('Lecteur ouvert sur le PC')
+        say('Épisode ' + ep + ' lancé sur le PC')
       } else if (action === 'trailer') {
         renderPlayer((await call('/api/trailer', { id: id })).player)
-        say('Bande-annonce lancée')
+        say('Bande-annonce lancée sur le PC')
       } else if (action === 'open') {
         await call('/api/open', { id: id })
         say('Fiche ouverte sur le PC')
@@ -1247,12 +1409,53 @@ const SCRIPT = `
       load()
     } finally {
       el.disabled = false
-      el.innerHTML = before
+      el.removeAttribute('aria-busy')
+    }
+  })
+
+  /**
+   * Les flèches, pour une TV ou un clavier.
+   *
+   * La télécommande d'une TV n'a pas de pointeur : ses flèches vont d'un
+   * élément à son voisin dans la direction pressée — le plus proche dans
+   * l'axe, en pénalisant l'écart de travers. Les champs et les curseurs
+   * gardent leurs flèches.
+   */
+  var DIRS = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }
+  document.addEventListener('keydown', function (e) {
+    var dir = DIRS[e.key]
+    if (!dir || e.altKey || e.ctrlKey || e.metaKey) return
+    var here = document.activeElement
+    if (here && (here.tagName === 'INPUT' || here.tagName === 'TEXTAREA' || here.tagName === 'SELECT')) return
+    var all = [].slice.call(document.querySelectorAll('button:not([disabled]), a[href], input'))
+      .filter(function (el) { var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 })
+    if (!here || here === document.body) {
+      if (all[0]) { e.preventDefault(); all[0].focus() }
+      return
+    }
+    var from = here.getBoundingClientRect()
+    var cx = from.left + from.width / 2, cy = from.top + from.height / 2
+    var best = null, score = Infinity
+    all.forEach(function (el) {
+      if (el === here) return
+      var r = el.getBoundingClientRect()
+      var dx = r.left + r.width / 2 - cx, dy = r.top + r.height / 2 - cy
+      var along = dx * dir[0] + dy * dir[1]
+      if (along <= 1) return
+      var across = Math.abs(dir[0] ? dy : dx)
+      var s = along + across * 2
+      if (s < score) { score = s; best = el }
+    })
+    if (best) {
+      e.preventDefault()
+      best.focus()
+      best.scrollIntoView({ block: 'nearest', inline: 'nearest' })
     }
   })
 
   async function load() {
     renderNav()
+    layout()
     try {
       if (tab === 'library') return renderLibrary((await call('/api/library')).rows)
       if (tab === 'calendar') return renderCalendar((await call('/api/calendar')).airing)
@@ -1269,17 +1472,15 @@ const SCRIPT = `
     }
   }
 
+  // Passer d'un écran étroit à large — tablette qu'on tourne, fenêtre qu'on
+  // élargit — déplace la fiche : on redessine.
+  if (wideQuery.addEventListener) wideQuery.addEventListener('change', function () { load() })
+
   load()
   // La bibliothèque bouge lentement ; une vidéo qui joue, non. Deux rythmes,
-  // et le second passe par une adresse légère : relire les entrées, les fiches
-  // et le journal entier toutes les deux secondes pour trois nombres serait
-  // absurde.
-  //
-  // Le rafraîchissement de fond ne concerne que l'accueil : recharger le
-  // catalogue sous les doigts, ou remettre les filtres à zéro pendant qu'on
-  // lit, serait une nuisance.
-  // Ni pendant qu'on lit une fiche : la reconstruire sous les doigts ferait
-  // sauter le défilement et replierait la grille d'épisodes qu'on consultait.
+  // et le second passe par une adresse légère. Le rafraîchissement de fond ne
+  // touche que l'accueil sans fiche ouverte : reconstruire sous les doigts
+  // ferait sauter le défilement et replierait la grille qu'on consultait.
   setInterval(function () { if (tab === 'home' && !sheet) load() }, 20000)
   setInterval(async function () {
     if (dragging || !playerEl.innerHTML) return
@@ -1296,18 +1497,26 @@ export function page(): string {
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#07080f">
-<title>AnimeList — télécommande</title>
+<link rel="icon" href="data:,">
+<title>AnimeList, télécommande</title>
 <style>${STYLE}</style>
 </head>
 <body>
-<header>
-  <h1>Anime<span>List</span></h1>
-  <p class="sub" id="count">Chargement…</p>
-</header>
-<div id="player"></div>
-<div id="app"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
-<div class="flash" id="flash"></div>
-<nav id="nav"></nav>
+<div class="shell">
+  <nav id="nav" aria-label="Onglets"></nav>
+  <main>
+    <header>
+      <h1 class="brand">AnimeList</h1>
+      <p class="lede" id="count" aria-live="polite">Chargement…</p>
+    </header>
+    <div id="app"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+  </main>
+  <div class="col">
+    <div id="player"></div>
+    <aside id="side" aria-label="Fiche de la série"></aside>
+  </div>
+</div>
+<div class="flash" id="flash" role="status"></div>
 <script>${SCRIPT}</script>
 </body>
 </html>`

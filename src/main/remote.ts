@@ -47,6 +47,7 @@ import { playerIndex } from '@shared/as-players'
 import { searchTitles } from '@shared/titles'
 import { summarise, upcoming } from '@shared/summary'
 import { buildIcs } from '@shared/ics'
+import { episodeStrip } from '@shared/episode-strip'
 import { aimFor, resolve as resolveAnimeSama } from './animesama'
 import { franchiseTree } from './franchise'
 import { openTrailerWindow } from './trailer'
@@ -131,6 +132,9 @@ function seriesRows(keep: (status: string) => boolean): {
       id: entry.animeId,
       title: found.title.english ?? found.title.romaji,
       cover: found.cover.large,
+      // La couleur de la jaquette teinte la frise et la fiche : chaque série
+      // se reconnaît à la sienne, comme dans le nouveau design de l'app.
+      color: found.cover.color,
       status: entry.status,
       // `null` quand tout est vu : la série n'a plus d'épisode à reprendre.
       episode,
@@ -138,6 +142,8 @@ function seriesRows(keep: (status: string) => boolean): {
       seen: seen.get(entry.animeId)?.size ?? 0,
       /** Épisodes sortis et pas encore vus : ce qui attend vraiment. */
       behind,
+      /** Un caractère par épisode. Voir `shared/episode-strip`. */
+      strip: episodeStrip(seen.get(entry.animeId), found.episodes, aired),
       // La série reste dans la liste, mais sans bouton : savoir qu'il n'y a
       // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
       unaired: episode !== null && isUnaired(found, episode),
@@ -361,7 +367,10 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const entries = data.entries.map((e) => ({ animeId: e.animeId, status: e.status }))
 
     if (route === 'stats') return json(res, 200, summarise(data.history, entries, media))
-    return json(res, 200, { airing: upcoming(entries, media) })
+    const colors = new Map(data.media.map((m) => [m.id, m.cover.color]))
+    return json(res, 200, {
+      airing: upcoming(entries, media).map((a) => ({ ...a, color: colors.get(a.animeId) ?? null }))
+    })
   }
 
   /**
@@ -452,6 +461,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         id: m.id,
         title: m.title.english ?? m.title.romaji,
         cover: m.cover.large,
+        color: m.cover.color,
         year: m.seasonYear,
         format: m.format,
         score: m.averageScore,
