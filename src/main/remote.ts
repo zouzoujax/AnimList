@@ -15,8 +15,9 @@
  * 2. Une liste fermée de quatre adresses. Aucun chemin n'est jamais traduit en
  *    fichier, donc rien du disque ne peut fuir par une remontée
  *    d'arborescence.
- * 3. Aucune permission d'écriture au-delà de « cocher un épisode ». Pas de
- *    suppression, pas de réglages, pas d'export.
+ * 3. Peu de permissions d'écriture : cocher un épisode, ajouter une série,
+ *    changer son statut. Pas de suppression, pas de réglages, pas d'export —
+ *    et chaque écriture refait ici les vérifications que fait l'app.
  *
  * Il n'y a pas de chiffrement : c'est du HTTP en clair sur le réseau local. Ça
  * suffit chez soi et pas ailleurs — d'où le refus catégorique d'ouvrir ça sur
@@ -34,12 +35,13 @@ import {
   REMOTE_PORT,
   icsUrl,
   remoteUrl,
+  isRemoteStatus,
   routeOf,
   safeEqual,
   tokenFrom
 } from '@shared/remote'
 import { nextEpisode } from '@shared/resume'
-import { canTick, isUnaired } from '@shared/airing'
+import { canComplete, canTick, isUnaired } from '@shared/airing'
 import { shouldOfferNext } from '@shared/binge'
 import { playerIndex } from '@shared/as-players'
 import { searchTitles } from '@shared/titles'
@@ -139,6 +141,9 @@ function seriesRows(keep: (status: string) => boolean): {
       // La série reste dans la liste, mais sans bouton : savoir qu'il n'y a
       // rien à regarder ce soir est une réponse, la masquer n'en est pas une.
       unaired: episode !== null && isUnaired(found, episode),
+      // « Terminé » reste éteint tant que la série paraît : la règle de l'app,
+      // dite d'avance plutôt que refusée après coup.
+      finishable: canComplete(found, entry.status === 'completed'),
       airingAt: found.nextAiring?.airingAt ?? null,
       // La bande-annonce se sait d'avance ; l'adresse de lecture demande une
       // résolution réseau, faite seulement au moment où on la réclame.
@@ -453,7 +458,15 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   if (req.method !== 'POST') return json(res, 405, { error: 'Méthode refusée.' })
 
-  let body: { id?: number; episode?: number; action?: string; value?: number; watched?: boolean; upTo?: boolean }
+  let body: {
+    id?: number
+    episode?: number
+    action?: string
+    value?: number
+    watched?: boolean
+    upTo?: boolean
+    status?: string
+  }
   try {
     body = JSON.parse((await readBody(req)) || '{}') as typeof body
   } catch {
@@ -512,6 +525,29 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
     setEntry(id, { status: 'planned' }, fresh)
     return json(res, 200, { ok: true })
+  }
+
+  /**
+   * Changer le statut d'une série de la liste.
+   *
+   * Seulement une série déjà suivie : ajouter passe par `add`, qui va chercher
+   * la fiche. Et « Terminé » refusé tant que la série paraît, comme sur le PC —
+   * la page éteint le bouton, mais une page n'a jamais protégé une écriture.
+   */
+  if (route === 'status') {
+    const next = body.status
+    if (!isRemoteStatus(next)) return json(res, 400, { error: 'Statut inconnu.' })
+
+    const data = snapshot()
+    const entry = data.entries.find((e) => e.animeId === id)
+    if (!entry) return json(res, 404, { error: 'Cette série n’est pas dans ta liste.' })
+    const media = data.media.find((m) => m.id === id)
+    if (next === 'completed' && media && !canComplete(media, entry.status === 'completed')) {
+      return json(res, 409, { error: 'Elle n’a pas fini de sortir : impossible de la marquer terminée.' })
+    }
+
+    if (entry.status !== next) setEntry(id, { status: next })
+    return json(res, 200, { ok: true, status: next })
   }
 
   if (route === 'tick') {

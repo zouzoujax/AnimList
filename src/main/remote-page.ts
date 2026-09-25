@@ -304,6 +304,7 @@ const STYLE = `
    * par le bord de l'écran, sans que rien ne dise qu'il y avait une suite.
    */
   .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .statuses { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
   .chip small { opacity: .65; font-size: .92em; }
 
   /* ---- catalogue ---- */
@@ -738,9 +739,26 @@ const SCRIPT = `
         (lancable && total ? btn('data-act="eps" data-id="' + s.id + '"', 'Épisodes', 'list', 'ghost') : '') +
         btn('data-act="tree" data-id="' + s.id + '"', 'Franchise', 'branch', 'ghost') +
       '</div>' +
+      statusRow(s) +
       renderEpisodes(s) +
       renderTree(s) +
     '</div>'
+  }
+
+  /**
+   * Le statut, changé d'un geste : mettre en pause, abandonner, reprendre.
+   *
+   * « Terminé » s'éteint tant que la série paraît — la règle de l'app, que le
+   * PC vérifie de toute façon. Le dire vaut mieux que laisser essayer.
+   */
+  function statusRow(s) {
+    var chips = Object.keys(STATUS).map(function (k) {
+      var off = k === 'completed' && !s.finishable
+      return '<button class="chip" data-act="status" data-id="' + s.id + '" data-status="' + k + '" aria-pressed="' +
+        (s.status === k) + '"' + (off ? ' disabled' : '') + '>' + STATUS[k] + '</button>'
+    }).join('')
+    return '<div class="statuses">' + chips + '</div>' +
+      (s.finishable ? '' : '<div class="note">« Terminé » attend la fin de la diffusion.</div>')
   }
 
   /**
@@ -1127,6 +1145,18 @@ const SCRIPT = `
       } finally {
         el.disabled = false
       }
+      return load()
+    }
+    if (action === 'status') {
+      var voulu = el.getAttribute('data-status')
+      el.disabled = true
+      try {
+        await call('/api/status', { id: id, status: voulu })
+        say('Passée en « ' + STATUS[voulu] + ' »')
+      } catch (err) {
+        say(err.message)
+      }
+      el.disabled = false
       return load()
     }
     if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }

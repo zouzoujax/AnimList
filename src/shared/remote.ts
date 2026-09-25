@@ -117,6 +117,7 @@ export type RemoteRoute =
   | 'library'
   | 'discover'
   | 'add'
+  | 'status'
   | 'episodes'
   | 'franchise'
   | 'stats'
@@ -162,6 +163,8 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'ics'
     case '/api/add':
       return 'add'
+    case '/api/status':
+      return 'status'
     case '/api/episodes':
       return 'episodes'
     case '/api/franchise':
@@ -189,4 +192,11 @@ export function remoteUrl(host: string, port: number, token: string): string {
  */
 export function icsUrl(host: string, port: number, token: string): string {
   return `http://${host}:${port}/calendrier.ics?t=${token}`
+}
+
+/** Les statuts qu'une requête peut demander : la liste fermée de l'app. */
+const STATUSES = ['watching', 'planned', 'completed', 'paused', 'dropped'] as const
+
+export function isRemoteStatus(value: unknown): value is (typeof STATUSES)[number] {
+  return typeof value === 'string' && (STATUSES as readonly string[]).includes(value)
 }

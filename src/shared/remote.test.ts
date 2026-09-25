@@ -4,6 +4,7 @@ import {
   makeToken,
   MAX_CHOSEN,
   MIN_CHOSEN,
+  isRemoteStatus,
   needsToken,
   remoteUrl,
   routeOf,
@@ -83,6 +84,7 @@ describe('routeOf', () => {
     expect(routeOf('/api/library')).toBe('library')
     expect(routeOf('/api/discover')).toBe('discover')
     expect(routeOf('/api/add')).toBe('add')
+    expect(routeOf('/api/status')).toBe('status')
     expect(routeOf('/api/episodes')).toBe('episodes')
     expect(routeOf('/api/franchise')).toBe('franchise')
   })
@@ -179,5 +181,14 @@ describe('checkChosen', () => {
       const url = remoteUrl('192.168.1.20', 8787, chosen.token)
       expect(tokenFrom(url, null)).toBe(chosen.token)
     }
+  })
+})
+
+describe('isRemoteStatus', () => {
+  it('n’accepte que les statuts de l’app', () => {
+    expect(isRemoteStatus('paused')).toBe(true)
+    expect(isRemoteStatus('completed')).toBe(true)
+    expect(isRemoteStatus('deleted')).toBe(false)
+    expect(isRemoteStatus(3)).toBe(false)
   })
 })
