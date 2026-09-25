@@ -81,3 +81,21 @@ describe('buildIcs', () => {
     expect(lines).toContain('DTEND:20260925T185400Z')
   })
 })
+
+describe('les alarmes', () => {
+  const now = Date.UTC(2026, 8, 24, 10)
+  it('en pose une à la sortie, ou avant', () => {
+    const at = unfold(buildIcs([ev({ alarm: 0 })], now))
+    expect(at).toContain('BEGIN:VALARM')
+    expect(at).toContain('TRIGGER:-PT0M')
+    const before = unfold(buildIcs([ev({ alarm: 30 })], now))
+    expect(before).toContain('TRIGGER:-PT30M')
+    // L'alarme vit dans son événement.
+    expect(before.indexOf('END:VALARM')).toBeLessThan(before.indexOf('END:VEVENT'))
+  })
+
+  it('n’en pose pas pour une série en silence', () => {
+    expect(unfold(buildIcs([ev({ alarm: null })], now))).not.toContain('VALARM')
+    expect(unfold(buildIcs([ev()], now))).not.toContain('VALARM')
+  })
+})

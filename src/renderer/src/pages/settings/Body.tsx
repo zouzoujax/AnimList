@@ -52,6 +52,7 @@ import {
 } from '@shared/types'
 import { looksLikeAppId, type DiscordStatus } from '@shared/discord'
 import { checkChosen } from '@shared/remote'
+import type { PhonePushStatus } from '@shared/phone-push'
 import { Modal } from '@/components/ui'
 import QrCode from '@/components/QrCode'
 import TvTimeImport from '@/components/TvTimeImport'
@@ -315,6 +316,120 @@ function BackupRow(): React.JSX.Element {
         onDone={() => void window.api.backup.status().then(setStatus)}
       />
     </Row>
+  )
+}
+
+/**
+ * Les notifications du téléphone, par ntfy.
+ *
+ * Éteint par défaut, et la phrase dit pourquoi : allumer envoie un titre et un
+ * numéro d'épisode à un serveur. Allumé, le sujet s'affiche en QR code — on
+ * s'abonne une fois dans l'app ntfy, puis tout arrive seul, PC en veille
+ * compris tant qu'il tourne.
+ */
+function PhonePushRow(): React.JSX.Element {
+  const [status, setStatus] = useState<PhonePushStatus | null>(null)
+  const [server, setServer] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const toast = useApp((s) => s.toast)
+
+  useEffect(() => {
+    let alive = true
+    void window.api.phonePush.status().then((next) => alive && setStatus(next))
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const saveServer = (): void => {
+    if (server === null || !status || server.trim() === status.server) {
+      setServer(null)
+      return
+    }
+    void window.api.phonePush.setServer(server).then((res) => {
+      setStatus(res.status)
+      if (res.ok) {
+        setServer(null)
+        toast('Serveur enregistré. Réabonne-toi dans l’app ntfy.', 'ok')
+      } else toast(res.error ?? 'Serveur refusé.', 'error')
+    })
+  }
+
+  return (
+    <>
+      <Row
+        label="Prévenir aussi sur le téléphone"
+        hint={
+          status?.on
+            ? 'Par ntfy : les épisodes des séries que tu suis arrivent sur le téléphone, même loin du PC, tant qu’il est allumé.'
+            : 'Par ntfy, une app gratuite pour Android et iPhone. Le titre de la série et le numéro de l’épisode passent par le serveur choisi — ntfy.sh par défaut.'
+        }
+      >
+        <Toggle on={!!status?.on} onChange={(on) => void window.api.phonePush.enable(on).then(setStatus)} />
+      </Row>
+
+      {status?.on && status.url && (
+        <div className="mt-1 flex flex-wrap items-start gap-4 px-1 py-3">
+          <QrCode text={status.url} label="Sujet ntfy à suivre" />
+          <div className="min-w-[220px] flex-1">
+            <p className="text-[0.84rem] font-semibold">Abonne ton téléphone</p>
+            <p className="mt-1 text-[0.78rem] leading-relaxed text-muted">
+              Installe ntfy, touche « + », puis entre ce sujet — ou scanne le code, qui ouvre son adresse. Le sujet est
+              tiré au hasard et fait office de mot de passe : ne le partage pas.
+            </p>
+            <code
+              className="mt-2 block break-all rounded-[8px] px-2 py-1.5 text-[0.7rem]"
+              style={{ background: 'var(--panel-2)', color: 'var(--color-muted)' }}
+            >
+              {status.url}
+            </code>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <button
+                className="chip"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true)
+                  void window.api.phonePush
+                    .test()
+                    .then((res) =>
+                      res.ok
+                        ? toast('Essai envoyé : regarde ton téléphone.', 'ok')
+                        : toast(res.error ?? 'Envoi impossible.', 'error')
+                    )
+                    .finally(() => setBusy(false))
+                }}
+              >
+                <BellRing size={13} />
+                {busy ? 'Envoi…' : 'Envoyer un essai'}
+              </button>
+              <button
+                className="chip"
+                title="L’ancien sujet ne recevra plus rien : à faire si l’adresse a circulé."
+                onClick={() =>
+                  void window.api.phonePush.newTopic().then((next) => {
+                    setStatus(next)
+                    toast('Nouveau sujet : réabonne-toi dans l’app ntfy.', 'ok')
+                  })
+                }
+              >
+                Nouveau sujet
+              </button>
+            </div>
+            <label className="mt-3 block text-[0.74rem] text-muted">
+              Serveur ntfy
+              <input
+                className="field mt-1 block !h-[32px] w-full max-w-[320px]"
+                value={server ?? status.server}
+                spellCheck={false}
+                onChange={(e) => setServer(e.target.value)}
+                onBlur={saveServer}
+                onKeyDown={(e) => e.key === 'Enter' && saveServer()}
+              />
+            </label>
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -703,6 +818,8 @@ export default function SettingsBody(): React.JSX.Element {
           <Toggle on={prefs.notifications} onChange={(notifications) => setPrefs({ notifications })} />
         </Row>
 
+        <PhonePushRow />
+
         <Row
           label="Prévenir à l'avance"
           hint="Ne vaut que pour les épisodes dont AniList connaît l'heure de diffusion ; les autres sont annoncés au rattrapage."
@@ -710,7 +827,7 @@ export default function SettingsBody(): React.JSX.Element {
           <select
             className="field !w-[9.5rem]"
             value={prefs.notifyLeadMinutes}
-            disabled={!prefs.notifications}
+            disabled={!prefs.notifications && !prefs.phonePush}
             onChange={(e) => setPrefs({ notifyLeadMinutes: Number(e.target.value) })}
           >
             {[0, 15, 30, 60, 180, 720, 1440].map((minutes) => (
@@ -725,7 +842,7 @@ export default function SettingsBody(): React.JSX.Element {
           <select
             className="field !w-[9.5rem]"
             value={prefs.notifyEveryMinutes}
-            disabled={!prefs.notifications}
+            disabled={!prefs.notifications && !prefs.phonePush}
             onChange={(e) => setPrefs({ notifyEveryMinutes: Number(e.target.value) })}
           >
             {[5, 15, 30, 60, 180].map((minutes) => (
@@ -910,7 +1027,8 @@ export default function SettingsBody(): React.JSX.Element {
                 iPhone : Réglages › Applications › Calendrier › Comptes › Ajouter un compte › Autre › Ajouter un
                 calendrier avec abonnement. L’agenda vient chercher le fichier ici, donc il ne se met à jour que sur ton
                 réseau, l’app ouverte et la télécommande allumée — un agenda hébergé ailleurs, comme celui de Google, ne
-                sait pas joindre une adresse locale.
+                sait pas joindre une adresse locale. Chaque épisode y porte une alarme, au même moment que les
+                notifications du PC : sur iPhone, décoche « Retirer les alarmes » en t’abonnant pour qu’elle sonne.
               </p>
               <code
                 className="mt-2 block break-all rounded-[8px] px-2 py-1.5 text-[0.7rem]"

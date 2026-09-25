@@ -611,6 +611,16 @@ export interface Prefs {
   /** Quand la dernière copie a été écrite. Zéro tant qu'il n'y en a pas eu. */
   backupAt: number
   /**
+   * Prévenir aussi sur le téléphone, par ntfy. Éteint par défaut : allumer
+   * envoie un titre et un numéro d'épisode au serveur choisi. Les règles sont
+   * dans `shared/phone-push.ts`.
+   */
+  phonePush: boolean
+  /** Le serveur ntfy : le public, ou le sien. */
+  phonePushServer: string
+  /** Le sujet, tiré au hasard à l'allumage. Il fait office de mot de passe. */
+  phonePushTopic: string
+  /**
    * Les surnoms donnés à une série, par identifiant.
    *
    * « jjk », « le truc des sorciers » : ce que tu tapes pour la retrouver et
@@ -1080,5 +1090,8 @@ export const DEFAULT_PREFS: Prefs = {
   badgeSound: true,
   backupFolder: null,
   backupAt: 0,
+  phonePush: false,
+  phonePushServer: 'https://ntfy.sh',
+  phonePushTopic: '',
   aliases: {}
 }

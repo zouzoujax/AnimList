@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { RestoreMode, RestorePreview } from '@shared/restore'
+import type { PhonePushStatus } from '@shared/phone-push'
 import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
@@ -220,6 +221,16 @@ const api = {
     /** Efface les visionnages dont la série n'existe plus. Renvoie le nombre. */
     cleanOrphans: (): Promise<number> => ipcRenderer.invoke('health:clean-orphans'),
     removeStray: (name: string): Promise<boolean> => ipcRenderer.invoke('health:remove-stray', name)
+  },
+
+  /** Les notifications du téléphone, par ntfy. Voir `shared/phone-push.ts`. */
+  phonePush: {
+    status: (): Promise<PhonePushStatus> => ipcRenderer.invoke('phone-push:status'),
+    enable: (on: boolean): Promise<PhonePushStatus> => ipcRenderer.invoke('phone-push:enable', on),
+    newTopic: (): Promise<PhonePushStatus> => ipcRenderer.invoke('phone-push:new-topic'),
+    setServer: (raw: string): Promise<{ ok: boolean; error?: string; status: PhonePushStatus }> =>
+      ipcRenderer.invoke('phone-push:server', raw),
+    test: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('phone-push:test')
   },
 
   anilist: {

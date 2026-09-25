@@ -393,6 +393,11 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const entries = data.entries.map((e) => ({ animeId: e.animeId, status: e.status }))
     const runtime = new Map(data.media.map((m) => [m.id, m.duration]))
     const fallback = getPrefs().defaultRuntime
+    // Une alarme par épisode, au même moment que la notification du PC — sauf
+    // pour une série mise en silence dans l'app : l'agenda n'a pas à sonner
+    // pour ce que le PC tait.
+    const muted = new Set(data.entries.filter((e) => e.notify === false).map((e) => e.animeId))
+    const lead = Math.max(0, getPrefs().notifyLeadMinutes)
 
     const body = buildIcs(
       upcoming(entries, media, Date.now(), ICS_DAYS).map((a) => ({
@@ -400,7 +405,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
         title: a.title,
         episode: a.episode,
         airingAt: a.airingAt,
-        minutes: runtime.get(a.animeId) || fallback
+        minutes: runtime.get(a.animeId) || fallback,
+        alarm: muted.has(a.animeId) ? null : lead
       }))
     )
     res.writeHead(200, {

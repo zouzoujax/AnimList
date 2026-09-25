@@ -17,6 +17,7 @@
 import { BrowserWindow, Notification } from 'electron'
 import type { Media, Prefs } from '@shared/types'
 import { airing, onApiRecovered } from './anilist'
+import { pushEpisode, phonePushStatus } from './phone-push'
 import { quickTick } from './quick-tick'
 import { getPrefs, setPrefs, snapshot } from './store'
 
@@ -24,6 +25,14 @@ const MAX_TOASTS = 4
 /** Beyond this a setTimeout is pointless — the sweep will pick it up instead. */
 const MAX_SCHEDULE_AHEAD_MS = 26 * 3600_000
 const MIN_POLL_MINUTES = 5
+
+/**
+ * Où prévenir. Le PC et le téléphone s'allument séparément : on peut vouloir
+ * l'un sans l'autre — le téléphone seul, quand le PC reste dans une autre pièce.
+ */
+function channels(): { desktop: boolean; phone: boolean } {
+  return { desktop: getPrefs().notifications && Notification.isSupported(), phone: phonePushStatus().on }
+}
 
 /** Series the user is following and has not muted. */
 function followedIds(): number[] {
@@ -68,7 +77,8 @@ function toast(win: BrowserWindow, animeId: number, title: string, body: string,
 /** Announces everything that aired since the previous check. */
 async function sweep(win: BrowserWindow): Promise<void> {
   const prefs = getPrefs()
-  if (!prefs.notifications || !Notification.isSupported()) return
+  const { desktop, phone } = channels()
+  if (!desktop && !phone) return
 
   const followed = followedIds()
   if (!followed.length) return
@@ -89,6 +99,17 @@ async function sweep(win: BrowserWindow): Promise<void> {
   if (!fresh.length) return
 
   const byId = new Map(snapshot().media.map((m) => [m.id, m]))
+
+  // Le téléphone reçoit tout : ses notifications s'empilent dans un centre
+  // qu'on consulte quand on veut, sans couvrir l'écran. Le déjà-envoyé est
+  // écarté par `pushEpisode` — le minuteur de la sortie est souvent passé avant.
+  if (phone) {
+    for (const item of fresh) {
+      const media = byId.get(item.mediaId)
+      if (media) pushEpisode(item.mediaId, item.episode, titleFor(media, prefs.titleLang))
+    }
+  }
+  if (!desktop) return
 
   for (const item of fresh.slice(0, MAX_TOASTS)) {
     const media = byId.get(item.mediaId)
@@ -124,7 +145,8 @@ export function planUpcoming(win: BrowserWindow): void {
   clearPlanned()
 
   const prefs = getPrefs()
-  if (!prefs.notifications || !Notification.isSupported()) return
+  const { desktop, phone } = channels()
+  if (!desktop && !phone) return
 
   const lead = Math.max(0, prefs.notifyLeadMinutes) * 60_000
   const allowed = new Set(followedIds())
@@ -134,21 +156,32 @@ export function planUpcoming(win: BrowserWindow): void {
     if (!allowed.has(media.id) || !media.nextAiring) continue
 
     const airsAt = media.nextAiring.airingAt * 1000
-    const fireAt = airsAt - lead
-    const delay = fireAt - now
-    // Already past: the sweep announces it. Too far off: re-planned later.
-    if (delay <= 0 || delay > MAX_SCHEDULE_AHEAD_MS) continue
-
     const episode = media.nextAiring.episode
-    const k = `${media.id}:${episode}`
-    if (planned.has(k)) continue
 
-    planned.set(
-      k,
-      setTimeout(() => {
-        planned.delete(k)
-        const title = titleFor(media, getPrefs().titleLang)
-        const body = lead > 0 ? `${title} — épisode ${episode} dans ${prefs.notifyLeadMinutes} min` : title
+    /**
+     * Deux moments, un par écran. Le PC prévient quand on le lui a demandé,
+     * éventuellement en avance ; le téléphone prévient en avance lui aussi,
+     * puis **à la sortie** — c'est la question qu'on lui pose : « est-ce
+     * sorti ? ». Sans ce second minuteur, un rappel une heure avant laissait
+     * le téléphone muet jusqu'au rattrapage suivant.
+     */
+    const arm = (k: string, fireAt: number, run: () => void): void => {
+      const delay = fireAt - now
+      // Already past: the sweep announces it. Too far off: re-planned later.
+      if (delay <= 0 || delay > MAX_SCHEDULE_AHEAD_MS || planned.has(k)) return
+      planned.set(
+        k,
+        setTimeout(() => {
+          planned.delete(k)
+          run()
+        }, delay)
+      )
+    }
+    const title = (): string => titleFor(media, getPrefs().titleLang)
+
+    if (desktop) {
+      arm(`${media.id}:${episode}`, airsAt - lead, () => {
+        const body = lead > 0 ? `${title()} — épisode ${episode} dans ${prefs.notifyLeadMinutes} min` : title()
         toast(
           win,
           media.id,
@@ -156,8 +189,16 @@ export function planUpcoming(win: BrowserWindow): void {
           body,
           lead > 0 ? undefined : episode
         )
-      }, delay)
-    )
+      })
+    }
+    if (phone) {
+      if (lead > 0) {
+        arm(`${media.id}:${episode}:tel-bientôt`, airsAt - lead, () =>
+          pushEpisode(media.id, episode, title(), prefs.notifyLeadMinutes)
+        )
+      }
+      arm(`${media.id}:${episode}:tel`, airsAt, () => pushEpisode(media.id, episode, title()))
+    }
   }
 }
 

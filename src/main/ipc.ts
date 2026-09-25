@@ -44,6 +44,7 @@ import { startSoiree } from './soiree-queue'
 import { franchiseTree } from './franchise'
 import { isLang } from '@shared/langs'
 import type { RestoreMode } from '@shared/restore'
+import { enablePhonePush, newPhonePushTopic, phonePushStatus, setPhonePushServer, testPhonePush } from './phone-push'
 import type { Slot } from '@shared/soiree'
 import { applyDiscord, discordStatus } from './discord'
 import { getProgress, rememberLaunch, setLocalWatching, type LocalWatching } from './now'
@@ -237,6 +238,11 @@ export function registerIpc(): void {
   ipcMain.handle('backup:forget', () => forgetBackupFolder())
   ipcMain.handle('backup:reveal', () => revealBackupFolder())
   ipcMain.handle('backup:copies', () => backupCopies())
+  ipcMain.handle('phone-push:status', () => phonePushStatus())
+  ipcMain.handle('phone-push:enable', (_e, on: boolean) => enablePhonePush(on === true))
+  ipcMain.handle('phone-push:new-topic', () => newPhonePushTopic())
+  ipcMain.handle('phone-push:server', (_e, raw: string) => setPhonePushServer(String(raw)))
+  ipcMain.handle('phone-push:test', () => testPhonePush())
   ipcMain.handle('backup:preview', (_e, name: string, mode: RestoreMode) => previewCopy(String(name), modeOf(mode)))
   ipcMain.handle('backup:restore', (_e, name: string, mode: RestoreMode) => restoreCopy(String(name), modeOf(mode)))
 

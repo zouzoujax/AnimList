@@ -24,6 +24,14 @@ export interface IcsEvent {
   airingAt: number
   /** Durée d'un épisode, pour que l'agenda ne pose pas un point sans épaisseur. */
   minutes: number
+  /**
+   * Prévenir, et combien de minutes avant. `null` : pas d'alarme.
+   *
+   * C'est la notification du téléphone qui ne demande rien d'autre que
+   * l'agenda : elle sonne même PC éteint, pour l'épisode déjà annoncé. Absente
+   * pour une série mise en silence dans l'app.
+   */
+  alarm?: number | null
 }
 
 /** L'identité stable d'un événement : relire le fichier met à jour, il ne duplique pas. */
@@ -102,9 +110,20 @@ export function buildIcs(events: IcsEvent[], now = Date.now(), name = 'AnimeList
       `DTEND:${stamp(ev.airingAt + minutes * 60_000)}`,
       `SUMMARY:${escape(`${ev.title} — épisode ${ev.episode}`)}`,
       `DESCRIPTION:${escape(`Épisode ${ev.episode} de ${ev.title}, annoncé par AniList.`)}`,
-      'TRANSP:TRANSPARENT',
-      'END:VEVENT'
+      'TRANSP:TRANSPARENT'
     )
+    if (typeof ev.alarm === 'number' && ev.alarm >= 0) {
+      lines.push(
+        'BEGIN:VALARM',
+        'ACTION:DISPLAY',
+        // `-PT0M` et non `PT0M` : certains agendas lisent mal un décalage
+        // positif nul, et le signe ne change rien au moment.
+        `TRIGGER:-PT${Math.round(ev.alarm)}M`,
+        `DESCRIPTION:${escape(ev.alarm > 0 ? `${ev.title} — épisode ${ev.episode} bientôt` : `${ev.title} — épisode ${ev.episode} disponible`)}`,
+        'END:VALARM'
+      )
+    }
+    lines.push('END:VEVENT')
   }
 
   lines.push('END:VCALENDAR')
