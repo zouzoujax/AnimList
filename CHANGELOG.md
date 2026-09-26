@@ -9,6 +9,19 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.10.0 — 26 septembre 2026
+
+### Ajouts
+
+- Restaurer une sauvegarde automatique en voyant d’abord ce qui change : Réglages › Sauvegarde automatique › Restaurer… liste les copies du dossier. Choisis une date, puis « Fusionner » ou « Remplacer », et l’aperçu dit quelles séries reviennent, lesquelles changent de statut ou disparaissent, et combien d’épisodes vus sont gagnés ou perdus. Ta bibliothèque actuelle est copiée juste avant, pour pouvoir revenir en arrière
+- Les notifications sur le téléphone. Le calendrier .ics de la télécommande porte désormais une alarme par épisode, au même moment que les notifications du PC : l’agenda du téléphone sonne même PC éteint (sur iPhone, décoche « Retirer les alarmes » en t’abonnant). Et, si tu l’allumes dans Réglages › Notifications, l’app gratuite ntfy reçoit chaque épisode à sa sortie : un QR code pour s’abonner, un bouton d’essai. Éteint par défaut, parce que le titre de la série passe alors par le serveur ntfy choisi. Seules les séries que tu suis et que tu n’as pas mises en silence sonnent
+- Changer le statut d’une série depuis le téléphone : mettre en pause, abandonner, reprendre, sans se lever. « Terminé » reste refusé tant que la série est en diffusion, comme sur le PC
+
+### Modifications
+
+- La télécommande a été refaite pour tous les écrans. Sur un téléphone, une colonne et les onglets sous le pouce ; sur une tablette, les onglets passent sur le côté ; sur un ordinateur, la fiche d’une série et le lecteur s’ouvrent à droite sans quitter la liste ; sur une TV, le texte grandit et les flèches de la télécommande vont d’un bouton à l’autre. Chaque série porte sa frise d’épisodes dans la couleur de sa jaquette — vu, sorti sans toi, à venir, le suivant —, l’accueil coche et lance d’un geste, et le calendrier se range en colonnes par jour
+- Les pannes d’AniList se rattrapent toutes seules. L’app vérifie de plus en plus rarement si le service est revenu, puis remet à jour les pages restées périmées et prévient des épisodes sortis entre-temps. Le témoin de la barre de titre dit depuis quand datent les données affichées et combien de pages se rattraperont, et un clic dessus réessaie tout de suite ; Découvrir et la fiche d’une série disent de quand date la version montrée hors ligne
+
 ## 0.9.3 — 25 septembre 2026
 
 ### Ajouts
