@@ -75,7 +75,15 @@ async function publish(msg: PushMessage): Promise<{ ok: boolean; error?: string 
     if (!res.ok) return { ok: false, error: `Le serveur ntfy a répondu ${res.status}.` }
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: `Serveur ntfy injoignable : ${(err as Error).message}` }
+    // Le message de Node — « fetch failed », « aborted due to timeout » — ne
+    // dit rien à personne ; la cause, elle, dit quoi vérifier.
+    const slow = (err as Error).name === 'TimeoutError'
+    return {
+      ok: false,
+      error: slow
+        ? `Le serveur ntfy ne répond pas (${TIMEOUT_MS / 1000} s d’attente).`
+        : 'Serveur ntfy injoignable : vérifie son adresse et la connexion du PC.'
+    }
   }
 }
 
