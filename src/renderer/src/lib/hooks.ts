@@ -329,8 +329,13 @@ const sessionValues = new Map<string, unknown>()
  * l'onglet, le tri et la recherche à zéro. Rien n'est écrit sur le disque —
  * au prochain lancement, la page repart de ses valeurs par défaut.
  */
-export function useSessionState<T>(key: string, initial: T): [T, (value: T) => void] {
-  const [value, setValue] = useState<T>(() => (sessionValues.has(key) ? (sessionValues.get(key) as T) : initial))
+export function useSessionState<T>(key: string, initial: T, force = false): [T, (value: T) => void] {
+  // `force` : la valeur de départ l'emporte sur la mémoire — un lien qui mène
+  // à un filtre précis. Elle devient alors celle dont on se souvient.
+  const [value, setValue] = useState<T>(() => {
+    if (force) sessionValues.set(key, initial)
+    return sessionValues.has(key) ? (sessionValues.get(key) as T) : initial
+  })
   const set = useCallback(
     (next: T) => {
       sessionValues.set(key, next)

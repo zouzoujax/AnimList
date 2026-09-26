@@ -242,7 +242,7 @@ export default function App(): React.JSX.Element {
                       ) : nd.library ? (
                         <NdLibraryPage initialGenre={route.genre} />
                       ) : (
-                        <LibraryPage initialGenre={route.genre} />
+                        <LibraryPage initialGenre={route.genre} initialList={route.list} />
                       ))}
                     {route.name === 'studio' &&
                       (nd.studio ? <NdStudioPage studio={route.studio} /> : <StudioPage studio={route.studio} />)}

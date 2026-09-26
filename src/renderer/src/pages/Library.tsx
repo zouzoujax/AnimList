@@ -171,7 +171,14 @@ function SelectableCard({
   )
 }
 
-export default function LibraryPage({ initialGenre }: { initialGenre?: string }): React.JSX.Element {
+export default function LibraryPage({
+  initialGenre,
+  initialList
+}: {
+  initialGenre?: string
+  /** Une liste perso choisie dans la barre latérale : elle l'emporte sur celle de la dernière visite. */
+  initialList?: string
+}): React.JSX.Element {
   const entries = useApp((s) => s.entries)
   const mediaMap = useApp((s) => s.media)
   const events = useApp((s) => s.events)
@@ -190,7 +197,11 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
     saveGenre(next)
   }
   const [view, setView] = useSessionState<'grid' | 'list'>('library.view', 'grid')
-  const [listId, setListId] = useSessionState<string | null>('library.listId', null)
+  const [listId, setListId] = useSessionState<string | null>(
+    'library.listId',
+    initialList ?? null,
+    initialList !== undefined
+  )
   const [selecting, setSelecting] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [showSequels, setShowSequels] = useSessionState<boolean>('library.showSequels', false)

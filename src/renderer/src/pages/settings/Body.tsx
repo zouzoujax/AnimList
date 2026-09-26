@@ -48,6 +48,7 @@ import {
   type LayoutId,
   type BackupStatus,
   type RemoteStatus,
+  type SidebarWidget,
   type TitleLang
 } from '@shared/types'
 import { looksLikeAppId, type DiscordStatus } from '@shared/discord'
@@ -770,6 +771,32 @@ export default function SettingsBody(): React.JSX.Element {
                 data-on={prefs.titleLang === value}
                 className="chip"
                 onClick={() => setPrefs({ titleLang: value })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </Row>
+
+        <Row
+          label="Bas de la barre latérale (essai)"
+          hint="Quatre formules à comparer : une seule restera, les autres partiront avec ce réglage."
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ['next', 'À suivre'],
+                ['tonight', 'Aujourd’hui'],
+                ['both', 'Les deux'],
+                ['lists', 'Mes listes'],
+                ['none', 'Rien']
+              ] as [SidebarWidget, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                data-on={prefs.sidebarWidget === value}
+                className="chip"
+                onClick={() => setPrefs({ sidebarWidget: value })}
               >
                 {label}
               </button>

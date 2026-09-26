@@ -550,6 +550,11 @@ export interface Prefs {
   mangaSeen: Record<string, MangaSeen>
   lastMangaSweep: number
   /**
+   * ESSAI — ce qui remplit le bas de la barre latérale, au-dessus de « Ces 7
+   * jours ». Quatre formules à comparer ; une seule restera.
+   */
+  sidebarWidget: SidebarWidget
+  /**
    * Suite → série dont elle découle, relevé pendant le balayage des suites.
    * Sert à replier les saisons suivantes derrière leur saison mère dans la
    * bibliothèque, sans redemander la relation à AniList à chaque affichage.
@@ -778,6 +783,8 @@ export interface MangaEntry {
   startedAt: number | null
   finishedAt: number | null
 }
+
+export type SidebarWidget = 'none' | 'next' | 'tonight' | 'both' | 'lists'
 
 /** Ce que le dernier passage a vu d'un manga suivi. Voir `shared/manga-watch.ts`. */
 export interface MangaSeen {
@@ -1160,6 +1167,7 @@ export const DEFAULT_PREFS: Prefs = {
   mangaAlerts: true,
   mangaSeen: {},
   lastMangaSweep: 0,
+  sidebarWidget: 'next',
   sequelOf: {},
   deeplKey: '',
   translate: true,

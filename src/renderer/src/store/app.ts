@@ -23,7 +23,7 @@ import { airingLabel, titleOf } from '@/lib/format'
 export type Route =
   | { name: 'home' }
   | { name: 'discover'; search?: string }
-  | { name: 'library'; genre?: string }
+  | { name: 'library'; genre?: string; list?: string }
   | { name: 'manga' }
   | { name: 'calendar' }
   | { name: 'season' }
@@ -45,7 +45,7 @@ export function routeKeyOf(route: Route): string {
     case 'studio':
       return `studio-${route.studio}`
     case 'library':
-      return `library-${route.genre ?? ''}`
+      return `library-${route.genre ?? ''}-${route.list ?? ''}`
     default:
       return route.name
   }

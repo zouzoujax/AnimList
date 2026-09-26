@@ -17,6 +17,7 @@ import { minutesToHuman } from '@/lib/format'
 import { useNow } from '@/lib/hooks'
 import { useApp, type Route } from '@/store/app'
 import { ApiStatusBadge } from './ApiStatus'
+import { SidebarWidget } from './SidebarWidget'
 import { ThemeFx } from './ThemeFx'
 
 const NOISE =
@@ -201,6 +202,7 @@ export function Sidebar(): React.JSX.Element {
   const route = useApp((s) => s.route)
   const navigate = useApp((s) => s.navigate)
   const events = useApp((s) => s.events)
+  const sidebarWidget = useApp((s) => s.prefs.sidebarWidget)
 
   const now = useNow()
 
@@ -248,6 +250,8 @@ export function Sidebar(): React.JSX.Element {
           </button>
         )
       })}
+
+      <SidebarWidget kind={sidebarWidget} />
 
       <div className="nav-widget mt-auto">
         <div className="hairline mb-3.5" />

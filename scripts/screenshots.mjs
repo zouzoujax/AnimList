@@ -22,6 +22,7 @@ const ENDPOINT = 'https://graphql.anilist.co'
 /*
  *   npm run screenshots -- [dossier] [--theme=laque] [--only=accueil,fiche]
  *   npm run screenshots -- screens --themes=all --only=accueil
+ *   npm run screenshots -- screens --only=accueil --sidebar=lists
  *
  * Le thème et le sous-ensemble servent à juger un thème à l'écran : ces
  * captures-là vont dans un dossier ignoré par git, pas dans docs/.
@@ -518,7 +519,9 @@ async function main() {
         layout: 'classic',
         accent: '#7c5cff',
         mica: false,
-        newDesign: NEW_DESIGN
+        newDesign: NEW_DESIGN,
+        // `--sidebar=next|tonight|both|lists|none` : le bas de la barre latérale.
+        ...(flag('sidebar') ? { sidebarWidget: flag('sidebar') } : {})
       }
     }),
     'utf8'
