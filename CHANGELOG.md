@@ -9,6 +9,27 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.12.0 — 26 septembre 2026
+
+### Ajouts
+
+- Le suivi de lecture des mangas. Sur la fiche d’un manga, « Je le lis » ou « À lire plus tard », puis le statut, le chapitre, les tomes, un favori et des notes. « +1 » compte un chapitre lu aujourd’hui ; taper un numéro rattrape une lecture ancienne sans la dater. Une relecture repart de zéro sans effacer la précédente. L’onglet « Ma lecture » range tes mangas par statut avec un « +1 » sous chaque jaquette, et les statistiques ont leur section Lecture
+- Les chapitres parus, d’après MangaDex, en français et en anglais : « Ma lecture » dit combien de chapitres sortis t’attendent (« Ch. 128 · 3 à lire »), et le calendrier montre chaque sortie (« Ch. 131 · FR · EN »)
+- Le calendrier montre aussi le début et la fin de parution de tes mangas, et la première diffusion d’un anime qui en est tiré
+- Une notification quand un manga que tu suis finit de paraître, ou devient un anime — avec un bouton pour ajouter l’adaptation à ta liste. Réglages › Notifications › « Nouvelles des mangas suivis »
+- Le bas de la barre latérale se remplit, au choix dans Réglages : « À suivre » (tes séries dont un épisode sorti t’attend), « Aujourd’hui » (les sorties du jour et du lendemain), les deux, ou tes listes perso
+- Sur le téléphone, un onglet « Lecture » avec le « +1 » de chaque manga, et une recherche dans « Ma liste »
+- Sur le téléphone, une série du calendrier ouvre sa fiche
+
+### Modifications
+
+- Dans la bibliothèque, filtrer par statut montre aussi les saisons suivantes rangées sous leur série
+- Une sauvegarde et sa restauration emportent aussi ta liste de lecture
+
+### Corrections
+
+- Un manga dont tu avais atteint le dernier chapitre restait « En lecture » le jour où la série finissait de paraître ; il passe maintenant « Lu »
+
 ## 0.11.0 — 26 septembre 2026
 
 ### Ajouts
