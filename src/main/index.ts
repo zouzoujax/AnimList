@@ -1,4 +1,4 @@
-import { BrowserWindow, app, session, shell } from 'electron'
+import { BrowserWindow, app, screen, session, shell, type Rectangle } from 'electron'
 import { chromeFor } from '@shared/types'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
@@ -86,16 +86,42 @@ function resolveIcon(): string | undefined {
   return candidates.find((p) => existsSync(p))
 }
 
+/**
+ * L'écran d'un essai : `ANIMELIST_DISPLAY=<nom>` ouvre la fenêtre sur l'écran
+ * dont le nom contient ce texte, sans lui donner le focus.
+ *
+ * Un lancement de vérification ne doit pas passer devant ce qui occupe l'écran
+ * principal — un jeu en plein écran, typiquement, dont il volerait la main.
+ * Sans la variable, ou si aucun écran ne porte ce nom, rien ne change.
+ */
+function testBounds(width: number, height: number): Rectangle | null {
+  const wanted = process.env.ANIMELIST_DISPLAY?.trim().toLowerCase()
+  if (!wanted) return null
+  const display = screen.getAllDisplays().find((d) => d.label.toLowerCase().includes(wanted))
+  if (!display) return null
+  const area = display.workArea
+  const w = Math.min(width, area.width)
+  const h = Math.min(height, area.height)
+  return {
+    x: area.x + Math.round((area.width - w) / 2),
+    y: area.y + Math.round((area.height - h) / 2),
+    width: w,
+    height: h
+  }
+}
+
 function createWindow(): BrowserWindow {
   const prefs = getPrefs()
+  const aside = testBounds(1440, 920)
   const useMica = process.platform === 'win32' && prefs.mica
   const chrome = chromeFor(prefs.theme)
 
   const win = new BrowserWindow({
     width: 1440,
     height: 920,
-    minWidth: 1040,
-    minHeight: 660,
+    ...aside,
+    minWidth: aside ? Math.min(1040, aside.width) : 1040,
+    minHeight: aside ? Math.min(660, aside.height) : 660,
     show: false,
     autoHideMenuBar: true,
     icon: resolveIcon(),
@@ -112,7 +138,7 @@ function createWindow(): BrowserWindow {
     }
   })
 
-  win.once('ready-to-show', () => win.show())
+  win.once('ready-to-show', () => (aside ? win.showInactive() : win.show()))
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) void shell.openExternal(url)
