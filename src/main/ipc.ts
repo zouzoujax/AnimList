@@ -217,6 +217,11 @@ export function registerIpc(): void {
     setMangaChapter(id, chapter, imported === true, manga)
   )
   ipcMain.handle('manga:advance', (_e, id: number, by: number) => advanceManga(id, Number(by) || 0))
+  // Les mangas suivis viennent du fichier : la fenêtre n'a pas à les énumérer.
+  ipcMain.handle('manga:dates', () => {
+    const ids = (snapshot().mangaEntries ?? []).map((e) => e.mangaId)
+    return ids.length ? anilist.mangaDates(ids) : []
+  })
   ipcMain.handle('manga:sweep', (e) => sweepMangas(ownerOf(e)))
   ipcMain.handle('manga:reread', (_e, id: number) => startReread(id))
   ipcMain.handle('manga:remove', (_e, id: number) => removeMangaEntry(id))

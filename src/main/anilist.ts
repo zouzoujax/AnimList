@@ -10,6 +10,7 @@ import { originOf } from '@shared/origin'
 import { matchStreamEpisodes } from '@shared/stream-episodes'
 import { nextProbeDelay, oldestShown, ReplayBook } from '@shared/api-recovery'
 import type { Adaptation } from '@shared/manga-watch'
+import type { FuzzyDate, MangaDates } from '@shared/manga-calendar'
 import { createQueue, gapForLimit, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -1855,6 +1856,78 @@ export async function mangaWatch(ids: number[]): Promise<Map<number, { manga: Ma
         .map((e) => e.node!)
         .map((n) => ({ id: n.id, title: n.title.english ?? n.title.romaji, format: n.format, status: n.status }))
       out.set(raw.id, { manga: toManga(raw), adaptations })
+    }
+  }
+  return out
+}
+
+const MANGA_DATES_QUERY = `
+query MangaDates($ids: [Int]) {
+  Page(perPage: 50) {
+    media(id_in: $ids, type: MANGA) {
+      id
+      startDate { year month day }
+      endDate { year month day }
+      relations {
+        edges {
+          relationType(version: 2)
+          node { id type title { romaji english } coverImage { large color } startDate { year month day } }
+        }
+      }
+    }
+  }
+}`
+
+interface RawMangaDates {
+  id: number
+  startDate: FuzzyDate | null
+  endDate: FuzzyDate | null
+  relations: {
+    edges: {
+      relationType: string | null
+      node: {
+        id: number
+        type: string | null
+        title: { romaji: string; english: string | null }
+        coverImage: { large: string; color: string | null } | null
+        startDate: FuzzyDate | null
+      } | null
+    }[]
+  } | null
+}
+
+/**
+ * Les dates des mangas suivis, pour le calendrier : parution, et première
+ * diffusion des animes qui en sont tirés.
+ *
+ * Gardées une journée : une date de parution bouge rarement, et le calendrier
+ * se rouvre souvent — il ne doit pas coûter une requête à chaque visite.
+ */
+export async function mangaDates(ids: number[]): Promise<MangaDates[]> {
+  const out: MangaDates[] = []
+  const sorted = [...ids].sort((a, b) => a - b)
+  for (let i = 0; i < sorted.length; i += 50) {
+    const slice = sorted.slice(i, i + 50)
+    const key = `manga-dates:${slice.join(',')}`
+    const { data } = await cached(key, TTL.detail, () =>
+      request<{ Page: { media: RawMangaDates[] } }>(MANGA_DATES_QUERY, { ids: slice }, 'interactive', key)
+    )
+    for (const raw of data.Page.media) {
+      out.push({
+        id: raw.id,
+        start: raw.startDate,
+        end: raw.endDate,
+        adaptations: (raw.relations?.edges ?? [])
+          .filter((e) => e.relationType === 'ADAPTATION' && e.node?.type === 'ANIME')
+          .map((e) => e.node!)
+          .map((n) => ({
+            id: n.id,
+            title: n.title.english ?? n.title.romaji,
+            cover: n.coverImage?.large ?? '',
+            color: n.coverImage?.color ?? null,
+            start: n.startDate
+          }))
+      })
     }
   }
   return out

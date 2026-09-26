@@ -5,6 +5,7 @@ import type { DiscordStatus, LocalWatching } from '@shared/discord'
 import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
 import type { Lang } from '@shared/langs'
+import type { MangaDates } from '@shared/manga-calendar'
 
 import type {
   ApiStatus,
@@ -139,6 +140,8 @@ const api = {
       ipcRenderer.invoke('manga:set-chapter', id, chapter, imported, manga),
     /** Avance de `by` chapitres depuis ce que le fichier tient : deux appuis rapides font deux. */
     advance: (id: number, by: number): Promise<MangaEntry> => ipcRenderer.invoke('manga:advance', id, by),
+    /** Les dates des mangas suivis, pour le calendrier : parution et adaptations. */
+    dates: (): Promise<MangaDates[]> => ipcRenderer.invoke('manga:dates'),
     /** Le passage quotidien des mangas suivis, tout de suite : fins de parution et adaptations. */
     sweep: (): Promise<{ news: unknown[]; checked: number }> => ipcRenderer.invoke('manga:sweep'),
     reread: (id: number): Promise<MangaEntry | null> => ipcRenderer.invoke('manga:reread', id),

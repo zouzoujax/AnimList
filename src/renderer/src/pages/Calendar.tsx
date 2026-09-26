@@ -1,8 +1,10 @@
 import { humanMessage } from '@shared/api-outage'
-import { CalendarDays, ChevronLeft, ChevronRight, Globe, LibraryBig, Radio } from 'lucide-react'
+import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clapperboard, Globe, LibraryBig, Radio } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import type { AiringEntry } from '@shared/types'
+import { dayOfTime, mangaEvents, type MangaDates, type MangaEvent } from '@shared/manga-calendar'
+import type { AiringEntry, Manga } from '@shared/types'
+import { MangaSheet } from '@/components/MangaSheet'
 import { EmptyState, ErrorBox, Modal, Poster, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatTime, titleOf } from '@/lib/format'
@@ -157,6 +159,66 @@ function PickerBody({
 
 const EMPTY_SLOTS: AiringEntry[] = []
 
+const MANGA_LABELS: Record<MangaEvent['kind'], string> = {
+  start: 'Début de parution',
+  end: 'Fin de parution',
+  adaptation: 'Adaptation animée'
+}
+
+/** Le titre d'un manga dans la langue choisie, comme `titleOf` pour un anime. */
+function mangaTitle(manga: Manga, lang: 'romaji' | 'english' | 'native'): string {
+  if (lang === 'english') return manga.title.english ?? manga.title.romaji
+  if (lang === 'native') return manga.title.native ?? manga.title.romaji
+  return manga.title.romaji
+}
+
+/**
+ * Une date de manga dans la grille.
+ *
+ * Même gabarit qu'un épisode, pour que la colonne reste d'un seul tenant ; une
+ * icône de livre ou de clap et un libellé à la place du numéro disent que ce
+ * n'est pas un épisode.
+ */
+function MangaSlot({
+  event,
+  manga,
+  lang,
+  onOpen
+}: {
+  event: MangaEvent
+  manga: Manga
+  lang: 'romaji' | 'english' | 'native'
+  onOpen: () => void
+}): React.JSX.Element {
+  const adaptation = event.kind === 'adaptation' ? event.anime : null
+  const glow = toneAccent(adaptation ? adaptation.color : manga.cover.color)
+  const Icon = adaptation ? Clapperboard : BookOpen
+  return (
+    <button
+      onClick={onOpen}
+      className="group flex gap-2 rounded-[11px] p-1.5 text-left transition hover:bg-white/6"
+      style={{ boxShadow: `inset 0 0 0 1px ${rgba(glow, 0.22)}` }}
+    >
+      <Poster
+        src={adaptation ? adaptation.cover : manga.cover.large}
+        alt=""
+        className="h-[54px] w-[38px] shrink-0"
+        rounded="rounded-[7px]"
+      />
+      <div className="min-w-0 flex-1">
+        <p className="clamp-2 text-[0.72rem] font-medium leading-tight">
+          {adaptation ? adaptation.title : mangaTitle(manga, lang)}
+        </p>
+        <p className="mt-1 flex items-center gap-1 text-[0.66rem]" style={{ color: rgba(glow, 1) }}>
+          <Icon size={9} />
+          {MANGA_LABELS[event.kind]}
+        </p>
+        {adaptation && <p className="clamp-1 text-[0.64rem] text-faint">Tiré de {mangaTitle(manga, lang)}</p>}
+      </div>
+    </button>
+  )
+}
+
 export default function CalendarPage(): React.JSX.Element {
   const entries = useApp((s) => s.entries)
   const mediaMap = useApp((s) => s.media)
@@ -169,6 +231,36 @@ export default function CalendarPage(): React.JSX.Element {
   const [pickerOpen, setPickerOpen] = useState(false)
   const now = useNow()
   const [nonce, setNonce] = useState(0)
+  const mangaEntries = useApp((s) => s.mangaEntries)
+  const mangas = useApp((s) => s.mangas)
+  const [openManga, setOpenManga] = useState<Manga | null>(null)
+
+  // Les dates des mangas ne dépendent pas de la semaine : une seule demande
+  // pour toute la visite, gardée une journée côté AniList.
+  const mangaKey = [...mangaEntries.keys()].sort((a, b) => a - b).join()
+  const [dates, setDates] = useState<{ key: string; list: MangaDates[] }>({ key: '', list: [] })
+  useEffect(() => {
+    if (!mangaKey) return
+    let alive = true
+    window.api.manga
+      .dates()
+      .then((list) => alive && setDates({ key: mangaKey, list }))
+      // Sans ses dates, le calendrier reste celui des épisodes : rien à signaler.
+      .catch(() => alive && setDates({ key: mangaKey, list: [] }))
+    return () => {
+      alive = false
+    }
+  }, [mangaKey])
+
+  const mangaByDay = useMemo(() => {
+    const byDay = new Map<string, MangaEvent[]>()
+    if (dates.key !== mangaKey) return byDay
+    for (const event of mangaEvents(dates.list, [...mangaEntries.values()], new Set(entries.keys()))) {
+      if (!mangas.has(event.mangaId)) continue
+      byDay.set(event.day, [...(byDay.get(event.day) ?? []), event])
+    }
+    return byDay
+  }, [dates, mangaKey, mangaEntries, mangas, entries])
 
   const ids = useMemo(
     () => [...entries.values()].filter((e) => e.status === 'watching' || e.status === 'planned').map((e) => e.animeId),
@@ -236,6 +328,12 @@ export default function CalendarPage(): React.JSX.Element {
 
   const todayStart = new Date().setHours(0, 0, 0, 0)
   const total = slots.length
+  // Les mangas sont ceux de ma liste : « Tous les animes » n'en montre pas.
+  // Midi plutôt que minuit : un changement d'heure décale minuit d'une heure,
+  // et le jour avec.
+  const mangaOf = (date: number): MangaEvent[] =>
+    scope === 'library' ? (mangaByDay.get(dayOfTime(date + DAY_MS / 2)) ?? []) : []
+  const mangaTotal = days.reduce((sum, day) => sum + mangaOf(day.date).length, 0)
 
   const scopeSwitch = (
     <div className="flex gap-1.5">
@@ -250,7 +348,7 @@ export default function CalendarPage(): React.JSX.Element {
     </div>
   )
 
-  if (scope === 'library' && !ids.length) {
+  if (scope === 'library' && !ids.length && !mangaEntries.size) {
     return (
       <div className="mx-auto max-w-[900px] px-7 py-16">
         <EmptyState
@@ -281,8 +379,12 @@ export default function CalendarPage(): React.JSX.Element {
             {loading
               ? 'Chargement…'
               : total > 0
-                ? `${total} épisodes ${scope === 'all' ? 'toutes séries confondues' : 'dans tes séries'} · ${weekRange(from)}`
-                : `Rien de prévu du ${weekRange(from)}`}
+                ? `${total} épisodes ${scope === 'all' ? 'toutes séries confondues' : 'dans tes séries'}${
+                    mangaTotal ? ` · ${mangaTotal} date${mangaTotal > 1 ? 's' : ''} manga` : ''
+                  } · ${weekRange(from)}`
+                : mangaTotal
+                  ? `${mangaTotal} date${mangaTotal > 1 ? 's' : ''} manga · ${weekRange(from)}`
+                  : `Rien de prévu du ${weekRange(from)}`}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -309,6 +411,7 @@ export default function CalendarPage(): React.JSX.Element {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4 xl:grid-cols-7">
           {days.map((day, di) => {
             const isToday = day.date === todayStart
+            const mangaItems = mangaOf(day.date)
             return (
               <motion.div
                 key={day.date}
@@ -337,7 +440,7 @@ export default function CalendarPage(): React.JSX.Element {
                   </span>
                 </div>
 
-                {day.items.length === 0 ? (
+                {day.items.length === 0 && mangaItems.length === 0 ? (
                   <p className="my-auto px-1 text-center text-[0.7rem] text-faint/60">—</p>
                 ) : (
                   <div className="flex flex-col gap-1.5">
@@ -380,6 +483,22 @@ export default function CalendarPage(): React.JSX.Element {
                         </button>
                       )
                     })}
+                    {mangaItems.map((event) => {
+                      const manga = mangas.get(event.mangaId)!
+                      return (
+                        <MangaSlot
+                          key={`${event.kind}-${event.mangaId}-${event.kind === 'adaptation' ? event.anime.id : ''}`}
+                          event={event}
+                          manga={manga}
+                          lang={lang}
+                          onOpen={() =>
+                            event.kind === 'adaptation'
+                              ? navigate({ name: 'anime', id: event.anime.id })
+                              : setOpenManga(manga)
+                          }
+                        />
+                      )
+                    })}
                   </div>
                 )}
               </motion.div>
@@ -387,6 +506,10 @@ export default function CalendarPage(): React.JSX.Element {
           })}
         </div>
       )}
+
+      <Modal open={openManga !== null} onClose={() => setOpenManga(null)} width={640}>
+        {openManga && <MangaSheet manga={openManga} onClose={() => setOpenManga(null)} />}
+      </Modal>
 
       <WeekPicker
         open={pickerOpen}
