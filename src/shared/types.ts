@@ -540,6 +540,15 @@ export interface Prefs {
    */
   sequelsAdded: number[]
   lastSequelSweep: number
+  /** Prévenir quand un manga suivi finit de paraître, ou qu'un anime en est tiré. */
+  mangaAlerts: boolean
+  /**
+   * Ce qu'on savait de chaque manga suivi au dernier passage : fini ou non, et
+   * les animes qui en sont tirés. Un relevé de ce qui a déjà été vu, rangé
+   * ici comme `sequelsAdded` ; les règles sont dans `shared/manga-watch.ts`.
+   */
+  mangaSeen: Record<string, MangaSeen>
+  lastMangaSweep: number
   /**
    * Suite → série dont elle découle, relevé pendant le balayage des suites.
    * Sert à replier les saisons suivantes derrière leur saison mère dans la
@@ -768,6 +777,13 @@ export interface MangaEntry {
   rereads: number
   startedAt: number | null
   finishedAt: number | null
+}
+
+/** Ce que le dernier passage a vu d'un manga suivi. Voir `shared/manga-watch.ts`. */
+export interface MangaSeen {
+  finished: boolean
+  /** Les animes tirés de ce manga, annoncés ou non. */
+  anime: number[]
 }
 
 export type MangaEntryPatch = Partial<Omit<MangaEntry, 'mangaId' | 'addedAt' | 'updatedAt'>>
@@ -1141,6 +1157,9 @@ export const DEFAULT_PREFS: Prefs = {
   autoSequels: true,
   sequelsAdded: [],
   lastSequelSweep: 0,
+  mangaAlerts: true,
+  mangaSeen: {},
+  lastMangaSweep: 0,
   sequelOf: {},
   deeplKey: '',
   translate: true,

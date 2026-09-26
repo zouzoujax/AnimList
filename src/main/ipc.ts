@@ -35,6 +35,7 @@ import { openAnimeSamaEpisode } from './watch-window'
 import { cleanOrphans, health, removeStray } from './health'
 import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
+import { sweepMangas } from './manga-watch'
 import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
 import { forYou } from './foryou'
 import { identifyImage } from './identify'
@@ -216,6 +217,7 @@ export function registerIpc(): void {
     setMangaChapter(id, chapter, imported === true, manga)
   )
   ipcMain.handle('manga:advance', (_e, id: number, by: number) => advanceManga(id, Number(by) || 0))
+  ipcMain.handle('manga:sweep', (e) => sweepMangas(ownerOf(e)))
   ipcMain.handle('manga:reread', (_e, id: number) => startReread(id))
   ipcMain.handle('manga:remove', (_e, id: number) => removeMangaEntry(id))
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))

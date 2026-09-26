@@ -139,6 +139,8 @@ const api = {
       ipcRenderer.invoke('manga:set-chapter', id, chapter, imported, manga),
     /** Avance de `by` chapitres depuis ce que le fichier tient : deux appuis rapides font deux. */
     advance: (id: number, by: number): Promise<MangaEntry> => ipcRenderer.invoke('manga:advance', id, by),
+    /** Le passage quotidien des mangas suivis, tout de suite : fins de parution et adaptations. */
+    sweep: (): Promise<{ news: unknown[]; checked: number }> => ipcRenderer.invoke('manga:sweep'),
     reread: (id: number): Promise<MangaEntry | null> => ipcRenderer.invoke('manga:reread', id),
     remove: (id: number): Promise<void> => ipcRenderer.invoke('manga:remove', id)
   },

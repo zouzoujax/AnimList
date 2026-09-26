@@ -824,6 +824,48 @@ export default function SettingsBody(): React.JSX.Element {
           <Toggle on={prefs.notifications} onChange={(notifications) => setPrefs({ notifications })} />
         </Row>
 
+        <Row
+          label="Nouvelles des mangas suivis"
+          hint={
+            'Quand un manga que tu lis finit de paraître, ou qu’un anime en est tiré. Vérifié une fois par jour' +
+            (prefs.lastMangaSweep
+              ? ` ; dernière fois le ${new Date(prefs.lastMangaSweep).toLocaleString('fr-FR')}.`
+              : '.')
+          }
+        >
+          <div className="flex items-center gap-2">
+            <button
+              className="btn"
+              disabled={busy === 'mangas' || !prefs.notifications}
+              onClick={() =>
+                void (async () => {
+                  setBusy('mangas')
+                  try {
+                    const res = await window.api.manga.sweep()
+                    // Le passage a écrit sa date dans les réglages : on la relit pour l'afficher.
+                    useApp.setState({ prefs: await window.api.prefs.get() })
+                    toast(
+                      res.news.length
+                        ? `${res.news.length} nouvelle${res.news.length > 1 ? 's' : ''} : regarde tes notifications.`
+                        : res.checked
+                          ? `Rien de neuf parmi tes ${res.checked} mangas suivis.`
+                          : 'Aucun manga suivi.',
+                      'ok'
+                    )
+                  } catch (err) {
+                    toast(humanMessage((err as Error).message), 'error')
+                  } finally {
+                    setBusy(null)
+                  }
+                })()
+              }
+            >
+              {busy === 'mangas' ? 'Vérification…' : 'Vérifier'}
+            </button>
+            <Toggle on={prefs.mangaAlerts} onChange={(mangaAlerts) => setPrefs({ mangaAlerts })} />
+          </div>
+        </Row>
+
         <PhonePushRow />
 
         <Row

@@ -9,6 +9,7 @@ import { applyBudget } from '@shared/cache-budget'
 import { originOf } from '@shared/origin'
 import { matchStreamEpisodes } from '@shared/stream-episodes'
 import { nextProbeDelay, oldestShown, ReplayBook } from '@shared/api-recovery'
+import type { Adaptation } from '@shared/manga-watch'
 import { createQueue, gapForLimit, type Lane } from './queue'
 import type { ImportCandidate } from './tvtime/chain'
 import type {
@@ -1796,6 +1797,66 @@ export async function sequelsOf(ids: number[]): Promise<Map<number, Media[]>> {
     }
   }
 
+  return out
+}
+
+// ---------------------------------------------------------------- mangas suivis
+
+const MANGA_WATCH_QUERY = `
+query MangaWatch($ids: [Int]) {
+  Page(perPage: 50) {
+    media(id_in: $ids, type: MANGA) {
+      ${MANGA_FIELDS}
+      relations {
+        edges {
+          relationType(version: 2)
+          node { id type format status title { romaji english } }
+        }
+      }
+    }
+  }
+}`
+
+interface RawMangaWatch extends RawManga {
+  relations: {
+    edges: {
+      relationType: string | null
+      node: {
+        id: number
+        type: string | null
+        format: string | null
+        status: string | null
+        title: { romaji: string; english: string | null }
+      } | null
+    }[]
+  } | null
+}
+
+/**
+ * La fiche à jour des mangas suivis, et les animes tirés de chacun.
+ *
+ * Par cinquante, en file de fond, comme les suites : c'est un passage
+ * quotidien que personne n'attend. Seules les relations « adaptation » vers un
+ * anime comptent — un spin-off en manga n'est pas ce qu'on guette.
+ */
+export async function mangaWatch(ids: number[]): Promise<Map<number, { manga: Manga; adaptations: Adaptation[] }>> {
+  const out = new Map<number, { manga: Manga; adaptations: Adaptation[] }>()
+  for (let i = 0; i < ids.length; i += 50) {
+    const slice = ids.slice(i, i + 50)
+    const data = await request<{ Page: { media: RawMangaWatch[] } }>(
+      MANGA_WATCH_QUERY,
+      { ids: slice },
+      'background',
+      `manga-watch:${slice.join(',')}`
+    )
+    for (const raw of data.Page.media) {
+      const adaptations = (raw.relations?.edges ?? [])
+        .filter((e) => e.relationType === 'ADAPTATION' && e.node?.type === 'ANIME')
+        .map((e) => e.node!)
+        .map((n) => ({ id: n.id, title: n.title.english ?? n.title.romaji, format: n.format, status: n.status }))
+      out.set(raw.id, { manga: toManga(raw), adaptations })
+    }
+  }
   return out
 }
 

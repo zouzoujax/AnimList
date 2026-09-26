@@ -20,6 +20,7 @@ import { backupOnLaunch } from './autobackup'
 import { useDevProfile } from './profile'
 
 import { startSequelWatcher } from './sequels'
+import { startMangaWatcher } from './manga-watch'
 import { captureAll, screenshotRun } from './screenshots'
 import { flush, getPrefs, initStore, store } from './store'
 
@@ -49,6 +50,7 @@ let stopWatcher: (() => void) | null = null
 let stopFollows: (() => void) | null = null
 let stopUpdateCheck: (() => void) | null = null
 let stopSequelWatcher: (() => void) | null = null
+let stopMangaWatcher: (() => void) | null = null
 let stopBinge: (() => void) | null = null
 
 const CSP = [
@@ -219,6 +221,7 @@ void app.whenReady().then(() => {
   stopFollows = startFollowWatcher(mainWindow)
   stopUpdateCheck = startUpdateWatcher()
   stopSequelWatcher = startSequelWatcher(mainWindow)
+  stopMangaWatcher = startMangaWatcher(mainWindow)
   stopBinge = startBinge()
   // La copie datée du jour, dans le dossier choisi s'il y en a un.
   backupOnLaunch()
@@ -259,6 +262,8 @@ app.on('before-quit', async (event) => {
   stopUpdateCheck = null
   stopSequelWatcher?.()
   stopSequelWatcher = null
+  stopMangaWatcher?.()
+  stopMangaWatcher = null
   stopBinge?.()
   stopBinge = null
   stopFollows?.()
