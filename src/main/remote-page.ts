@@ -302,11 +302,6 @@ const STYLE = `
   .seg { display: grid; grid-template-columns: repeat(auto-fit, minmax(5.2rem, 1fr)); gap: .35rem; }
   .seg .chip { justify-content: center; }
 
-  .side-empty {
-    border: 1px dashed var(--line); border-radius: 20px; padding: 2rem 1.25rem;
-    color: var(--muted); font-size: .88rem; line-height: 1.55;
-  }
-
   /* Le choix de l'épisode : des cases carrées, assez grandes pour un pouce. */
   .modes { display: flex; gap: .35rem; margin-bottom: .7rem; }
   .modes .chip { flex: 1; justify-content: center; }
@@ -467,10 +462,16 @@ const SCRIPT = `
   var wideQuery = window.matchMedia('(min-width: 1000px)')
   function isWide() { return wideQuery.matches }
 
-  /** La colonne de droite n'a lieu d'être que pour une fiche ou une vidéo. */
+  /**
+   * La colonne de droite n'existe que lorsqu'elle a quelque chose à montrer :
+   * une fiche ouverte, ou une vidéo en cours.
+   *
+   * Réservée en permanence, elle prenait un tiers de l'écran pour dire
+   * « choisis une série » — la liste, elle, se serrait dans le reste.
+   */
   var shellEl = document.querySelector('.shell')
   function layout() {
-    var utile = tab === 'home' || tab === 'library' || !!playerEl.innerHTML
+    var utile = !!sideEl.innerHTML || !!playerEl.innerHTML
     shellEl.setAttribute('data-col', utile ? 'on' : 'off')
   }
 
@@ -907,9 +908,6 @@ const SCRIPT = `
     '</article>'
   }
 
-  var SIDE_EMPTY = '<div class="side-empty">Choisis une série : sa fiche s’ouvre ici, sans quitter la liste. ' +
-    'Tu pourras la cocher, la lancer sur le PC ou changer son statut.</div>'
-
   /**
    * La fiche de la série choisie.
    *
@@ -921,10 +919,13 @@ const SCRIPT = `
     var seule = sheet ? rows.filter(function (r) { return r.id === sheet })[0] : null
     if (sheet && !seule) sheet = 0
     if (isWide()) {
-      sideEl.innerHTML = seule ? card(seule) : SIDE_EMPTY
+      // Refermer rend la largeur à la liste.
+      sideEl.innerHTML = seule ? '<button class="chip back" data-act="back">× Fermer la fiche</button>' + card(seule) : ''
+      layout()
       return false
     }
     sideEl.innerHTML = ''
+    layout()
     if (!seule) return false
     countEl.textContent = STATUS[seule.status] || ''
     appEl.innerHTML = '<button class="chip back" data-act="back">← ' + retour + '</button>' + card(seule)
@@ -1480,6 +1481,9 @@ const SCRIPT = `
     } catch (err) {
       if (err.message === 'unauthorized') askToken('Mot de passe demandé.')
       else appEl.innerHTML = '<div class="err">' + esc(err.message) + '</div>'
+    } finally {
+      // Chaque onglet a vidé ou rempli la colonne : elle suit.
+      layout()
     }
   }
 
