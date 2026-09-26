@@ -96,6 +96,14 @@ const STYLE = `
   header { padding: calc(1.2rem + env(safe-area-inset-top)) 0 1rem; }
   .brand { margin: 0; font-size: 1rem; font-weight: 650; letter-spacing: -.01em; color: var(--muted); }
   .lede { margin: .25rem 0 0; font-size: 1.45rem; line-height: 1.2; font-weight: 650; letter-spacing: -.025em; max-width: 30ch; }
+  /* Hors ligne : ce qu'on voit reste lisible, et la ligne dit de quand il date. */
+  .offline {
+    display: flex; align-items: center; gap: .5rem; margin: .75rem 0 0; padding: .55rem .8rem;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--panel);
+    color: var(--muted); font-size: .85rem; line-height: 1.4; max-width: 34rem;
+  }
+  .offline::before { content: ''; flex: none; width: .5rem; height: .5rem; border-radius: 50%; background: var(--amber); }
+  .offline[hidden] { display: none; }
 
   /* Onglets : en bas, là où le pouce arrive sans changer la prise en main. */
   nav {
@@ -179,6 +187,13 @@ const STYLE = `
   .frise i.n { box-shadow: 0 0 0 1.5px var(--text); }
   .frise.big { height: 1.1rem; gap: 3px; margin-top: 1rem; }
   .frise.big i { max-width: 1rem; border-radius: 3px; }
+  /* Quarante-huit traits à 2 px, écarts compris, demandaient 190 px : sur un
+     téléphone de 360 px, la carte d'une longue série débordait de l'écran et
+     toute la page glissait de côté. */
+  @media (max-width: 420px) {
+    .frise:not(.big) { gap: 1px; }
+    .frise i { min-width: 1px; }
+  }
   .legend { display: flex; flex-wrap: wrap; gap: .35rem 1rem; margin-top: .55rem; color: var(--muted); font-size: .76rem; }
   .legend span { display: inline-flex; align-items: center; gap: .4rem; }
   .legend i { width: .55rem; height: .75rem; border-radius: 2px; background: var(--line); display: inline-block; }
@@ -449,6 +464,7 @@ const SCRIPT = `
   var playerEl = document.getElementById('player')
   var countEl = document.getElementById('count')
   var flashEl = document.getElementById('flash')
+  var offlineEl = document.getElementById('offline')
 
   // Vrai pendant qu'on fait glisser : sinon le rafraîchissement remettrait le
   // curseur là où la vidéo en est, et il sauterait sous le doigt.
@@ -568,20 +584,99 @@ const SCRIPT = `
     flashTimer = setTimeout(function () { flashEl.classList.remove('on') }, 1800)
   }
 
+  // ---------------------------------------------------------------- hors ligne
+
+  /**
+   * Ce que la page a déjà vu, gardé sur le téléphone.
+   *
+   * Loin du wifi de la maison, ou le PC en veille, la page ouverte remplaçait
+   * toutes les vingt secondes ce qu'elle montrait par « Failed to fetch ». Les
+   * lectures réussies sont désormais gardées, et resservies quand le PC ne
+   * répond plus, avec l'heure à laquelle elles datent. Pas les écritures : une
+   * coche qui n'est pas partie ne se rejoue pas plus tard dans le dos de
+   * quelqu'un, elle se refait à la main.
+   *
+   * Ni le lecteur, qui ne vaut que pour l'instant présent, ni Découvrir, qui
+   * vient d'AniList. Un service worker aurait permis d'ouvrir la page PC
+   * éteint, mais un navigateur n'en accepte pas sur une adresse http du réseau
+   * local : c'est la page déjà ouverte qui tient bon, pas davantage.
+   */
+  var CACHE = 'animelist-remote-cache:'
+  var CACHE_MAX = 40
+
+  function keepable(path) {
+    return path.indexOf('/api/player') !== 0 && path.indexOf('/api/discover') !== 0
+  }
+
+  function remember(path, data) {
+    try {
+      localStorage.setItem(CACHE + path, JSON.stringify({ at: Date.now(), data: data }))
+      // Les fiches s'accumulent au fil des séries ouvertes : on ne garde que
+      // les plus récentes, sans jamais toucher au mot de passe.
+      var keys = []
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i)
+        if (k && k.indexOf(CACHE) === 0) keys.push(k)
+      }
+      if (keys.length > CACHE_MAX) {
+        keys.sort(function (a, b) { return recalled(a).at - recalled(b).at })
+        for (var j = 0; j < keys.length - CACHE_MAX; j++) localStorage.removeItem(keys[j])
+      }
+    } catch (err) { /* plein, ou refusé : la page marche sans */ }
+  }
+
+  function recalled(key) {
+    try { return JSON.parse(localStorage.getItem(key) || 'null') || { at: 0 } } catch (err) { return { at: 0 } }
+  }
+
+  function hour(at) {
+    var d = new Date(at)
+    var same = d.toDateString() === new Date().toDateString()
+    var h = d.getHours() + ' h ' + String(d.getMinutes()).padStart(2, '0')
+    return same ? h : d.toLocaleDateString('fr-FR', { weekday: 'long' }) + ' à ' + h
+  }
+
+  var shownAt = 0
+  function offline(at) {
+    // La plus ancienne des données montrées : un chiffre rassurant qui ne vaut
+    // que pour un écran sur trois serait un mensonge par omission.
+    shownAt = shownAt ? Math.min(shownAt, at) : at
+    offlineEl.textContent = 'Hors ligne : le PC ne répond pas. Ce que tu vois date de ' + hour(shownAt) + '.'
+    offlineEl.hidden = false
+  }
+  function online() {
+    shownAt = 0
+    offlineEl.hidden = true
+  }
+
   async function call(path, sent) {
-    var res = await fetch(path, {
-      method: sent ? 'POST' : 'GET',
-      headers: sent
-        ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
-        : { Authorization: 'Bearer ' + token },
-      body: sent ? JSON.stringify(sent) : undefined
-    })
+    var res
+    try {
+      res = await fetch(path, {
+        method: sent ? 'POST' : 'GET',
+        headers: sent
+          ? { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' }
+          : { Authorization: 'Bearer ' + token },
+        body: sent ? JSON.stringify(sent) : undefined
+      })
+    } catch (err) {
+      // Le réseau, pas un refus : le navigateur n'a jamais atteint le PC.
+      if (sent) throw new Error('Le PC ne répond pas : rien n’a été envoyé.')
+      var kept = keepable(path) ? recalled(CACHE + path) : null
+      if (kept && kept.data !== undefined) {
+        offline(kept.at)
+        return kept.data
+      }
+      throw new Error('Le PC ne répond pas. Il doit être allumé, et le téléphone sur le même wifi.')
+    }
+    online()
     if (res.status === 401) throw new Error('unauthorized')
     // Le nom doit rester distinct du paramètre : redéclarer un identifiant
     // empêche tout le script de se parser, et la page ne démarre jamais.
     var answer = await res.json().catch(function () { return null })
     // Le serveur explique ses refus : « pas encore sorti » vaut mieux que 409.
     if (!res.ok) throw new Error((answer && answer.error) || 'Le PC a répondu ' + res.status)
+    if (!sent && keepable(path)) remember(path, answer)
     return answer
   }
 
@@ -1523,6 +1618,7 @@ export function page(): string {
     <header>
       <h1 class="brand">AnimeList</h1>
       <p class="lede" id="count" aria-live="polite">Chargement…</p>
+      <p class="offline" id="offline" role="status" hidden></p>
     </header>
     <div id="app"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
   </main>

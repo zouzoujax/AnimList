@@ -54,6 +54,20 @@ describe('la page de la télécommande', () => {
     expect(html).toContain('OVA et spéciaux')
   })
 
+  /**
+   * Hors ligne, la page ressert ce qu'elle a déjà lu. Comme le reste du
+   * script, rien ne le vérifie à la compilation : on s'assure au moins que le
+   * bandeau, la mise en mémoire et les deux refus en clair sont là.
+   */
+  it('garde ses lectures pour quand le PC ne répond plus', () => {
+    expect(html).toContain('id="offline"')
+    expect(html).toContain('function remember(')
+    expect(html).toContain('Hors ligne : le PC ne répond pas.')
+    expect(html).toContain('rien n’a été envoyé')
+    // Jamais le lecteur ni Découvrir : l'un ne vaut que pour l'instant, l'autre vient d'AniList.
+    expect(html).toContain("path.indexOf('/api/player') !== 0")
+  })
+
   it('reste en français et sans dépendance extérieure', () => {
     expect(html).toContain('lang="fr"')
     expect(html).not.toMatch(/src="https?:/)
