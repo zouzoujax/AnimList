@@ -624,7 +624,14 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     return json(res, 200, { ok: true })
   }
 
-  const media = snapshot().media.find((m) => m.id === id)
+  /**
+   * Regarder un titre hors de la liste — un film touché dans l'arbre d'une
+   * franchise — demande sa fiche pour chercher ses titres sur Anime-Sama. Elle
+   * n'est pas en cache : on la redemande, comme pour l'ajout. La bande-annonce,
+   * elle, ne se propose que depuis une fiche de la liste.
+   */
+  const held = snapshot().media.find((m) => m.id === id)
+  const media = held ?? (route === 'watch' ? (await refreshMedia([id]).catch(() => []))[0] : undefined)
   if (!media) return json(res, 404, { error: 'Série inconnue.' })
 
   if (route === 'trailer') {
@@ -653,7 +660,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     const aim = aimFor(id, target.url, at)
     const opened = await openAnimeSamaEpisode(target.url, aim.episode, aim.entry)
     if (!opened) return json(res, 502, { error: 'Le lecteur n’a pas pu s’ouvrir.' })
-    rememberLaunch(id, at)
+    rememberLaunch(id, at, undefined, media)
     return json(res, 200, { player: await nowPlaying() })
   }
 

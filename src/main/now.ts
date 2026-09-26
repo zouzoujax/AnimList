@@ -18,7 +18,7 @@
 
 import { BrowserWindow } from 'electron'
 import type { LocalWatching } from '@shared/discord'
-import type { WatchProgress } from '@shared/types'
+import type { Media, WatchProgress } from '@shared/types'
 import { getMedia } from './store'
 
 /** Ce qu'on a lancé dans une fenêtre extérieure, que son titre ne dit pas. */
@@ -117,10 +117,18 @@ export function getLocalWatching(): LocalWatching | null {
  *
  * Une fiche inconnue efface la note au lieu de la laisser : garder la
  * précédente ferait annoncer la mauvaise série, ce qui est pire que de n'en
- * annoncer aucune.
+ * annoncer aucune. `fallback` sert pour un titre hors de la liste — un film
+ * lancé depuis l'arbre d'une franchise —, dont la fiche vient d'être lue sans
+ * être gardée.
  */
-export function rememberLaunch(animeId: number | undefined, episode: number | null, note?: string): void {
-  const media = animeId === undefined ? undefined : getMedia(animeId)
+export function rememberLaunch(
+  animeId: number | undefined,
+  episode: number | null,
+  note?: string,
+  fallback?: Pick<Media, 'id' | 'title' | 'cover'>
+): void {
+  const media =
+    animeId === undefined ? undefined : (getMedia(animeId) ?? (fallback?.id === animeId ? fallback : undefined))
   if (!media) return setLaunched(null)
   setLaunched({
     animeId: media.id,

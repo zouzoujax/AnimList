@@ -161,6 +161,30 @@ describe('le calendrier .ics', () => {
   })
 })
 
+describe('regarder depuis l’arbre d’une franchise', () => {
+  it('lance un film qui n’est pas dans la liste, en allant chercher sa fiche', async () => {
+    const { BrowserWindow } = await import('electron')
+    const anilist = await import('./anilist')
+    const animesama = await import('./animesama')
+    const watch = await import('./watch-window')
+    const win = { isDestroyed: () => false, isMinimized: () => false }
+    vi.spyOn(BrowserWindow, 'getAllWindows').mockReturnValue([win] as never)
+    vi.mocked(anilist.refreshMedia).mockResolvedValueOnce([media(50, { format: 'MOVIE', episodes: 1 })])
+    vi.mocked(animesama.resolve).mockResolvedValueOnce({ url: 'https://anime-sama.test/film', episodes: true } as never)
+    vi.mocked(animesama.aimFor).mockReturnValueOnce({ episode: 1, entry: null })
+    vi.mocked(watch.openAnimeSamaEpisode).mockResolvedValueOnce(true)
+
+    const res = await post('/api/watch', { id: 50, episode: 1 })
+    expect(res.status).toBe(200)
+    expect(anilist.refreshMedia).toHaveBeenCalledWith([50])
+    expect(watch.openAnimeSamaEpisode).toHaveBeenCalledWith('https://anime-sama.test/film', 1, null)
+    // Regarder n'ajoute rien à la liste : c'est le bouton d'à côté.
+    expect(statusOf(50)).toBeUndefined()
+  })
+})
+
+// En dernier : éteindre et rallumer le serveur laisse à `fetch` des connexions
+// gardées ouvertes vers l'ancien, et la requête suivante tomberait dessus.
 describe('allumer la télécommande', () => {
   it('dit en clair que le port est déjà pris', async () => {
     const { createServer } = await import('node:net')

@@ -348,6 +348,11 @@ const STYLE = `
     background: transparent; border: 1px solid var(--line);
   }
   .tleaf[data-on='true'] { border-color: var(--accent-line); }
+  .tline[aria-expanded='true'], .tleaf[aria-expanded='true'] { background: var(--accent-soft); border-color: var(--accent-line); }
+  /* Sous le titre touché : ce qu'on peut en faire sans se lever. */
+  .tacts { display: flex; flex-wrap: wrap; gap: .4rem; margin: .35rem 0 .5rem; }
+  .tacts .btn { flex: 1 1 auto; min-height: 2.5rem; padding: 0 .8rem; font-size: .8rem; }
+  .tacts .owned { min-height: 2.5rem; margin: 0; padding: 0 .6rem; }
 
   /* ---------------------------------------------------------------- lecteur */
 
@@ -884,6 +889,28 @@ const SCRIPT = `
    * range dessous, en retrait. Toucher un titre l'ouvre sur le PC — y compris
    * un film qui n'est pas dans la bibliothèque.
    */
+  /**
+   * Les gestes sur un titre de l'arbre, sous le titre touché.
+   *
+   * Toucher un film ouvrait sa fiche sur le PC, et il fallait ensuite aller
+   * jusqu'à la souris pour l'ajouter ou le lancer. Le toucher le sélectionne
+   * désormais : regarder, ajouter, ou ouvrir la fiche comme avant, au choix.
+   * « Regarder » vise le premier épisode pas vu — un film n'en a qu'un.
+   */
+  function nodeActs(n) {
+    if (tree.pick !== n.id) return ''
+    var fini = n.total > 0 && n.seen >= n.total
+    var ep = fini || !n.seen ? 1 : n.seen + 1
+    var label = ep > 1 ? 'Reprendre ép. ' + ep : 'Regarder'
+    return '<div class="tacts">' +
+      btn('data-act="watch" data-id="' + n.id + '" data-ep="' + ep + '"', label, 'play', 'primary') +
+      (n.tracked
+        ? '<span class="owned">Dans ta liste</span>'
+        : btn('data-act="add" data-id="' + n.id + '"', 'Ajouter à ma liste', 'plus', '')) +
+      btn('data-act="open" data-id="' + n.id + '"', 'Ouvrir sur le PC', 'info', '') +
+    '</div>'
+  }
+
   function renderTree(s) {
     if (tree.id !== s.id) return ''
     if (!tree.data) {
@@ -903,18 +930,19 @@ const SCRIPT = `
       var num = 'S' + saison.number + (saison.part ? '.' + saison.part : '')
       var prog = saison.total ? saison.seen + ' / ' + saison.total : ''
       var fini = saison.total > 0 && saison.seen >= saison.total
-      var ligne = '<button class="tline" data-act="open" data-id="' + saison.id + '" data-on="' + fini + '">' +
+      var ligne = '<button class="tline" data-act="tnode" data-id="' + saison.id + '" data-on="' + fini + '"' +
+        ' aria-expanded="' + (tree.pick === saison.id) + '">' +
         '<span class="tnum">' + num + '</span>' +
         '<span class="ttit">' + esc(saison.title) + '</span>' +
         '<span class="tprog">' + prog + '</span>' +
-      '</button>'
+      '</button>' + nodeActs(saison)
 
       var branches = (saison.branches || []).map(function (b) {
         var feuilles = b.nodes.map(function (n) {
           var p = n.total ? ' (' + n.seen + '/' + n.total + ')' : ''
           var complet = n.total > 0 && n.seen >= n.total
-          return '<button class="tleaf" data-act="open" data-id="' + n.id + '" data-on="' + complet + '">' +
-            esc(n.title) + p + '</button>'
+          return '<button class="tleaf" data-act="tnode" data-id="' + n.id + '" data-on="' + complet + '"' +
+            ' aria-expanded="' + (tree.pick === n.id) + '">' + esc(n.title) + p + '</button>' + nodeActs(n)
         }).join('')
         return '<div class="tbr"><span class="tbrn">' + esc(BRANCHES[b.kind] || b.kind) + '</span>' + feuilles + '</div>'
       }).join('')
@@ -927,7 +955,7 @@ const SCRIPT = `
       '<div class="note">' + tete + '</div>' +
       (t.partial ? '<div class="note alerte">Une partie n’a pas pu être lue : l’arbre est peut-être incomplet.</div>' : '') +
       '<div style="margin-top:.7rem">' + corps + '</div>' +
-      '<div class="note">Touche un titre pour l’ouvrir sur le PC.</div>' +
+      '<div class="note">Touche un titre pour le regarder, l’ajouter à ta liste ou l’ouvrir sur le PC.</div>' +
     '</div>'
   }
 
@@ -1389,6 +1417,12 @@ const SCRIPT = `
       return
     }
 
+    // Un titre de l'arbre : le sélectionner, ou le replier s'il l'était.
+    if (action === 'tnode') {
+      tree.pick = tree.pick === id ? 0 : id
+      return load()
+    }
+
     if (action === 'ep') {
       el.disabled = true
       try {
@@ -1498,6 +1532,12 @@ const SCRIPT = `
       if (action === 'add') {
         await call('/api/add', { id: id })
         say('Ajoutée à ta liste')
+        // Ajoutée depuis l'arbre : il se relit pour dire « Dans ta liste ».
+        // Sa structure est gardée par le PC, la relecture ne coûte presque rien.
+        if (tree.id && tree.data) {
+          var relu = await call('/api/franchise?id=' + tree.id).catch(function () { return null })
+          if (relu && tree.data) tree.data = relu
+        }
         return load()
       }
       if (action === 'watch') {
