@@ -124,7 +124,11 @@ function Row({
           {label}
           {badge && <span className="nd-set-badge">{badge}</span>}
         </p>
-        {hint && <p className="mt-1 max-w-[62ch] text-[0.78rem] leading-relaxed text-muted">{hint}</p>}
+        {/* `anywhere` : un chemin de dossier n'a pas d'espace où couper, et
+            passait sous les boutons voisins. */}
+        {hint && (
+          <p className="mt-1 max-w-[62ch] text-[0.78rem] leading-relaxed text-muted [overflow-wrap:anywhere]">{hint}</p>
+        )}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -264,7 +268,9 @@ function BackupRow(): React.JSX.Element {
 
   return (
     <Row label="Sauvegarde automatique" hint={hint}>
-      <div className="flex flex-wrap items-center justify-end gap-1.5">
+      {/* Cinq boutons sur une ligne ne laissaient qu'une colonne étroite au
+          chemin du dossier : au-delà de cette largeur, ils passent à la ligne. */}
+      <div className="flex max-w-[20rem] flex-wrap items-center justify-end gap-1.5">
         {status?.folder && (
           <>
             <button className="btn" disabled={busy} onClick={() => window.api.backup.reveal()}>
