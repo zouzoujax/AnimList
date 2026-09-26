@@ -9,6 +9,24 @@ Un titre de niveau deux par version, puis des rubriques `### Ajouts`,
 changement, écrite pour quelqu'un qui utilise l'app, pas pour quelqu'un qui lit
 le code.
 
+## 0.11.0 — 26 septembre 2026
+
+### Ajouts
+
+- Le rattrapage guidé : quand des épisodes de séries en diffusion sont sortis sans toi, l’accueil les répartit soir par soir, à ton rythme habituel, et dit le jour où tu seras à jour. La série dont le prochain épisode sort le plus tôt passe en premier, un épisode annoncé entre dans le plan le jour de sa sortie, et ce que tu as déjà vu aujourd’hui est retiré de ce soir. Dans l’accueil classique, c’est la section « Pour être à jour » ; dans le nouvel accueil, l’onglet « Rattrapage » de « Cette semaine »
+- Sur le téléphone, toucher un titre dans l’arbre d’une franchise montre sa petite affiche — format, date, durée, diffusion, note, studio, genres, résumé — avec quatre boutons : Regarder, Bande-annonce, Ajouter à ma liste et Ouvrir sur le PC. Un film jamais ajouté se lance ou s’ajoute sans aller jusqu’à la souris
+- Sur le téléphone, une jaquette de Découvrir ouvre sa fiche au lieu de l’ouvrir sur le PC, avec les mêmes informations et les mêmes boutons
+- Sur le téléphone, la fiche d’une série de ta liste dit aussi son format, sa saison, son nombre d’épisodes, sa durée, son studio et ses genres, avec le résumé qu’on déplie d’un « Lire la suite »
+- La télécommande tient bon loin du wifi : une page déjà ouverte garde ce qu’elle a vu quand le PC ne répond plus, et un bandeau dit de quelle heure datent les données. Une coche envoyée hors ligne est refusée en clair, jamais rejouée plus tard
+
+### Corrections
+
+- Remplacer la bibliothèque par une sauvegarde effaçait aussi ce qu’aucune copie ne contient — les dossiers d’épisodes liés aux séries, les positions de lecture, les studios et personnes suivis, les langues choisies — sans retour possible. Seul ce que la copie contient est désormais remplacé
+- Dans Réglages › Sauvegarde automatique, le chemin du dossier passait sous les boutons quand il était long
+- Allumer la télécommande alors qu’une autre fenêtre AnimeList l’a déjà allumée affichait « listen EADDRINUSE » ; le message dit maintenant ce qu’il se passe
+- Un essai ntfy raté affichait « fetch failed » ; il dit maintenant de vérifier l’adresse du serveur et la connexion
+- Sur un téléphone étroit, la frise d’une longue série faisait déborder sa carte et glisser la page de côté
+
 ## 0.10.0 — 26 septembre 2026
 
 ### Ajouts
