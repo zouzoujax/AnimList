@@ -252,6 +252,8 @@ const STYLE = `
     background: none; border: 0; cursor: pointer; border-radius: 12px;
   }
   .tile img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--panel-2); display: block; }
+  /* La jaquette dont la fiche est ouverte à côté. */
+  .tile[aria-expanded='true'] img { outline: 2px solid var(--accent); outline-offset: 2px; }
   .tile[aria-current='true'] img { outline: 2px solid var(--accent); outline-offset: 2px; }
   .tile .title { font-size: .8rem; margin-top: .45rem; }
   .tile .meta { font-size: .72rem; margin-top: .1rem; }
@@ -1194,6 +1196,9 @@ const SCRIPT = `
   var about = { id: 0, data: null, open: false }
   var query = ''
   var discoverTab = 'trending'
+  /** Les jaquettes déjà reçues, et celle qu'on a touchée : sa fiche se dessine sans tout redemander. */
+  var dItems = []
+  var dpick = 0
 
   var TABS = [
     { id: 'home', label: 'Accueil', icon: 'home' },
@@ -1358,7 +1363,8 @@ const SCRIPT = `
       ? '<span class="owned">Déjà dans ta liste</span>'
       : btn('data-act="add" data-id="' + m.id + '"', 'Ajouter', 'plus', '')
     return '<div class="tile-wrap"' + colorStyle(m.color) + '>' +
-      '<button class="tile" data-act="open" data-id="' + m.id + '" aria-label="Ouvrir ' + esc(m.title) + ' sur le PC">' +
+      '<button class="tile" data-act="dpick" data-id="' + m.id + '" aria-label="Voir ' + esc(m.title) + '"' +
+        ' aria-expanded="' + (dpick === m.id) + '">' +
         '<img src="' + esc(m.cover) + '" alt="" loading="lazy">' +
         '<span class="title">' + esc(m.title) + '</span>' +
         (meta ? '<span class="meta" style="display:block">' + meta + '</span>' : '') +
@@ -1367,14 +1373,56 @@ const SCRIPT = `
     '</div>'
   }
 
+  /**
+   * La fiche d'une jaquette de Découvrir.
+   *
+   * Toucher une jaquette l'ouvrait sur le PC, et il fallait aller jusqu'à la
+   * souris pour en savoir plus. Elle s'ouvre désormais ici, comme la fiche
+   * d'une série de la liste : les faits, le résumé, et de quoi la regarder,
+   * voir sa bande-annonce, l'ajouter ou l'ouvrir sur le PC.
+   */
+  function discoverSheet(m) {
+    var card = about.id === m.id ? about.data : null
+    var faits = !card
+      ? '<div class="tcard wait" aria-label="Lecture de la fiche"></div>'
+      : card.error ? '' : '<div class="about">' + factsHtml(card, true) + '</div>'
+    return '<article class="sheet"' + colorStyle(m.color) + '>' +
+      '<div class="top">' +
+        '<img src="' + esc(m.cover) + '" alt="">' +
+        '<div class="grow"><h2>' + esc(m.title) + '</h2></div>' +
+      '</div>' +
+      faits +
+      '<div class="acts">' +
+        btn('data-act="watch" data-id="' + m.id + '" data-ep="1"', 'Regarder sur le PC', 'play', 'primary') +
+        (card && card.trailer ? btn('data-act="trailer" data-id="' + m.id + '"', 'Bande-annonce', 'film', '') : '') +
+      '</div>' +
+      '<div class="acts">' +
+        (m.owned
+          ? '<span class="owned">Déjà dans ta liste</span>'
+          : btn('data-act="add" data-id="' + m.id + '"', 'Ajouter à ma liste', 'plus', '')) +
+        btn('data-act="open" data-id="' + m.id + '"', 'Fiche sur le PC', 'info', '') +
+      '</div>' +
+    '</article>'
+  }
+
   function renderDiscover(items) {
-    sideEl.innerHTML = ''
+    dItems = items
+    var choisie = dpick ? items.filter(function (m) { return m.id === dpick })[0] : null
+    if (dpick && !choisie) dpick = 0
+    // Sur un téléphone, la fiche prend la place de la grille, avec un retour.
+    if (choisie && !isWide()) {
+      sideEl.innerHTML = ''
+      countEl.textContent = query ? 'Résultats pour « ' + query + ' ».' : 'Découvrir'
+      appEl.innerHTML = '<button class="chip back" data-act="dback">← Découvrir</button>' + discoverSheet(choisie)
+      return
+    }
+    sideEl.innerHTML = choisie ? '<button class="chip back" data-act="dback">× Fermer la fiche</button>' + discoverSheet(choisie) : ''
     var tabs = [['trending', 'Tendances'], ['season', 'Cette saison']].map(function (t) {
       return '<button class="chip" data-act="dtab" data-tab="' + t[0] + '" aria-pressed="' +
         (!query && discoverTab === t[0]) + '">' + t[1] + '</button>'
     }).join('')
 
-    countEl.textContent = query ? 'Résultats pour « ' + query + ' ».' : 'Le catalogue AniList. Choisis une jaquette pour l’ouvrir sur le PC.'
+    countEl.textContent = query ? 'Résultats pour « ' + query + ' ».' : 'Le catalogue AniList. Touche une jaquette pour la voir, la regarder ou l’ajouter.'
     appEl.innerHTML =
       '<div class="search">' +
         '<input type="text" id="q" placeholder="Rechercher un titre" value="' + esc(query) + '" ' +
@@ -1450,6 +1498,7 @@ const SCRIPT = `
     if (action === 'tab') {
       tab = el.getAttribute('data-tab')
       sheet = 0
+      dpick = 0
       appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
       return load()
     }
@@ -1489,7 +1538,11 @@ const SCRIPT = `
       return
     }
 
-    if (action === 'syn') { about.open = !about.open; return load() }
+    if (action === 'syn') {
+      about.open = !about.open
+      if (tab === 'discover') { renderDiscover(dItems); layout(); return }
+      return load()
+    }
 
     // Un titre de l'arbre : le sélectionner, ou le replier s'il l'était.
     if (action === 'tnode') {
@@ -1550,8 +1603,25 @@ const SCRIPT = `
       el.disabled = false
       return load()
     }
-    if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; return load() }
-    if (action === 'search') { query = ((document.getElementById('q') || {}).value || '').trim(); return load() }
+    if (action === 'dtab') { discoverTab = el.getAttribute('data-tab'); query = ''; dpick = 0; return load() }
+    if (action === 'search') { query = ((document.getElementById('q') || {}).value || '').trim(); dpick = 0; return load() }
+
+    // Une jaquette de Découvrir : sa fiche, sans redemander la grille.
+    if (action === 'dpick') {
+      dpick = id
+      renderDiscover(dItems)
+      layout()
+      if (!isWide()) window.scrollTo(0, 0)
+      if (about.id !== id) {
+        about = { id: id, data: null, open: false }
+        var lue
+        try { lue = await call('/api/media?id=' + id) } catch (err) { lue = { error: err.message } }
+        if (about.id === id) about.data = lue
+      }
+      if (dpick === id && tab === 'discover') { renderDiscover(dItems); layout() }
+      return
+    }
+    if (action === 'dback') { dpick = 0; renderDiscover(dItems); layout(); return }
 
     // Enchaîner sur le suivant. La fenêtre est déjà ouverte sur la bonne
     // saison : le PC change d'épisode dans son menu, sans tout recharger.
