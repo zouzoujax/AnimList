@@ -70,12 +70,15 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     // trois pages : il lui faut plus de temps que les autres.
     { name: 'saison', route: { name: 'season' }, settleMs: 6000 },
     { name: 'manga', route: { name: 'manga' }, settleMs: 2000 },
+    // La fiche d'un manga suivi : statut, chapitre, tomes, notes.
+    { name: 'manga-fiche', route: { name: 'manga' }, settleMs: 1400, click: '.card-grid button' },
     // Les expériences ont leur propre page de badges ; ailleurs, la route
     // retombe sur les Statistiques.
     { name: 'mur-badges', route: { name: 'badges' }, settleMs: 1600 },
     { name: 'statistiques', route: { name: 'stats' }, settleMs: 1600 },
     // The badge wall sits under every chart, so its offset moves with the data.
     { name: 'badges', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#badges' },
+    { name: 'lecture', route: { name: 'stats' }, settleMs: 1600, scrollTo: '#lecture' },
     // Pas de réseau : la page ne lit que l'historique local, elle est prête tout de suite.
     { name: 'journal', route: { name: 'journal' }, settleMs: 900 },
     { name: 'reglages', route: { name: 'settings' }, settleMs: 1000 },

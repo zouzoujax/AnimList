@@ -26,6 +26,8 @@ import type {
   ImportReport,
   LocalFolder,
   Manga,
+  MangaEntry,
+  MangaEntryPatch,
   MangaKind,
   Media,
   MediaDetail,
@@ -123,12 +125,20 @@ const api = {
     }
   },
   manga: {
-    /** Le catalogue manga d'AniList. Lecture seule : rien n'est suivi. */
+    /** Le catalogue manga d'AniList. */
     /** `country` est un code à deux lettres : JP pour un manga, KR pour un manhwa. */
     browse: (kind: MangaKind, page: number, search: string, genre?: string, country?: string): Promise<Paged<Manga>> =>
       ipcRenderer.invoke('manga:browse', kind, page, search, genre, country),
     /** La fiche d'un manga seul, quand on arrive depuis la relation d'un anime. */
-    detail: (id: number): Promise<Manga> => ipcRenderer.invoke('manga:detail', id)
+    detail: (id: number): Promise<Manga> => ipcRenderer.invoke('manga:detail', id),
+    /** Ajoute à la liste de lecture ou retouche : statut, tomes, favori, notes. */
+    setEntry: (id: number, patch: MangaEntryPatch, manga?: Manga): Promise<MangaEntry> =>
+      ipcRenderer.invoke('manga:set-entry', id, patch, manga),
+    /** `imported` : un rattrapage tapé, pas une lecture du jour. */
+    setChapter: (id: number, chapter: number, imported: boolean, manga?: Manga): Promise<MangaEntry> =>
+      ipcRenderer.invoke('manga:set-chapter', id, chapter, imported, manga),
+    reread: (id: number): Promise<MangaEntry | null> => ipcRenderer.invoke('manga:reread', id),
+    remove: (id: number): Promise<void> => ipcRenderer.invoke('manga:remove', id)
   },
 
   watch: {

@@ -39,6 +39,13 @@ src/
 - **Données AniList** via l'API GraphQL publique (sans clé), appelée depuis le main : pas de
   CORS, une file d'attente qui respecte la limite de débit, et un cache disque qui sert de
   repli hors-ligne.
+- **Suivi de lecture des mangas** : `mangaEntries`, `mangas` et `reads` dans le fichier
+  principal, ajout additif sans numéro de schéma (comme `follows` ou `positions`). La
+  progression est un compteur de chapitres, pas une grille ; le journal garde une ligne par
+  séance (`from` → `to`). « +1 » est une lecture datée, un numéro tapé un rattrapage
+  (`imported`), compté au total mais pas au mois. Logique pure dans `shared/reading.ts` ; les
+  sauvegardes et la restauration les portent (`shared/restore.ts`). Pas de badges : ils sont
+  bâtis sur des épisodes et des durées.
 - **Sécurité** : `contextIsolation` activé, `nodeIntegration` désactivé, CSP stricte en
   production, navigation externe forcée vers le navigateur système.
 

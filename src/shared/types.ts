@@ -670,6 +670,11 @@ export interface Snapshot {
   /** Optional: this type doubles as the shape of a restored backup, and files
    * exported before custom lists existed simply do not have the field. */
   lists?: CustomList[]
+  /** Les mangas suivis. Optionnels pour la même raison que les listes. */
+  mangaEntries?: MangaEntry[]
+  /** Leurs fiches, pour que la liste de lecture tienne hors ligne. */
+  mangas?: Manga[]
+  reads?: ReadEvent[]
 }
 
 export interface PageInfo {
@@ -736,6 +741,59 @@ export interface Manga {
 }
 
 export type MangaKind = 'trending' | 'popular' | 'top' | 'search'
+
+/**
+ * Un manga suivi.
+ *
+ * À part d'`Entry`, comme `Manga` est à part de `Media` : on lit des chapitres
+ * et des tomes, on ne coche pas des épisodes d'une durée donnée. Les cinq
+ * statuts sont les mêmes — seuls leurs mots changent (`READ_STATUS_LABELS`).
+ *
+ * La progression est un compteur et non une grille : on dit « j'en suis au
+ * chapitre 214 », pas « j'ai lu le 1, le 2, le 3… ». Mille cases pour One
+ * Piece n'aideraient personne.
+ */
+export interface MangaEntry {
+  mangaId: number
+  status: LibraryStatus
+  addedAt: number
+  updatedAt: number
+  /** Chapitres lus. */
+  chapter: number
+  /** Tomes lus, pour qui lit en reliés. Indépendant des chapitres. */
+  volume: number
+  favorite: boolean
+  notes: string
+  /** Relectures commencées. La progression repart de zéro à chacune. */
+  rereads: number
+  startedAt: number | null
+  finishedAt: number | null
+}
+
+export type MangaEntryPatch = Partial<Omit<MangaEntry, 'mangaId' | 'addedAt' | 'updatedAt'>>
+
+/**
+ * Une séance de lecture : les chapitres `from + 1` à `to`, lus à `at`.
+ *
+ * Une ligne par avancée plutôt qu'une par chapitre : rattraper quarante
+ * chapitres en une soirée fait une ligne, et le journal reste court même
+ * pour une série au long cours.
+ */
+export interface ReadEvent {
+  mangaId: number
+  from: number
+  to: number
+  at: number
+  /** Relecture à laquelle appartient la séance ; absente pour la première lecture. */
+  pass?: number
+  /**
+   * Rattrapage saisi d'un coup, et non lecture du jour : taper « 214 » en
+   * ajoutant un manga lu depuis des années. Compté dans les totaux, jamais
+   * dans ce qui se mesure au jour ou au mois — même règle que les épisodes
+   * importés.
+   */
+  imported?: boolean
+}
 
 export interface AiringItem {
   mediaId: number
@@ -981,6 +1039,15 @@ export const STATUS_LABELS: Record<LibraryStatus, string> = {
   watching: 'En cours',
   planned: 'À voir',
   completed: 'Terminé',
+  paused: 'En pause',
+  dropped: 'Abandonné'
+}
+
+/** Les mêmes statuts, dits pour un manga : on le lit, on ne le regarde pas. */
+export const READ_STATUS_LABELS: Record<LibraryStatus, string> = {
+  watching: 'En lecture',
+  planned: 'À lire',
+  completed: 'Lu',
   paused: 'En pause',
   dropped: 'Abandonné'
 }

@@ -16,6 +16,7 @@ import { motion } from 'motion/react'
 import { useMemo, useRef, useState } from 'react'
 import { GENRE_LABELS, type Media } from '@shared/types'
 import { ActivityHeatmap, MonthlyColumns, RankedBars, StatTile, type DayCount } from '@/components/Charts'
+import { ReadingStats } from '@/components/ReadingStats'
 import { EmptyState, Poster, RowScroller, Section } from '@/components/ui'
 import { rgba } from '@/lib/color'
 import { dayLabel, durationParts, hoursOf, minutesToHuman, monthLabel, num, startOfDay, titleOf } from '@/lib/format'
@@ -544,6 +545,8 @@ export default function StatsPage(): React.JSX.Element {
           />
         </div>
       </div>
+
+      <ReadingStats />
 
       <Section
         id="badges"

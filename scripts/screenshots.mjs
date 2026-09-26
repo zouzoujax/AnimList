@@ -166,6 +166,89 @@ const toMedia = (m) => ({
 
 const DAY = 86_400_000
 
+/**
+ * Une liste de lecture de démonstration : un manga au long cours, un fini, un
+ * manhwa, un à lire. Assez pour que l'onglet « Ma lecture » et la section des
+ * statistiques aient chacun quelque chose à montrer.
+ *
+ * Berserk, Vagabond, Solo Leveling, Frieren, Chainsaw Man.
+ */
+const MANGA_CAST = [
+  { id: 30002, status: 'watching', chapter: 212, volume: 24 },
+  { id: 30656, status: 'completed', chapter: 327, volume: 37 },
+  { id: 105398, status: 'watching', chapter: 96, volume: 0 },
+  { id: 118586, status: 'watching', chapter: 58, volume: 6 },
+  { id: 105778, status: 'planned', chapter: 0, volume: 0 }
+]
+
+const ORIGINS = { JP: 'manga', KR: 'manhwa', CN: 'manhua', TW: 'manhua', HK: 'manhua' }
+
+async function fetchMangas() {
+  const raw = (
+    await ask(
+      `query($ids: [Int]) { Page(perPage: 20) { media(id_in: $ids, type: MANGA) {
+        id title { romaji english native } countryOfOrigin format
+        coverImage { large extraLarge color } bannerImage description(asHtml: false)
+        chapters volumes status genres averageScore popularity startDate { year } siteUrl
+        staff(perPage: 2, sort: [RELEVANCE]) { nodes { name { full } } }
+      } } }`,
+      { ids: MANGA_CAST.map((m) => m.id) }
+    )
+  ).Page.media
+  return raw.map((m) => ({
+    id: m.id,
+    title: m.title,
+    cover: { large: m.coverImage.large, xl: m.coverImage.extraLarge ?? m.coverImage.large, color: m.coverImage.color },
+    banner: m.bannerImage,
+    description: strip(m.description),
+    chapters: m.chapters,
+    volumes: m.volumes,
+    status: m.status,
+    genres: m.genres ?? [],
+    averageScore: m.averageScore,
+    popularity: m.popularity ?? 0,
+    startYear: m.startDate?.year ?? null,
+    origin: m.format === 'NOVEL' ? 'novel' : (ORIGINS[m.countryOfOrigin] ?? 'other'),
+    staff: (m.staff?.nodes ?? []).map((n) => n.name.full),
+    siteUrl: m.siteUrl
+  }))
+}
+
+/**
+ * Les fiches suivies et leurs séances : un rattrapage à l'ajout, puis
+ * quelques chapitres par soir sur les dernières semaines.
+ */
+function inventReading(mangas, now) {
+  const known = new Set(mangas.map((m) => m.id))
+  const mangaEntries = []
+  const reads = []
+  MANGA_CAST.filter((c) => known.has(c.id)).forEach((c, i) => {
+    const addedAt = now - (120 - i * 15) * DAY
+    const live = c.status === 'watching' ? Math.min(c.chapter, 6 + i * 4) : 0
+    const caught = c.chapter - live
+    if (caught > 0) reads.push({ mangaId: c.id, from: 0, to: caught, at: addedAt, imported: true })
+    for (let at = caught, day = live; at < c.chapter; day -= 1) {
+      const to = Math.min(c.chapter, at + 1 + (day % 3))
+      reads.push({ mangaId: c.id, from: at, to, at: eveningOf(day * 3, 0, now) })
+      at = to
+    }
+    mangaEntries.push({
+      mangaId: c.id,
+      status: c.status,
+      addedAt,
+      updatedAt: now - i * 3600_000,
+      chapter: c.chapter,
+      volume: c.volume,
+      favorite: i === 0,
+      notes: '',
+      rereads: 0,
+      startedAt: c.chapter > 0 ? addedAt : null,
+      finishedAt: c.status === 'completed' ? now - 30 * DAY : null
+    })
+  })
+  return { mangaEntries, reads }
+}
+
 /** Index in the cast shown mid-rewatch; its slot must be a completed one. */
 const REWATCHING = 3
 
@@ -374,7 +457,9 @@ function followAiring(media, history, entries) {
 
 async function main() {
   process.stdout.write('Récupération du casting depuis AniList…\n')
-  const [raw, airingRaw] = await Promise.all([fetchCast(), fetchAiring()])
+  const [raw, airingRaw, mangas] = await Promise.all([fetchCast(), fetchAiring(), fetchMangas()])
+  const { mangaEntries, reads } = inventReading(mangas, Date.now())
+  process.stdout.write(`${mangaEntries.length} mangas suivis, ${reads.length} séances de lecture\n`)
   if (!raw.length) throw new Error('AniList n’a renvoyé aucune fiche')
 
   // Keep the requested order: the API returns them by id.
@@ -424,6 +509,9 @@ async function main() {
       entries: Object.fromEntries(entries.map((e) => [String(e.animeId), e])),
       history: [],
       lists,
+      mangaEntries: Object.fromEntries(mangaEntries.map((e) => [String(e.mangaId), e])),
+      mangas: Object.fromEntries(mangas.map((m) => [String(m.id), m])),
+      reads,
       prefs: {
         titleLang: 'romaji',
         theme: THEME,

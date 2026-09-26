@@ -7,13 +7,18 @@ import { join } from 'node:path'
 import { migrate, SCHEMA_VERSION, type MigrationReport, type StoredDb } from './migrations'
 import { MAX_POSITIONS, prunePositions, worthRemembering, type Position } from '@shared/playback'
 import { pruneUndone, undoneKey, type Undone } from '@shared/undone'
+import { logProgress, newMangaEntry, settleStatus } from '@shared/reading'
 import {
   DEFAULT_PREFS,
   type CustomList,
   type Entry,
   type Follow,
   type EntryPatch,
+  type Manga,
+  type MangaEntry,
+  type MangaEntryPatch,
   type Media,
+  type ReadEvent,
   type Prefs,
   type Snapshot,
   type WatchEvent,
@@ -57,6 +62,17 @@ interface Db {
    * `sanitize` le remplace par une table vide.
    */
   undone: Record<string, Undone>
+  /**
+   * Le suivi de lecture des mangas : les fiches suivies, leurs données
+   * AniList, et le journal des séances.
+   *
+   * Additif comme les précédents. Le journal reste dans le fichier principal
+   * plutôt que dans un journal à part : une séance couvre plusieurs chapitres,
+   * et il y en a cent fois moins que d'épisodes cochés.
+   */
+  mangaEntries: Record<string, MangaEntry>
+  mangas: Record<string, Manga>
+  reads: ReadEvent[]
 }
 
 const emptyDb = (): Db => ({
@@ -70,7 +86,10 @@ const emptyDb = (): Db => ({
   positions: {},
   follows: [],
   undone: {},
-  watchLangs: {}
+  watchLangs: {},
+  mangaEntries: {},
+  mangas: {},
+  reads: []
 })
 
 export const store = new EventEmitter()
@@ -125,7 +144,10 @@ function sanitize(raw: unknown): Db {
     positions: input.positions && typeof input.positions === 'object' ? prunePositions(input.positions) : {},
     follows: Array.isArray(input.follows) ? input.follows.filter((f) => f && typeof f.key === 'string') : [],
     undone: input.undone && typeof input.undone === 'object' ? pruneUndone(input.undone) : {},
-    watchLangs: input.watchLangs && typeof input.watchLangs === 'object' ? input.watchLangs : {}
+    watchLangs: input.watchLangs && typeof input.watchLangs === 'object' ? input.watchLangs : {},
+    mangaEntries: input.mangaEntries && typeof input.mangaEntries === 'object' ? input.mangaEntries : {},
+    mangas: input.mangas && typeof input.mangas === 'object' ? input.mangas : {},
+    reads: Array.isArray(input.reads) ? input.reads.filter((r) => r && typeof r.mangaId === 'number') : []
   }
 }
 
@@ -354,7 +376,10 @@ export function snapshot(): Snapshot {
     media: Object.values(db.media),
     history: db.history,
     prefs: db.prefs,
-    lists: db.lists
+    lists: db.lists,
+    mangaEntries: Object.values(db.mangaEntries),
+    mangas: Object.values(db.mangas),
+    reads: db.reads
   }
 }
 
@@ -871,6 +896,9 @@ export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): v
   db.entries = Object.fromEntries(after.entries.map((e) => [String(e.animeId), e]))
   db.history = after.history
   db.lists = after.lists
+  db.mangaEntries = Object.fromEntries(after.mangaEntries.map((e) => [String(e.mangaId), e]))
+  db.mangas = Object.fromEntries(after.mangas.map((m) => [String(m.id), m]))
+  db.reads = after.reads
 
   rebuildIndex()
   changed()
@@ -882,8 +910,108 @@ export function libraryState(): LibraryState {
     entries: Object.values(db.entries),
     media: Object.values(db.media),
     history: db.history,
-    lists: db.lists
+    lists: db.lists,
+    mangaEntries: Object.values(db.mangaEntries),
+    mangas: Object.values(db.mangas),
+    reads: db.reads
   }
+}
+
+// ---------------------------------------------------------------- mangas
+
+/** Tient à jour la fiche des mangas suivis ; les autres ne sont pas gardés. */
+export function cacheMangas(list: Manga[]): void {
+  let touched = false
+  for (const manga of list) {
+    const id = String(manga.id)
+    if (!db.mangaEntries[id]) continue
+    db.mangas[id] = manga
+    touched = true
+  }
+  if (touched) changed()
+}
+
+/**
+ * Ajoute un manga à la liste de lecture, ou retouche sa fiche.
+ *
+ * Choisir « Lu » à la main amène la progression au dernier chapitre quand on
+ * le connaît — comme un rattrapage : compté au total, pas daté d'aujourd'hui.
+ */
+export function setMangaEntry(mangaId: number, patch: MangaEntryPatch, manga?: Manga): MangaEntry {
+  // La progression et les relectures ont leurs propres chemins, qui tiennent le journal.
+  const { chapter: _chapter, rereads: _rereads, ...rest } = patch
+  const id = String(mangaId)
+  if (manga) db.mangas[id] = manga
+  const now = Date.now()
+  const held = db.mangaEntries[id] ?? newMangaEntry(mangaId, now)
+  const entry: MangaEntry = { ...held, ...rest, updatedAt: now }
+
+  if (patch.volume !== undefined) entry.volume = Math.max(0, Math.round(patch.volume))
+  if (patch.status === 'watching') entry.startedAt ??= now
+  if (patch.status === 'completed') {
+    entry.finishedAt ??= now
+    const total = db.mangas[id]?.chapters ?? null
+    if (total && entry.chapter < total) {
+      db.reads = logProgress(db.reads, mangaId, entry.rereads, entry.chapter, total, now, true)
+      entry.chapter = total
+      entry.startedAt ??= now
+    }
+  }
+  if (patch.status && patch.status !== 'completed') entry.finishedAt = null
+  db.mangaEntries[id] = entry
+  changed()
+  return entry
+}
+
+/**
+ * Déplace la progression d'un manga.
+ *
+ * `imported` distingue un rattrapage tapé d'une lecture : voir `ReadEvent`.
+ * Un manga absent de la liste y entre, comme une série qu'on coche.
+ */
+export function setMangaChapter(mangaId: number, chapter: number, imported: boolean, manga?: Manga): MangaEntry {
+  const id = String(mangaId)
+  if (manga) db.mangas[id] = manga
+  const now = Date.now()
+  const held = db.mangaEntries[id] ?? newMangaEntry(mangaId, now)
+  const to = Math.max(0, Math.round(chapter))
+  db.reads = logProgress(db.reads, mangaId, held.rereads, held.chapter, to, now, imported)
+  const entry = settleStatus({ ...held, chapter: to, updatedAt: now }, db.mangas[id]?.chapters ?? null, now)
+  db.mangaEntries[id] = entry
+  changed()
+  return entry
+}
+
+/**
+ * Recommence un manga. Les séances de la lecture précédente restent au
+ * journal — elles ont eu lieu —, la progression repart de zéro.
+ */
+export function startReread(mangaId: number): MangaEntry | null {
+  const entry = db.mangaEntries[String(mangaId)]
+  if (!entry) return null
+  const now = Date.now()
+  const next: MangaEntry = {
+    ...entry,
+    rereads: entry.rereads + 1,
+    chapter: 0,
+    status: 'watching',
+    startedAt: now,
+    finishedAt: null,
+    updatedAt: now
+  }
+  db.mangaEntries[String(mangaId)] = next
+  changed()
+  return next
+}
+
+/** Retire un manga de la liste, avec tout son journal. */
+export function removeMangaEntry(mangaId: number): void {
+  const id = String(mangaId)
+  if (!db.mangaEntries[id]) return
+  delete db.mangaEntries[id]
+  delete db.mangas[id]
+  db.reads = db.reads.filter((r) => r.mangaId !== mangaId)
+  changed()
 }
 
 // ---------------------------------------------------------------- lists

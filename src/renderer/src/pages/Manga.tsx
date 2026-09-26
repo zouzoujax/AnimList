@@ -1,30 +1,144 @@
 /**
- * Le catalogue manga.
+ * Les mangas : ce qu'on lit, et le catalogue pour trouver la suite.
  *
- * En lecture seule, et c'est délibéré. Suivre un manga voudrait dire des
- * chapitres cochés, un historique, des statistiques et cent badges bâtis sur
- * des épisodes et des durées — un chapitre n'a ni l'un ni l'autre. Parcourir
- * répond déjà à la question qu'on se pose le plus souvent : « ça continue en
- * manga, et où j'en serais ? »
+ * « Ma lecture » range les mangas suivis par statut, avec leur chapitre et un
+ * « +1 » à portée de clic — le geste qu'on fait en refermant un chapitre. Le
+ * reste de la tenue (statut, tomes, notes, relecture) est dans la fiche,
+ * partagée avec la fiche d'un anime.
  *
  * Manga, manhwa et manhua sont séparés, parce qu'AniList ne les sépare pas :
  * il les range tous sous le même format, et sept des huit titres en tendance
  * sont en réalité coréens. Ce ne sont pourtant ni les mêmes objets ni le même
  * sens de lecture — l'annoncer évite d'ouvrir autre chose que ce qu'on croyait.
- *
- * Rien n'est écrit dans la bibliothèque depuis cette page.
  */
 
 import { humanMessage } from '@shared/api-outage'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { motion } from 'motion/react'
-import { Flame, Search, Star, TrendingUp, X } from 'lucide-react'
-import type { Manga, MangaKind } from '@shared/types'
+import { BookOpen, Flame, Plus, Search, Star, TrendingUp, X } from 'lucide-react'
+import { READ_STATUS_LABELS, type Manga, type MangaEntry, type MangaKind } from '@shared/types'
 import { ORIGIN_FILTERS, ORIGIN_HINTS, ORIGIN_LABELS, type MangaOrigin } from '@shared/origin'
-import { MANGA_STATUS, MangaSheet } from '@/components/MangaSheet'
-import { ErrorBox, Modal, Poster, PosterSkeletons, Spinner } from '@/components/ui'
+import { MANGA_STATUS, MangaSheet, READ_STATUS_ORDER } from '@/components/MangaSheet'
+import { ErrorBox, Modal, Poster, PosterSkeletons, Section, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { useDebounced, useInView } from '@/lib/hooks'
+import { useApp } from '@/store/app'
+
+type Tab = MangaKind | 'mine'
+
+/**
+ * Un manga de ma liste : où j'en suis, et « +1 » sans ouvrir la fiche.
+ *
+ * Le bouton est à part de la jaquette : un clic sur l'une ouvre, un clic sur
+ * l'autre avance, et on ne confond pas les deux en refermant un chapitre.
+ */
+function ShelfCard({
+  manga,
+  entry,
+  index,
+  onOpen
+}: {
+  manga: Manga
+  entry: MangaEntry
+  index: number
+  onOpen: () => void
+}): React.JSX.Element {
+  const total = manga.chapters
+  const done = total !== null && entry.chapter >= total
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(index * 0.02, 0.25) }}
+    >
+      <button onClick={onOpen} className="block w-full text-left">
+        <Poster src={manga.cover.large} alt="" className="aspect-[2/3] w-full" />
+        {/* La place de la barre est gardée même sans total : sinon les titres
+            d'une même rangée ne tombent pas à la même hauteur. */}
+        <div
+          className="mt-1.5 h-1 overflow-hidden rounded-full"
+          style={{ background: total ? 'var(--line)' : 'transparent' }}
+        >
+          {total ? (
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${Math.min(100, (entry.chapter / total) * 100)}%`, background: 'var(--accent)' }}
+            />
+          ) : null}
+        </div>
+        <p className="clamp-2 mt-2 text-[0.815rem] font-semibold leading-snug">
+          {manga.title.english ?? manga.title.romaji}
+        </p>
+      </button>
+      <div className="mt-1 flex items-center justify-between gap-2">
+        <p className="text-[0.7rem] tabular-nums text-faint">
+          {entry.chapter > 0 ? `Ch. ${entry.chapter}${total ? ` / ${total}` : ''}` : 'Pas commencé'}
+        </p>
+        {entry.status !== 'completed' && !done && (
+          <button
+            className="chip !h-6 !px-2 !text-[0.68rem]"
+            title="Un chapitre lu aujourd’hui"
+            aria-label={`Un chapitre de plus pour ${manga.title.english ?? manga.title.romaji}`}
+            onClick={() => void window.api.manga.setChapter(manga.id, entry.chapter + 1, false)}
+          >
+            <Plus size={11} />1
+          </button>
+        )}
+      </div>
+    </motion.div>
+  )
+}
+
+/** Les mangas suivis, une étagère par statut, dans l'ordre de la fiche. */
+function MyReading({
+  origin,
+  onOpen
+}: {
+  origin: MangaOrigin | null
+  onOpen: (manga: Manga) => void
+}): React.JSX.Element {
+  const entries = useApp((s) => s.mangaEntries)
+  const mangas = useApp((s) => s.mangas)
+
+  const shelves = useMemo(() => {
+    const rows = [...entries.values()]
+      .map((entry) => ({ entry, manga: mangas.get(entry.mangaId) }))
+      .filter((r): r is { entry: MangaEntry; manga: Manga } => !!r.manga && (!origin || r.manga.origin === origin))
+      // Le dernier touché d'abord : c'est celui qu'on est en train de lire.
+      .sort((a, b) => b.entry.updatedAt - a.entry.updatedAt)
+    return READ_STATUS_ORDER.map((status) => ({ status, rows: rows.filter((r) => r.entry.status === status) })).filter(
+      (s) => s.rows.length > 0
+    )
+  }, [entries, mangas, origin])
+
+  if (!shelves.length) {
+    return (
+      <p className="py-16 text-center text-sm text-faint">
+        {entries.size
+          ? 'Aucun manga de ta liste ne vient de là.'
+          : 'Rien à lire pour l’instant. Ouvre un manga du catalogue et choisis « Je le lis ».'}
+      </p>
+    )
+  }
+
+  return (
+    <>
+      {shelves.map(({ status, rows }) => (
+        <Section
+          key={status}
+          title={READ_STATUS_LABELS[status]}
+          subtitle={`${rows.length} titre${rows.length > 1 ? 's' : ''}`}
+        >
+          <div className="card-grid">
+            {rows.map(({ entry, manga }, i) => (
+              <ShelfCard key={manga.id} manga={manga} entry={entry} index={i} onOpen={() => onOpen(manga)} />
+            ))}
+          </div>
+        </Section>
+      ))}
+    </>
+  )
+}
 
 const TABS: { kind: MangaKind; label: string; icon: typeof Flame }[] = [
   { kind: 'trending', label: 'Tendances', icon: Flame },
@@ -68,7 +182,9 @@ function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: (
 }
 
 export default function MangaPage(): React.JSX.Element {
-  const [tab, setTab] = useState<MangaKind>('trending')
+  const tracked = useApp((s) => s.mangaEntries.size)
+  // Qui lit arrive sur ce qu'il lit ; les autres, sur les tendances.
+  const [tab, setTab] = useState<Tab>(() => (useApp.getState().mangaEntries.size ? 'mine' : 'trending'))
   // `null` : les trois traditions mélangées, comme AniList les sert.
   const [origin, setOrigin] = useState<MangaOrigin | null>(null)
   const [search, setSearch] = useState('')
@@ -76,7 +192,10 @@ export default function MangaPage(): React.JSX.Element {
   const [open, setOpen] = useState<Manga | null>(null)
 
   const searching = debounced.length >= 2
-  const kind: MangaKind = searching ? 'search' : tab
+  const mine = !searching && tab === 'mine'
+  // Ma liste ne demande rien à AniList : la requête du catalogue garde sa
+  // dernière forme, et ne part pas tant qu'on y reste.
+  const kind: MangaKind = searching ? 'search' : tab === 'mine' ? 'trending' : tab
   const country = ORIGIN_FILTERS.find((f) => f.id === origin)?.country
   const key = `${kind}:${searching ? debounced : ''}:${country ?? ''}`
 
@@ -90,6 +209,7 @@ export default function MangaPage(): React.JSX.Element {
   }>({ key: '', items: [], hasMore: false, page: 1, error: null })
 
   useEffect(() => {
+    if (mine) return
     let alive = true
     void window.api.manga
       .browse(kind, 1, searching ? debounced : '', undefined, country)
@@ -103,7 +223,7 @@ export default function MangaPage(): React.JSX.Element {
       alive = false
     }
     // La clé porte la requête entière ; le reste n'est là que pour la composer.
-  }, [key, kind, debounced, searching, country])
+  }, [key, kind, debounced, searching, country, mine])
 
   const fresh = held.key === key
   const items = fresh ? held.items : []
@@ -111,7 +231,7 @@ export default function MangaPage(): React.JSX.Element {
   const hasMore = fresh && held.hasMore
 
   const loadMore = (): void => {
-    if (loading || loadingMore || !hasMore) return
+    if (mine || loading || loadingMore || !hasMore) return
     const next = held.page + 1
     setLoadingMore(true)
     void window.api.manga
@@ -141,8 +261,8 @@ export default function MangaPage(): React.JSX.Element {
     <div className="page">
       <h1 className="title-xl mb-1 text-[1.85rem]">Manga</h1>
       <p className="mb-6 text-[0.85rem] text-muted">
-        Le catalogue AniList, pour lire ce qui prolonge une série. Manga, manhwa et manhua sont distingués — AniList les
-        mélange. Rien n’est suivi ici : cette page se consulte.
+        Ce que tu lis, et le catalogue AniList pour trouver la suite d’une série. Manga, manhwa et manhua sont
+        distingués — AniList les mélange.
       </p>
 
       <div className="glass sticky top-0 z-20 mb-7 rounded-[20px] p-3 backdrop-blur-xl">
@@ -167,6 +287,17 @@ export default function MangaPage(): React.JSX.Element {
           </div>
 
           <div className="flex flex-wrap gap-1.5">
+            <button
+              data-on={mine}
+              className="chip"
+              onClick={() => {
+                setSearch('')
+                setTab('mine')
+              }}
+            >
+              <BookOpen size={13} />
+              Ma lecture{tracked > 0 ? ` · ${tracked}` : ''}
+            </button>
             {TABS.map(({ kind: k, label, icon: Icon }) => (
               <button
                 key={k}
@@ -204,7 +335,9 @@ export default function MangaPage(): React.JSX.Element {
         </div>
       </div>
 
-      {loading ? (
+      {mine ? (
+        <MyReading origin={origin} onOpen={setOpen} />
+      ) : loading ? (
         <PosterSkeletons count={12} />
       ) : held.error ? (
         <ErrorBox message={held.error} />

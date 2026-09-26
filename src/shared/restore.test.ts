@@ -17,7 +17,10 @@ const current: LibraryState = {
   entries: [entry(1, 'watching', 10), entry(2, 'completed', 10)],
   media: [media(1, 'Frieren'), media(2, 'Mob Psycho')],
   history: [ev(1, 1), ev(1, 2), ev(2, 1)],
-  lists: [{ id: 'l1', name: 'Favoris', emoji: '⭐', animeIds: [1], createdAt: 0, updatedAt: 5 }]
+  lists: [{ id: 'l1', name: 'Favoris', emoji: '⭐', animeIds: [1], createdAt: 0, updatedAt: 5 }],
+  mangaEntries: [],
+  mangas: [],
+  reads: []
 }
 
 const backup = {
@@ -64,6 +67,34 @@ describe('mergeSnapshot', () => {
     const after = mergeSnapshot(current, { entries: current.entries }, 'replace')
     expect(after.history).toEqual([])
     expect(previewRestore(current, after, 'replace').episodes).toMatchObject({ lost: 3, gained: 0 })
+  })
+
+  it('fusionne les mangas suivis et leurs séances de lecture', () => {
+    const reading = {
+      ...current,
+      mangaEntries: [{ mangaId: 9, status: 'watching', updatedAt: 10 } as LibraryState['mangaEntries'][number]],
+      reads: [{ mangaId: 9, from: 0, to: 12, at: 1 }]
+    }
+    const copy = {
+      entries: [],
+      mangaEntries: [
+        { mangaId: 9, status: 'paused', updatedAt: 5 } as LibraryState['mangaEntries'][number],
+        { mangaId: 10, status: 'planned', updatedAt: 5 } as LibraryState['mangaEntries'][number]
+      ],
+      reads: [
+        { mangaId: 9, from: 0, to: 12, at: 1 },
+        { mangaId: 10, from: 0, to: 3, at: 2 }
+      ]
+    }
+    const merged = mergeSnapshot(reading, copy, 'merge')
+    expect(merged.mangaEntries.find((e) => e.mangaId === 9)?.status).toBe('watching')
+    expect(merged.mangaEntries).toHaveLength(2)
+    expect(merged.reads).toHaveLength(2)
+    // Une copie d'avant le suivi de lecture ne touche pas aux mangas en fusion…
+    expect(mergeSnapshot(reading, { entries: [] }, 'merge').mangaEntries).toHaveLength(1)
+    // …et l'aperçu d'un remplacement dit qu'ils partent.
+    const p = previewRestore(reading, mergeSnapshot(reading, { entries: [] }, 'replace'), 'replace')
+    expect(p.mangas).toEqual({ before: 1, after: 0 })
   })
 
   it('garde deux passages du même épisode', () => {

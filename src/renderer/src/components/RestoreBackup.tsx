@@ -133,6 +133,7 @@ export default function RestoreBackup({
 
   const shown = preview?.key === key ? preview : null
   const p = shown?.data ?? null
+  const hasMangas = !!p && (p.mangas.before > 0 || p.mangas.after > 0)
   // Remplacer en perdant quelque chose mérite la couleur d'un geste qui coûte.
   const costly = !!p && (p.removed.length > 0 || p.episodes.lost > 0)
 
@@ -227,10 +228,12 @@ export default function RestoreBackup({
                 </p>
               ) : p ? (
                 <div aria-live="polite">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={`grid gap-2 ${hasMangas ? 'grid-cols-4' : 'grid-cols-3'}`}>
                     <Figure label="Séries" before={p.series.before} after={p.series.after} />
                     <Figure label="Épisodes vus" before={p.episodes.before} after={p.episodes.after} />
                     <Figure label="Listes" before={p.lists.before} after={p.lists.after} />
+                    {/* Seulement pour qui lit : trois zéros de plus n'apprendraient rien aux autres. */}
+                    {hasMangas && <Figure label="Mangas" before={p.mangas.before} after={p.mangas.after} />}
                   </div>
                   {p.identical ? (
                     <p className="mt-3 text-[0.82rem] text-muted">

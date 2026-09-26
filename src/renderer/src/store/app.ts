@@ -5,7 +5,10 @@ import {
   type CustomList,
   type Entry,
   type EntryPatch,
+  type Manga,
+  type MangaEntry,
   type Media,
+  type ReadEvent,
   type Prefs,
   type Snapshot,
   type WatchEvent,
@@ -88,6 +91,10 @@ interface AppState {
   finished: number | null
   events: WatchEvent[]
   lists: CustomList[]
+  /** La liste de lecture : les mangas suivis, leurs fiches, leurs séances. */
+  mangaEntries: Map<number, MangaEntry>
+  mangas: Map<number, Manga>
+  reads: ReadEvent[]
   toasts: Toast[]
   paletteOpen: boolean
   /** L'aide des raccourcis, ouvrable par `?` comme depuis les Réglages. */
@@ -161,7 +168,9 @@ function applyTheme(prefs: Prefs): void {
   document.body.classList.toggle('reduce-motion', prefs.reduceMotion)
 }
 
-function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' | 'watched' | 'events' | 'lists'> {
+function indexSnapshot(
+  snapshot: Snapshot
+): Pick<AppState, 'entries' | 'media' | 'watched' | 'events' | 'lists' | 'mangaEntries' | 'mangas' | 'reads'> {
   const entries = new Map(snapshot.entries.map((e) => [e.animeId, e]))
   const watched = new Map<number, Set<number>>()
 
@@ -179,7 +188,10 @@ function indexSnapshot(snapshot: Snapshot): Pick<AppState, 'entries' | 'media' |
     media: new Map(snapshot.media.map((m) => [m.id, m])),
     watched,
     events: snapshot.history,
-    lists: snapshot.lists ?? []
+    lists: snapshot.lists ?? [],
+    mangaEntries: new Map((snapshot.mangaEntries ?? []).map((e) => [e.mangaId, e])),
+    mangas: new Map((snapshot.mangas ?? []).map((m) => [m.id, m])),
+    reads: snapshot.reads ?? []
   }
 }
 
@@ -218,6 +230,9 @@ export const useApp = create<AppState>((set, get) => ({
   finished: null,
   events: [],
   lists: [],
+  mangaEntries: new Map(),
+  mangas: new Map(),
+  reads: [],
   toasts: [],
   paletteOpen: false,
   helpOpen: false,

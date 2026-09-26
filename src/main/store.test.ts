@@ -20,7 +20,11 @@ import {
   snapshot,
   startRewatch,
   updateEvent,
-  isTracked
+  isTracked,
+  removeMangaEntry,
+  setMangaChapter,
+  setMangaEntry,
+  startReread
 } from './store'
 
 function media(id: number, episodes: number | null, duration: number | null = 24): Media {
@@ -407,5 +411,34 @@ describe('isTracked', () => {
   it('ne compte pas une fiche jamais ajoutée', () => {
     cacheMedia([media(2, 12)])
     expect(isTracked(2)).toBe(false)
+  })
+})
+
+describe('lecture des mangas', () => {
+  const manga = (id: number, chapters: number | null) =>
+    ({ id, title: { romaji: `Manga ${id}`, english: null, native: null }, chapters, volumes: null }) as never
+
+  it('avance, se termine au dernier chapitre et garde un rattrapage hors du jour', () => {
+    setMangaEntry(50, { status: 'watching' }, manga(50, 10))
+    setMangaChapter(50, 8, true)
+    setMangaChapter(50, 10, false)
+    const snap = snapshot()
+    expect(snap.mangaEntries?.[0]).toMatchObject({ chapter: 10, status: 'completed' })
+    expect(snap.reads?.map((r) => [r.from, r.to, r.imported ?? false])).toEqual([
+      [0, 8, true],
+      [8, 10, false]
+    ])
+  })
+
+  it('une relecture repart de zéro sans effacer la précédente, retirer efface tout', () => {
+    setMangaEntry(51, { status: 'completed' }, manga(51, 20))
+    expect(snapshot().mangaEntries?.[0].chapter).toBe(20)
+    startReread(51)
+    setMangaChapter(51, 3, false)
+    expect(snapshot().mangaEntries?.[0]).toMatchObject({ chapter: 3, rereads: 1, status: 'watching' })
+    expect(snapshot().reads).toHaveLength(2)
+    removeMangaEntry(51)
+    expect(snapshot().mangaEntries).toEqual([])
+    expect(snapshot().reads).toEqual([])
   })
 })

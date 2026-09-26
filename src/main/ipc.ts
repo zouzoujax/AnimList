@@ -3,6 +3,8 @@ import type {
   BrowseQuery,
   EntryPatch,
   FollowKind,
+  Manga,
+  MangaEntryPatch,
   MangaKind,
   Media,
   Prefs,
@@ -72,6 +74,11 @@ import {
   snapshot,
   startRewatch,
   store,
+  cacheMangas,
+  removeMangaEntry,
+  setMangaChapter,
+  setMangaEntry,
+  startReread,
   updateEvent,
   setWatchLang,
   updateList
@@ -188,10 +195,27 @@ export function registerIpc(): void {
   ipcMain.handle('anime:identify', (_e, bytes: Uint8Array, mime: string) => identifyImage(bytes, mime))
   ipcMain.handle(
     'manga:browse',
-    (_e, kind: MangaKind, page: number, search: string, genre?: string, country?: string) =>
-      anilist.mangas(kind, page, search, genre, getPrefs().showAdult, country)
+    async (_e, kind: MangaKind, page: number, search: string, genre?: string, country?: string) => {
+      const res = await anilist.mangas(kind, page, search, genre, getPrefs().showAdult, country)
+      // Passer devant un manga suivi rafraîchit sa fiche : le nombre de
+      // chapitres d'une série en cours change d'une semaine à l'autre.
+      cacheMangas(res.items)
+      return res
+    }
   )
-  ipcMain.handle('manga:detail', (_e, id: number) => anilist.mangaById(id))
+  ipcMain.handle('manga:detail', async (_e, id: number) => {
+    const manga = await anilist.mangaById(id)
+    cacheMangas([manga])
+    return manga
+  })
+  ipcMain.handle('manga:set-entry', (_e, id: number, patch: MangaEntryPatch, manga?: Manga) =>
+    setMangaEntry(id, patch, manga)
+  )
+  ipcMain.handle('manga:set-chapter', (_e, id: number, chapter: number, imported: boolean, manga?: Manga) =>
+    setMangaChapter(id, chapter, imported === true, manga)
+  )
+  ipcMain.handle('manga:reread', (_e, id: number) => startReread(id))
+  ipcMain.handle('manga:remove', (_e, id: number) => removeMangaEntry(id))
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))
