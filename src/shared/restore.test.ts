@@ -51,6 +51,21 @@ describe('mergeSnapshot', () => {
     expect(current).toEqual(copy)
   })
 
+  it('fusionner reprend une série plus récente dans la copie', () => {
+    const newer = { entries: [entry(2, 'dropped', 20)], lists: [{ ...backup.lists[0], updatedAt: 9 }] }
+    const after = mergeSnapshot(current, newer, 'merge')
+    expect(after.entries.find((e) => e.animeId === 2)?.status).toBe('dropped')
+    expect(after.lists[0].name).toBe('Anciens favoris')
+    // Le nom change, les séries de la liste s'additionnent toujours.
+    expect(after.lists[0].animeIds.sort()).toEqual([1, 3])
+  })
+
+  it('remplacer par une copie sans journal efface le journal, et l’aperçu le dit', () => {
+    const after = mergeSnapshot(current, { entries: current.entries }, 'replace')
+    expect(after.history).toEqual([])
+    expect(previewRestore(current, after, 'replace').episodes).toMatchObject({ lost: 3, gained: 0 })
+  })
+
   it('garde deux passages du même épisode', () => {
     const after = mergeSnapshot(current, { entries: [], history: [ev(1, 1, 1)] }, 'merge')
     expect(after.history).toHaveLength(4)
