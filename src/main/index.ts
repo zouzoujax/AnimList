@@ -9,6 +9,7 @@ import { initTranslate } from './translate'
 import { stopRemote } from './remote'
 import { applyDiscord, stopDiscord } from './discord'
 import { registerMediaScheme, serveMedia } from './videos'
+import { serveManga } from './manga-reader'
 import { registerIpc } from './ipc'
 import { startAiringWatcher } from './notifications'
 import { startFollowWatcher } from './follows'
@@ -62,7 +63,8 @@ const CSP = [
   // `api.trace.moe` sert la vignette de la scène reconnue — la preuve visuelle
   // que la réponse est la bonne, et la seule chose qu'on ne peut pas produire
   // soi-même.
-  "img-src 'self' data: blob: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com https://img1.ak.crunchyroll.com https://api.trace.moe",
+  // `animelist-manga:` sert les pages des mangas du dossier choisi, et rien d'autre.
+  "img-src 'self' data: blob: animelist-manga: https://s4.anilist.co https://img.anili.st https://i.ytimg.com https://artworks.thetvdb.com https://img1.ak.crunchyroll.com https://api.trace.moe",
   // Les fichiers vidéo locaux, servis par src/main/videos.ts. Ce protocole ne
   // donne accès qu'aux dossiers choisis à la main dans l'app.
   "media-src 'self' animelist-media:",
@@ -144,6 +146,7 @@ void app.whenReady().then(() => {
   initTranslate()
   registerIpc()
   serveMedia()
+  serveManga()
 
   if (!isDev) {
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

@@ -1,0 +1,295 @@
+/*
+ * Le lecteur de manga.
+ *
+ * Tout passe par les jetons du thème : l'accent teinte les fonds, les barres
+ * et les contours, jamais le texte. « Cinéma » reste noir quel que soit le
+ * thème — c'est son principe — mais y prend son accent ; « Livre » et
+ * « Épure » vivent dans les couleurs du thème, clair compris.
+ */
+
+.rd-root {
+  color: var(--color-ink);
+}
+
+/* ── Contrôles communs ─────────────────────────────────────────────── */
+
+.rd-seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: calc(var(--radius-ctl) + 2px);
+  background: color-mix(in oklab, var(--rd-ink, var(--color-ink)) 7%, transparent);
+  border: 1px solid color-mix(in oklab, var(--rd-ink, var(--color-ink)) 10%, transparent);
+}
+.rd-seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-ctl);
+  font-size: 0.74rem;
+  white-space: nowrap;
+  font-weight: 600;
+  opacity: 0.7;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+.rd-seg button:hover {
+  opacity: 1;
+}
+.rd-seg button[data-on='true'] {
+  opacity: 1;
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 55%, transparent);
+}
+
+.rd-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
+}
+.rd-icon:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--rd-ink, var(--color-ink)) 12%, transparent);
+}
+.rd-icon:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.rd-icon[data-on='true'] {
+  background: color-mix(in oklab, var(--accent) 28%, transparent);
+}
+
+.rd-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 64px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* La barre de pages : la partie lue prend l'accent. */
+.rd-range {
+  appearance: none;
+  height: 4px;
+  border-radius: 999px;
+  cursor: pointer;
+  background: linear-gradient(
+    to right,
+    var(--accent) 0 var(--p),
+    color-mix(in oklab, var(--rd-ink, var(--color-ink)) 18%, transparent) var(--p) 100%
+  );
+}
+.rd-range[dir='rtl'] {
+  background: linear-gradient(
+    to left,
+    var(--accent) 0 var(--p),
+    color-mix(in oklab, var(--rd-ink, var(--color-ink)) 18%, transparent) var(--p) 100%
+  );
+}
+.rd-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--accent) 60%, transparent),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Ce qui apparaît et disparaît avec la souris. */
+.rd-fade {
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+.rd-fade[data-on='false'] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ── Cinéma ────────────────────────────────────────────────────────── */
+
+.rd-cinema {
+  --rd-ink: #fff;
+  color: #fff;
+  background:
+    radial-gradient(120% 80% at 50% 110%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%), #050507;
+}
+.rd-fade-top,
+.rd-fade-bottom {
+  position: absolute;
+  inset-inline: 0;
+}
+.rd-fade-top {
+  top: 0;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.45) 60%, transparent);
+}
+.rd-fade-top[data-on='false'] {
+  transform: translateY(-10px);
+}
+.rd-fade-bottom {
+  bottom: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.6) 70%, transparent);
+}
+.rd-fade-bottom[data-on='false'] {
+  transform: translateY(12px);
+}
+.rd-strip {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 18px 24px 6px;
+  scrollbar-width: none;
+}
+.rd-strip button {
+  flex: none;
+  width: 48px;
+  height: 70px;
+  border-radius: 6px;
+  overflow: hidden;
+  opacity: 0.45;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  transition:
+    opacity 0.15s,
+    transform 0.15s,
+    outline-color 0.15s;
+}
+.rd-strip button:hover {
+  opacity: 0.85;
+}
+.rd-strip button[data-on='true'] {
+  opacity: 1;
+  outline-color: var(--accent);
+  transform: translateY(-3px);
+}
+.rd-strip img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Livre ─────────────────────────────────────────────────────────── */
+
+.rd-livre {
+  background: var(--bg);
+}
+.rd-side {
+  background: color-mix(in oklab, var(--chrome) 88%, transparent);
+  border-right: 1px solid var(--line);
+  padding-top: 8px;
+}
+.rd-cover {
+  border-radius: 6px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+.rd-vol {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px 10px;
+  border-radius: var(--radius-ctl);
+  font-size: 0.82rem;
+  transition: background 0.15s;
+}
+.rd-vol:hover {
+  background: var(--panel-2);
+}
+.rd-vol[data-on='true'] {
+  background: color-mix(in oklab, var(--accent) 16%, var(--panel));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 40%, transparent);
+}
+.rd-bar {
+  display: block;
+  height: 3px;
+  margin-top: 7px;
+  border-radius: 999px;
+  /* Neutre : certains thèmes teintent --line-2, et un tome jamais ouvert
+     paraissait lu. */
+  background: color-mix(in oklab, var(--color-ink) 12%, transparent);
+  overflow: hidden;
+}
+.rd-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+.rd-desk {
+  background:
+    radial-gradient(90% 70% at 50% 40%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%),
+    color-mix(in oklab, var(--bg) 92%, #000);
+}
+.rd-paper {
+  border-radius: 2px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 50px rgba(0, 0, 0, 0.45),
+    0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.rd-pill {
+  background: color-mix(in oklab, var(--chrome) 92%, transparent);
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Épure ─────────────────────────────────────────────────────────── */
+
+.rd-epure {
+  /* Presque noir, pour que la page soit la seule lumière ; l'accent affleure
+     sur les bords, juste assez pour dire dans quel thème on est. */
+  background:
+    radial-gradient(60% 50% at 0% 100%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%),
+    radial-gradient(60% 50% at 100% 0%, color-mix(in oklab, var(--accent-2) 8%, transparent), transparent 70%),
+    color-mix(in oklab, var(--bg) 70%, #000);
+}
+.rd-thread {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: 2;
+  background: color-mix(in oklab, var(--color-ink) 8%, transparent);
+}
+.rd-thread span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 70%, transparent);
+  transition: width 0.25s ease;
+}
+.rd-thread[dir='rtl'] span {
+  margin-left: auto;
+  background: linear-gradient(270deg, var(--accent), var(--accent-2));
+}
+.rd-menu {
+  /* Opaque : un thème sans flou (Papier) laissait voir la planche à travers. */
+  background: var(--chrome);
+  border-radius: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+.rd-icon-soft {
+  width: 34px;
+  height: 34px;
+}
+
+/* Un thème clair garde ses pages lisibles : pas de fond presque noir. */
+:root[data-theme='paper'] .rd-epure {
+  background: color-mix(in oklab, var(--bg) 88%, #000);
+}
+:root[data-theme='paper'] .rd-desk {
+  background:
+    radial-gradient(90% 70% at 50% 40%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%),
+    color-mix(in oklab, var(--bg) 94%, #000);
+}
+:root[data-theme='paper'] .rd-paper {
+  box-shadow:
+    0 18px 40px rgba(28, 26, 23, 0.22),
+    0 3px 8px rgba(28, 26, 23, 0.14);
+}

@@ -21,7 +21,7 @@ export type Route =
   | { name: 'home' }
   | { name: 'discover'; search?: string }
   | { name: 'library'; genre?: string }
-  | { name: 'manga' }
+  | { name: 'manga'; tab?: 'local' | 'catalogue' }
   | { name: 'calendar' }
   | { name: 'season' }
   | { name: 'journal' }
@@ -43,6 +43,8 @@ export function routeKeyOf(route: Route): string {
       return `studio-${route.studio}`
     case 'library':
       return `library-${route.genre ?? ''}`
+    case 'manga':
+      return `manga-${route.tab ?? ''}`
     default:
       return route.name
   }

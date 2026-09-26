@@ -11,6 +11,7 @@ import type { Manga } from '@shared/types'
 import { ORIGIN_HINTS, ORIGIN_LABELS } from '@shared/origin'
 import { Poster } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
+import { izneoSearch } from '@/lib/izneo'
 
 export const MANGA_STATUS: Record<string, string> = {
   FINISHED: 'Terminé',
@@ -70,6 +71,15 @@ export function MangaSheet({ manga, onClose }: { manga: Manga; onClose: () => vo
       <div className="flex justify-end gap-2 border-t px-5 py-3" style={{ borderColor: 'var(--line)' }}>
         <button className="btn" onClick={onClose}>
           Fermer
+        </button>
+        {/* izneo vend ses mangas mais ne les laisse lire que chez lui : on y
+            mène, on ne les en sort pas. */}
+        <button
+          className="btn"
+          onClick={() => void window.api.app.openExternal(izneoSearch(manga.title.english ?? manga.title.romaji))}
+        >
+          Chercher sur izneo
+          <ExternalLink size={13} />
         </button>
         <button className="btn btn-primary" onClick={() => void window.api.app.openExternal(manga.siteUrl)}>
           <BookOpen size={14} />

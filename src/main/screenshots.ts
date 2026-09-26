@@ -34,7 +34,36 @@ export interface ShotPlan {
    */
   scrollTo?: string
   /** CSS selector to click before capturing, for states behind an interaction. */
-  click?: string
+  click?: string | string[]
+  /** Attente après chaque clic. Six secondes par défaut, pour la bande-annonce. */
+  clickWaitMs?: number
+  /** Script lancé juste avant la prise, pour réveiller un habillage qui se cache. */
+  beforeShot?: string
+}
+
+/** Réveille l'habillage : sans souris, Cinéma et Épure se cachent au bout de deux secondes. */
+const WAKE = "window.dispatchEvent(new MouseEvent('mousemove'))"
+
+/**
+ * Le lecteur de manga, sur les tomes inventés de la démonstration. Les prises
+ * s'enchaînent : chacune part de l'habillage laissé par la précédente, d'où
+ * l'ordre des clics — un sélecteur absent est simplement sauté.
+ */
+function readerShots(): ShotPlan[] {
+  const base = { route: { name: 'manga', tab: 'local' }, settleMs: 800, clickWaitMs: 1300 }
+  return [
+    {
+      ...base,
+      name: 'lecteur-cinema',
+      click: ['[data-shot="resume"]', '[data-menu]', '[data-skin="cinema"]', '[data-mode="single"]'],
+      beforeShot: WAKE
+    },
+    { ...base, name: 'lecteur-cinema-nu', settleMs: 3400 },
+    { ...base, name: 'lecteur-livre', click: ['[data-skin="livre"]', '[data-mode="double"]'] },
+    { ...base, name: 'lecteur-epure', click: ['[data-mode="single"]', '[data-skin="epure"]'], beforeShot: WAKE },
+    { ...base, name: 'lecteur-epure-menu', click: ['[data-menu]'] },
+    { ...base, name: 'lecteur-defilement', click: ['[data-skin="cinema"]', '[data-mode="scroll"]'], beforeShot: WAKE }
+  ]
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -69,7 +98,9 @@ export function screenshotRun(): { outDir: string; plan: ShotPlan[]; themes: The
     // Le tri de la saison interroge AniList sur toute la saison, en deux ou
     // trois pages : il lui faut plus de temps que les autres.
     { name: 'saison', route: { name: 'season' }, settleMs: 6000 },
-    { name: 'manga', route: { name: 'manga' }, settleMs: 2000 },
+    { name: 'manga', route: { name: 'manga', tab: 'catalogue' }, settleMs: 2000 },
+    { name: 'mangas', route: { name: 'manga', tab: 'local' }, settleMs: 1500 },
+    ...readerShots(),
     // Les expériences ont leur propre page de badges ; ailleurs, la route
     // retombe sur les Statistiques.
     { name: 'mur-badges', route: { name: 'badges' }, settleMs: 1600 },
@@ -165,13 +196,18 @@ async function walk(win: BrowserWindow, dir: string, plan: ShotPlan[]): Promise<
       await sleep(900)
     }
 
-    if (shot.click) {
+    for (const selector of shot.click === undefined ? [] : [shot.click].flat()) {
       const clicked = (await win.webContents.executeJavaScript(
-        `(() => { const el = document.querySelector(${JSON.stringify(shot.click)}); if (!el) return false; el.click(); return true })()`
+        `(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return false; el.click(); return true })()`
       )) as boolean
-      if (!clicked) process.stdout.write(`  (rien à cliquer pour ${shot.name})\n`)
+      if (!clicked) process.stdout.write(`  (rien à cliquer pour ${shot.name} : ${selector})\n`)
       // The player has to fetch and start.
-      await sleep(6000)
+      await sleep(shot.clickWaitMs ?? 6000)
+    }
+
+    if (shot.beforeShot) {
+      await win.webContents.executeJavaScript(`${shot.beforeShot}; void 0`)
+      await sleep(400)
     }
 
     const image = await win.webContents.capturePage()

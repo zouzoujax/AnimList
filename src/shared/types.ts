@@ -620,6 +620,10 @@ export interface Prefs {
   phonePushServer: string
   /** Le sujet, tiré au hasard à l'allumage. Il fait office de mot de passe. */
   phonePushTopic: string
+  /** Lecteur de manga : habillage, disposition des pages et sens de lecture. */
+  readerSkin: ReaderSkin
+  readerMode: ReaderMode
+  readerDir: ReaderDir
   /**
    * Les surnoms donnés à une série, par identifiant.
    *
@@ -956,6 +960,43 @@ export interface LocalFolder {
   episodes: LocalEpisode[]
 }
 
+/** Un tome — ou un chapitre — posé sur le disque. */
+export interface LocalVolume {
+  /** Chemin de l'archive ou du dossier : il sert aussi d'identifiant. */
+  id: string
+  name: string
+  number: number | null
+  /** Nommé « chapitre » plutôt que « tome » sur le disque. */
+  chapter: boolean
+  pages: number
+  /** Page où la lecture s'est arrêtée, 0 si jamais ouvert. */
+  page: number
+  readAt: number | null
+  cover: string | null
+}
+
+export interface LocalSeries {
+  id: string
+  title: string
+  volumes: LocalVolume[]
+  cover: string | null
+  /** Dernière lecture d'un de ses tomes. */
+  readAt: number | null
+}
+
+export interface MangaShelf {
+  /** Le dossier des mangas, choisi à la main ; null tant qu'il n'y en a pas. */
+  root: string | null
+  missing: boolean
+  series: LocalSeries[]
+}
+
+/** Habillage du lecteur de manga, en essai : un seul restera. */
+export type ReaderSkin = 'cinema' | 'livre' | 'epure'
+export type ReaderMode = 'single' | 'double' | 'scroll'
+/** Sens de lecture : de droite à gauche pour un manga, l'inverse pour une BD. */
+export type ReaderDir = 'rtl' | 'ltr'
+
 export interface UpdateStatus {
   phase: UpdatePhase
   version: string | null
@@ -1093,5 +1134,8 @@ export const DEFAULT_PREFS: Prefs = {
   phonePush: false,
   phonePushServer: 'https://ntfy.sh',
   phonePushTopic: '',
+  readerSkin: 'cinema',
+  readerMode: 'single',
+  readerDir: 'rtl',
   aliases: {}
 }
