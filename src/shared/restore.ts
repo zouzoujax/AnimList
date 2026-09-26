@@ -107,10 +107,33 @@ export function mergeSnapshot(current: LibraryState, incoming: Partial<Snapshot>
   // d'une liste de lecture vide — c'est ce que la copie contenait.
   const mangas = new Map(base.mangas.map((m) => [m.id, m]))
   for (const m of incoming.mangas ?? []) mangas.set(m.id, m)
-  const reads = [...base.reads]
+  const mangaEntries = newest(base.mangaEntries, incoming.mangaEntries, (e) => e.mangaId)
+
+  /**
+   * Le journal d'un manga suit sa fiche, il ne s'unit pas.
+   *
+   * Reculer rogne les séances : une copie d'avant la correction porte encore
+   * « 0 → 20 » quand l'état vivant dit « 0 → 10 ». Les unir compterait trente
+   * chapitres pour une fiche arrêtée au dixième. Le journal vient donc du côté
+   * dont la fiche l'emporte ; à égalité, les deux disent la même lecture et
+   * l'union ne fait que dédoublonner.
+   */
+  const stamp = (list: MangaEntry[] | undefined): Map<number, number> =>
+    new Map((list ?? []).map((e) => [e.mangaId, e.updatedAt]))
+  const held = stamp(base.mangaEntries)
+  const came = stamp(incoming.mangaEntries)
+  const side = (id: number): 'base' | 'incoming' | 'both' => {
+    const a = held.get(id)
+    const b = came.get(id)
+    if (a === undefined && b === undefined) return 'both'
+    if (b === undefined) return 'base'
+    if (a === undefined) return 'incoming'
+    return a === b ? 'both' : a > b ? 'base' : 'incoming'
+  }
+  const reads = base.reads.filter((ev) => side(ev.mangaId) !== 'incoming')
   const knownReads = new Set(reads.map(readKey))
   for (const ev of incoming.reads ?? []) {
-    if (knownReads.has(readKey(ev))) continue
+    if (side(ev.mangaId) === 'base' || knownReads.has(readKey(ev))) continue
     reads.push(ev)
     knownReads.add(readKey(ev))
   }
@@ -120,7 +143,7 @@ export function mergeSnapshot(current: LibraryState, incoming: Partial<Snapshot>
     media: [...media.values()],
     history,
     lists,
-    mangaEntries: newest(base.mangaEntries, incoming.mangaEntries, (e) => e.mangaId),
+    mangaEntries,
     mangas: [...mangas.values()],
     reads
   }

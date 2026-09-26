@@ -97,6 +97,23 @@ describe('mergeSnapshot', () => {
     expect(p.mangas).toEqual({ before: 1, after: 0 })
   })
 
+  it('ne rend pas les chapitres qu’une correction a retirés', () => {
+    // Lu jusqu'au 20, sauvegardé, puis ramené au 10 : la séance est rognée.
+    const corrected = {
+      ...current,
+      mangaEntries: [{ mangaId: 9, chapter: 10, updatedAt: 20 } as LibraryState['mangaEntries'][number]],
+      reads: [{ mangaId: 9, from: 0, to: 10, at: 1 }]
+    }
+    const copy = {
+      ...current,
+      mangaEntries: [{ mangaId: 9, chapter: 20, updatedAt: 10 } as LibraryState['mangaEntries'][number]],
+      reads: [{ mangaId: 9, from: 0, to: 20, at: 1 }]
+    }
+    expect(mergeSnapshot(corrected, copy, 'merge').reads).toEqual([{ mangaId: 9, from: 0, to: 10, at: 1 }])
+    // Dans l'autre sens, la copie plus récente apporte son journal entier.
+    expect(mergeSnapshot(copy, corrected, 'merge').reads).toEqual(corrected.reads)
+  })
+
   it('garde deux passages du même épisode', () => {
     const after = mergeSnapshot(current, { entries: [], history: [ev(1, 1, 1)] }, 'merge')
     expect(after.history).toHaveLength(4)
