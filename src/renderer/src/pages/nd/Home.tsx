@@ -2,11 +2,13 @@ import { ArrowUpRight, Check, Compass, Dices } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FollowNews, Media } from '@shared/types'
+import { MIN_BEHIND } from '@shared/catch-up'
 import { AnimeCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { EpisodeStrip, SeriesRow, plural } from '@/components/nd'
 import { Soiree } from '@/components/Soiree'
 import { Dormant } from '@/components/Dormant'
+import { PlanGrid, dayName, planSentence, useCatchUpPlan } from '@/components/CatchUp'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, formatTime, isUnaired, startOfDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
@@ -167,12 +169,7 @@ function WeekGrid({
           const at = m.nextAiring!.airingAt * 1000
           return at >= day && at < end
         })
-        const label =
-          i === 0
-            ? "Aujourd'hui"
-            : i === 1
-              ? 'Demain'
-              : new Date(day).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric' })
+        const label = dayName(i, day)
         return (
           <div key={day} className="week-day" data-empty={items.length === 0}>
             <p className="week-day-name">{label}</p>
@@ -215,6 +212,7 @@ export default function HomePage(): React.JSX.Element {
   const now = useNow()
   const [discoverTab, setDiscoverTab] = useState<'trending' | 'season'>('trending')
   const [queueOpen, setQueueOpen] = useState(false)
+  const [weekTab, setWeekTab] = useState<'airing' | 'plan'>('airing')
 
   const trending = useBrowse({ kind: 'trending', perPage: 20 })
   const season = useBrowse({ kind: 'season', perPage: 20 })
@@ -299,6 +297,10 @@ export default function HomePage(): React.JSX.Element {
       .filter((m): m is Media => !!m?.nextAiring && m.nextAiring.airingAt * 1000 < horizon)
       .sort((a, b) => a.nextAiring!.airingAt - b.nextAiring!.airingAt)
   }, [entries, mediaMap, now])
+
+  const plan = useCatchUpPlan(now)
+  const planWorth = plan.behind.episodes >= MIN_BEHIND
+  const showPlan = planWorth && weekTab === 'plan'
 
   const heroMedia = continueList[0] ?? trending.items[0]
   const heroResume = heroMedia && continueList[0] ? nextEpisodeOf(state, heroMedia.id, heroMedia.episodes) : null
@@ -423,18 +425,45 @@ export default function HomePage(): React.JSX.Element {
             ce qu'on leur demande n'est pas de continuer mais de se refermer. */}
         <Dormant />
 
-        {upcoming.length > 0 && (
+        {(upcoming.length > 0 || planWorth) && (
           <section id="semaine" className="span-all mb-9">
             <header className="mb-3.5 flex items-end justify-between gap-4 px-1">
               <div>
-                <h2 className="title-xl text-[1.32rem] leading-tight">Cette semaine</h2>
-                <p className="mt-0.5 text-[0.8rem] text-muted">Les prochains épisodes de tes séries, jour par jour</p>
+                {planWorth ? (
+                  <div className="flex items-center gap-3" role="tablist" aria-label="Que montrer de la semaine">
+                    <button
+                      role="tab"
+                      aria-selected={!showPlan}
+                      className="home-tab title-xl"
+                      onClick={() => setWeekTab('airing')}
+                    >
+                      Cette semaine
+                    </button>
+                    <button
+                      role="tab"
+                      aria-selected={showPlan}
+                      className="home-tab title-xl"
+                      onClick={() => setWeekTab('plan')}
+                    >
+                      Rattrapage
+                    </button>
+                  </div>
+                ) : (
+                  <h2 className="title-xl text-[1.32rem] leading-tight">Cette semaine</h2>
+                )}
+                <p className="mt-0.5 text-[0.8rem] text-muted">
+                  {showPlan ? planSentence(plan, now) : 'Les prochains épisodes de tes séries, jour par jour'}
+                </p>
               </div>
               <button className="btn btn-ghost" onClick={() => navigate({ name: 'calendar' })}>
                 Calendrier <ArrowUpRight size={14} />
               </button>
             </header>
-            <WeekGrid upcoming={upcoming} now={now} onHover={lightUp} />
+            {showPlan ? (
+              <PlanGrid plan={plan} now={now} onHover={lightUp} />
+            ) : (
+              <WeekGrid upcoming={upcoming} now={now} onHover={lightUp} />
+            )}
           </section>
         )}
 

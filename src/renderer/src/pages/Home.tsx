@@ -2,10 +2,12 @@ import { ArrowUpRight, Check, Clock, Compass, Dices, Play, Sparkles } from 'luci
 import { motion } from 'motion/react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FollowNews, Media } from '@shared/types'
+import { MIN_BEHIND } from '@shared/catch-up'
 import { AnimeCard, ContinueCard, MiniCard } from '@/components/AnimeCard'
 import { EmptyState, ErrorBox, PosterSkeletons, Poster, RowScroller, Section } from '@/components/ui'
 import { Soiree } from '@/components/Soiree'
 import { Dormant } from '@/components/Dormant'
+import { PlanGrid, planSentence, useCatchUpPlan } from '@/components/CatchUp'
 import { rgba, toneAccent } from '@/lib/color'
 import { airingLabel, countdown, isUnaired, relativeDay, titleOf } from '@/lib/format'
 import { useBrowse, useNow } from '@/lib/hooks'
@@ -202,6 +204,7 @@ export default function HomePage(): React.JSX.Element {
   const state = useApp()
   const refreshed = useRef(false)
   const now = useNow()
+  const plan = useCatchUpPlan(now)
 
   const trending = useBrowse({ kind: 'trending', perPage: 20 })
   const season = useBrowse({ kind: 'season', perPage: 20 })
@@ -439,6 +442,14 @@ export default function HomePage(): React.JSX.Element {
                 />
               ))}
             </RowScroller>
+          </Section>
+        )}
+
+        {/* « À rattraper » dit quoi ; le plan dit quand. Seulement pour ce
+            qui est encore en diffusion : c'est là qu'être à jour a un sens. */}
+        {plan.behind.episodes >= MIN_BEHIND && (
+          <Section title="Pour être à jour" subtitle={planSentence(plan, now)}>
+            <PlanGrid plan={plan} now={now} onHover={lightUp} />
           </Section>
         )}
 
