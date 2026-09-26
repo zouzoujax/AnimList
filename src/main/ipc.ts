@@ -77,6 +77,7 @@ import {
   cacheMangas,
   removeMangaEntry,
   setMangaChapter,
+  advanceManga,
   setMangaEntry,
   startReread,
   updateEvent,
@@ -214,6 +215,7 @@ export function registerIpc(): void {
   ipcMain.handle('manga:set-chapter', (_e, id: number, chapter: number, imported: boolean, manga?: Manga) =>
     setMangaChapter(id, chapter, imported === true, manga)
   )
+  ipcMain.handle('manga:advance', (_e, id: number, by: number) => advanceManga(id, Number(by) || 0))
   ipcMain.handle('manga:reread', (_e, id: number) => startReread(id))
   ipcMain.handle('manga:remove', (_e, id: number) => removeMangaEntry(id))
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))

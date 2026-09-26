@@ -983,6 +983,19 @@ export function setMangaChapter(mangaId: number, chapter: number, imported: bool
 }
 
 /**
+ * Avance d'un nombre de chapitres, compté ici.
+ *
+ * Le « +1 » de la fenêtre et celui du téléphone envoyaient le numéro visé,
+ * calculé sur ce qu'ils affichaient : deux appuis rapides partaient tous deux
+ * avec « 13 », et la lecture n'avançait que d'un. Le pas, lui, s'ajoute à ce
+ * que le fichier tient au moment où il arrive.
+ */
+export function advanceManga(mangaId: number, by: number): MangaEntry {
+  const held = db.mangaEntries[String(mangaId)]
+  return setMangaChapter(mangaId, (held?.chapter ?? 0) + Math.round(by), false)
+}
+
+/**
  * Recommence un manga. Les séances de la lecture précédente restent au
  * journal — elles ont eu lieu —, la progression repart de zéro.
  */

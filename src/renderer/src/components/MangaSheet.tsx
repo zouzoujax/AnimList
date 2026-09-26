@@ -167,7 +167,7 @@ function Reading({ manga }: { manga: Manga }): React.JSX.Element {
           value={entry.chapter}
           total={total}
           stepLabel="Un chapitre lu aujourd’hui"
-          onStep={(d) => void api.setChapter(manga.id, entry.chapter + d, false)}
+          onStep={(d) => void api.advance(manga.id, d)}
           onSet={(n) => void api.setChapter(manga.id, n, true)}
         />
         <Counter

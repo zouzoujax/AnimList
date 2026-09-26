@@ -79,7 +79,7 @@ function ShelfCard({
             className="chip !h-6 !px-2 !text-[0.68rem]"
             title="Un chapitre lu aujourd’hui"
             aria-label={`Un chapitre de plus pour ${manga.title.english ?? manga.title.romaji}`}
-            onClick={() => void window.api.manga.setChapter(manga.id, entry.chapter + 1, false)}
+            onClick={() => void window.api.manga.advance(manga.id, 1)}
           >
             <Plus size={11} />1
           </button>

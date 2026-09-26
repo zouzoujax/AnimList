@@ -23,6 +23,7 @@ import {
   isTracked,
   removeMangaEntry,
   setMangaChapter,
+  advanceManga,
   setMangaEntry,
   startReread
 } from './store'
@@ -428,6 +429,14 @@ describe('lecture des mangas', () => {
       [0, 8, true],
       [8, 10, false]
     ])
+  })
+
+  it('deux appuis rapides sur +1 font deux chapitres', () => {
+    setMangaEntry(52, { status: 'watching' }, manga(52, null))
+    advanceManga(52, 1)
+    advanceManga(52, 1)
+    expect(snapshot().mangaEntries?.[0].chapter).toBe(2)
+    expect(snapshot().reads).toHaveLength(2)
   })
 
   it('une relecture repart de zéro sans effacer la précédente, retirer efface tout', () => {

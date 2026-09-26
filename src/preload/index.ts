@@ -137,6 +137,8 @@ const api = {
     /** `imported` : un rattrapage tapé, pas une lecture du jour. */
     setChapter: (id: number, chapter: number, imported: boolean, manga?: Manga): Promise<MangaEntry> =>
       ipcRenderer.invoke('manga:set-chapter', id, chapter, imported, manga),
+    /** Avance de `by` chapitres depuis ce que le fichier tient : deux appuis rapides font deux. */
+    advance: (id: number, by: number): Promise<MangaEntry> => ipcRenderer.invoke('manga:advance', id, by),
     reread: (id: number): Promise<MangaEntry | null> => ipcRenderer.invoke('manga:reread', id),
     remove: (id: number): Promise<void> => ipcRenderer.invoke('manga:remove', id)
   },
