@@ -4,13 +4,17 @@ import {
   cacheMedia,
   clearWatched,
   flush,
+  getFolder,
   getPrefs,
+  getWatchLang,
   importSnapshot,
   initStore,
   removeEntry,
   resetAll,
   setEntry,
   setPrefs,
+  setFolder,
+  setWatchLang,
   setWatched,
   setWatchedUpTo,
   snapshot,
@@ -337,6 +341,20 @@ describe('importSnapshot', () => {
     importSnapshot(incoming({ entries: [], media: [media(2, 12)] }), 'replace')
     expect(snapshot().entries).toHaveLength(0)
     expect(snapshot().history).toHaveLength(0)
+  })
+
+  it('remplacer garde ce qu’aucune copie ne contient', () => {
+    // Dossiers d'épisodes, langues, positions, suivis : propres à ce PC, et
+    // absents de toute sauvegarde. Les effacer serait sans retour possible,
+    // la copie de sécurité prise avant ne les portant pas non plus.
+    setEntry(1, { status: 'watching' }, media(1, 12))
+    setFolder(1, 'D:/Animes/Anime 1')
+    setWatchLang(1, 'vf')
+    importSnapshot(incoming({ entries: [], media: [media(2, 12)] }), 'replace')
+    expect(getFolder(1)).toBe('D:/Animes/Anime 1')
+    expect(getWatchLang(1)).toBe('vf')
+    setFolder(1, null)
+    setWatchLang(1, null)
   })
 
   it('preserves the imported flag so stats can exclude those rows', () => {

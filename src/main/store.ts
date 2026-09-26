@@ -862,10 +862,11 @@ function settleFinished(): number {
 export function importSnapshot(incoming: Snapshot, mode: 'merge' | 'replace'): void {
   touchJournal()
   const after = mergeSnapshot(libraryState(), incoming, mode)
-  if (mode === 'replace') {
-    db = emptyDb()
-    db.prefs = { ...DEFAULT_PREFS, ...incoming.prefs }
-  }
+  // Remplacer ne remplace que ce que la copie contient. Les dossiers
+  // d'épisodes, les positions de lecture, les suivis, les langues et les
+  // épisodes décochés ne sont dans aucune sauvegarde : repartir d'une base
+  // vide les effaçait sans retour, la copie de sécurité ne les portant pas.
+  if (mode === 'replace') db.prefs = { ...DEFAULT_PREFS, ...incoming.prefs }
   db.media = Object.fromEntries(after.media.map((m) => [String(m.id), m]))
   db.entries = Object.fromEntries(after.entries.map((e) => [String(e.animeId), e]))
   db.history = after.history
