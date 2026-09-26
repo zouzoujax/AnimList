@@ -706,9 +706,16 @@ export function startRemote(port = REMOTE_PORT): Promise<RemoteStatus> {
       })
     })
 
-    next.on('error', (err) => {
+    next.on('error', (err: NodeJS.ErrnoException) => {
       server = null
-      status = { on: false, url: null, ics: null, token: null, port, error: err.message }
+      // Le cas courant : une autre AnimeList ouverte — l'installée à côté de
+      // celle de développement — a déjà sa télécommande allumée. Le message
+      // de Node, « listen EADDRINUSE », ne le disait à personne.
+      const error =
+        err.code === 'EADDRINUSE'
+          ? `Le port ${port} est déjà pris : une autre fenêtre AnimeList a sans doute sa télécommande allumée. Éteins-la, puis réessaie.`
+          : err.message
+      status = { on: false, url: null, ics: null, token: null, port, error }
       resolve(status)
     })
 
