@@ -267,8 +267,9 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
     const needle = search.trim().toLowerCase()
     const scores = new Map<number, number>()
     const inList = activeList ? new Set(activeList.animeIds) : null
-    // Une recherche explicite doit retrouver une saison repliée.
-    const hide = !showSequels && !needle && folded.size > 0
+    // Une recherche explicite doit retrouver une saison repliée, et un filtre
+    // de statut montre tout ce qu'il annonce : le repli ne vaut que pour « Tout ».
+    const hide = !showSequels && !needle && filter === 'all' && folded.size > 0
     const filtered = rows.filter(({ entry, media }) => {
       if (hide && folded.has(media.id)) return false
       if (inList && !inList.has(media.id)) return false
@@ -421,7 +422,7 @@ export default function LibraryPage({ initialGenre }: { initialGenre?: string })
               <span className="tabular-nums opacity-60">{counts[f.id] ?? 0}</span>
             </button>
           ))}
-          {folded.size > 0 && (
+          {folded.size > 0 && filter === 'all' && (
             <button
               data-on={showSequels}
               className="chip"
