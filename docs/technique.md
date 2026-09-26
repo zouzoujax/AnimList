@@ -46,6 +46,13 @@ src/
   (`imported`), compté au total mais pas au mois. Logique pure dans `shared/reading.ts` ; les
   sauvegardes et la restauration les portent (`shared/restore.ts`). Pas de badges : ils sont
   bâtis sur des épisodes et des durées.
+- **Mangas dans le calendrier** : AniList ne date que le début et la fin de parution, et la
+  première diffusion des adaptations (`shared/manga-calendar.ts`). Les chapitres parus
+  viennent de **MangaDex** (`main/mangadex.ts`, logique dans `shared/mangadex.ts`), en
+  français et en anglais : série retrouvée par son lien AniList (`links.al`), jamais par le
+  titre ; chaque numéro daté de sa première apparition ; une requête toutes les 250 ms ;
+  cache disque `mangadex-cache.json` (association à vie, introuvable revu sous 7 jours,
+  chapitres 6 h). Piège : `includeExternalUrl=1` ne garde *que* les chapitres externes.
 - **Sécurité** : `contextIsolation` activé, `nodeIntegration` désactivé, CSP stricte en
   production, navigation externe forcée vers le navigateur système.
 

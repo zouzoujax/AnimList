@@ -6,6 +6,7 @@ import type { Slot } from '@shared/soiree'
 import type { Tree } from '@shared/franchise'
 import type { Lang } from '@shared/langs'
 import type { MangaDates } from '@shared/manga-calendar'
+import type { ChapterRelease } from '@shared/mangadex'
 
 import type {
   ApiStatus,
@@ -142,6 +143,8 @@ const api = {
     advance: (id: number, by: number): Promise<MangaEntry> => ipcRenderer.invoke('manga:advance', id, by),
     /** Les dates des mangas suivis, pour le calendrier : parution et adaptations. */
     dates: (): Promise<MangaDates[]> => ipcRenderer.invoke('manga:dates'),
+    /** Les chapitres parus de chaque manga suivi, d'après MangaDex (français et anglais). */
+    chapters: (): Promise<Record<number, ChapterRelease[]>> => ipcRenderer.invoke('manga:chapters'),
     /** Le passage quotidien des mangas suivis, tout de suite : fins de parution et adaptations. */
     sweep: (): Promise<{ news: unknown[]; checked: number }> => ipcRenderer.invoke('manga:sweep'),
     reread: (id: number): Promise<MangaEntry | null> => ipcRenderer.invoke('manga:reread', id),

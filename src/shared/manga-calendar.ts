@@ -7,9 +7,13 @@
  * plus. Une date sans jour ne se place pas sur une semaine : elle est tue
  * plutôt que posée au 1er du mois.
  *
+ * Les chapitres, eux, viennent de MangaDex (`mangadex.ts`) : `chapterEvents`
+ * les pose à côté.
+ *
  * Pur et testé : la fenêtre décide seulement où poser ce qui sort d'ici.
  */
 
+import type { ChapterLang, ChapterRelease } from './mangadex'
 import type { MangaEntry } from './types'
 
 /** Une date d'AniList : l'année seule, le mois, ou le jour. */
@@ -41,6 +45,16 @@ export type MangaEvent =
       mangaId: number
       day: string
       anime: { id: number; title: string; cover: string; color: string | null }
+    }
+  | {
+      /** Des chapitres devenus lisibles ce jour-là, d'après MangaDex. */
+      kind: 'chapters'
+      mangaId: number
+      day: string
+      /** Le plus petit et le plus grand numéro du jour : égaux pour un seul chapitre. */
+      from: number
+      to: number
+      langs: ChapterLang[]
     }
 
 /** `2026-10-04`, ou `null` si le jour manque. */
@@ -82,6 +96,38 @@ export function mangaEvents(dates: MangaDates[], entries: MangaEntry[], ownAnime
         mangaId: m.id,
         day,
         anime: { id: a.id, title: a.title, cover: a.cover, color: a.color }
+      })
+    }
+  }
+  return out
+}
+
+/**
+ * Les chapitres parus, un jour par carte.
+ *
+ * Une série qui sort trois chapitres d'un coup fait une carte « Ch. 12 – 14 »,
+ * pas trois : la colonne du jour resterait sinon illisible. Les langues sont
+ * celles de tout le lot.
+ */
+export function chapterEvents(releases: Record<number, ChapterRelease[]>, entries: MangaEntry[]): MangaEvent[] {
+  const out: MangaEvent[] = []
+  for (const entry of entries) {
+    if (entry.status === 'dropped') continue
+    const byDay = new Map<string, ChapterRelease[]>()
+    for (const r of releases[entry.mangaId] ?? []) {
+      const day = dayOfTime(r.at)
+      byDay.set(day, [...(byDay.get(day) ?? []), r])
+    }
+    for (const [day, list] of byDay) {
+      const numbers = list.map((r) => r.chapter)
+      const langs = new Set(list.flatMap((r) => r.langs))
+      out.push({
+        kind: 'chapters',
+        mangaId: entry.mangaId,
+        day,
+        from: Math.min(...numbers),
+        to: Math.max(...numbers),
+        langs: (['fr', 'en'] as ChapterLang[]).filter((l) => langs.has(l))
       })
     }
   }

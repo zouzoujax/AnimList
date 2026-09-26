@@ -22,7 +22,9 @@ import { MANGA_STATUS, MangaSheet, READ_STATUS_ORDER } from '@/components/MangaS
 import { ErrorBox, Modal, Poster, PosterSkeletons, Section, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { useDebounced, useInView } from '@/lib/hooks'
+import { useMangaChapters } from '@/lib/manga-chapters'
 import { useApp } from '@/store/app'
+import { unreadCount } from '@shared/mangadex'
 
 type Tab = MangaKind | 'mine'
 
@@ -35,11 +37,14 @@ type Tab = MangaKind | 'mine'
 function ShelfCard({
   manga,
   entry,
+  unread,
   index,
   onOpen
 }: {
   manga: Manga
   entry: MangaEntry
+  /** Chapitres parus d'après MangaDex, pas encore lus. */
+  unread: number
   index: number
   onOpen: () => void
 }): React.JSX.Element {
@@ -73,6 +78,17 @@ function ShelfCard({
       <div className="mt-1 flex items-center justify-between gap-2">
         <p className="text-[0.7rem] tabular-nums text-faint">
           {entry.chapter > 0 ? `Ch. ${entry.chapter}${total ? ` / ${total}` : ''}` : 'Pas commencé'}
+          {/* Seulement une fois commencé : « 153 à lire » sur un manga pas ouvert
+              n'apprend rien que le numéro du dernier chapitre. */}
+          {entry.chapter > 0 && unread > 0 && (
+            <span
+              className="ml-1.5 whitespace-nowrap rounded-full px-1.5 py-px text-[0.64rem] font-semibold text-ink"
+              style={{ background: 'color-mix(in oklab, var(--accent) 28%, transparent)' }}
+              title="Chapitres parus en français ou en anglais, d’après MangaDex"
+            >
+              {unread} à lire
+            </span>
+          )}
         </p>
         {entry.status !== 'completed' && !done && (
           <button
@@ -99,6 +115,7 @@ function MyReading({
 }): React.JSX.Element {
   const entries = useApp((s) => s.mangaEntries)
   const mangas = useApp((s) => s.mangas)
+  const chapters = useMangaChapters()
 
   const shelves = useMemo(() => {
     const rows = [...entries.values()]
@@ -131,7 +148,14 @@ function MyReading({
         >
           <div className="card-grid">
             {rows.map(({ entry, manga }, i) => (
-              <ShelfCard key={manga.id} manga={manga} entry={entry} index={i} onOpen={() => onOpen(manga)} />
+              <ShelfCard
+                key={manga.id}
+                manga={manga}
+                entry={entry}
+                unread={unreadCount(chapters[manga.id] ?? [], entry.chapter)}
+                index={i}
+                onOpen={() => onOpen(manga)}
+              />
             ))}
           </div>
         </Section>

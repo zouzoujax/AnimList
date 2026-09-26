@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dayOf, dayOfTime, mangaEvents, type MangaDates } from './manga-calendar'
+import { chapterEvents, dayOf, dayOfTime, mangaEvents, type MangaDates } from './manga-calendar'
 import type { LibraryStatus, MangaEntry } from './types'
 
 const entry = (mangaId: number, status: LibraryStatus = 'watching'): MangaEntry => ({ mangaId, status }) as MangaEntry
@@ -63,5 +63,30 @@ describe('mangaEvents', () => {
       new Set()
     )
     expect(events).toEqual([])
+  })
+})
+
+describe('chapterEvents', () => {
+  const at = (day: number, hour = 12): number => new Date(2026, 8, day, hour).getTime()
+
+  it('réunit les chapitres d’un même jour, et garde les langues du lot', () => {
+    const events = chapterEvents(
+      {
+        1: [
+          { chapter: 14, at: at(20, 18), langs: ['en'] },
+          { chapter: 13, at: at(20, 9), langs: ['fr', 'en'] },
+          { chapter: 12, at: at(13), langs: ['en'] }
+        ]
+      },
+      [entry(1)]
+    )
+    expect(events).toEqual([
+      { kind: 'chapters', mangaId: 1, day: '2026-09-20', from: 13, to: 14, langs: ['fr', 'en'] },
+      { kind: 'chapters', mangaId: 1, day: '2026-09-13', from: 12, to: 12, langs: ['en'] }
+    ])
+  })
+
+  it('ne montre pas les chapitres d’un manga abandonné', () => {
+    expect(chapterEvents({ 1: [{ chapter: 3, at: at(1), langs: ['fr'] }] }, [entry(1, 'dropped')])).toEqual([])
   })
 })

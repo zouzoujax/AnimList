@@ -36,6 +36,7 @@ import { cleanOrphans, health, removeStray } from './health'
 import { saveCard, type CardRect } from './card'
 import { sweepSequels } from './sequels'
 import { sweepMangas } from './manga-watch'
+import { mangaChapters } from './mangadex'
 import { addFollow, followNews, markSeen, removeFollow, sweepFollows } from './follows'
 import { forYou } from './foryou'
 import { identifyImage } from './identify'
@@ -221,6 +222,16 @@ export function registerIpc(): void {
   ipcMain.handle('manga:dates', () => {
     const ids = (snapshot().mangaEntries ?? []).map((e) => e.mangaId)
     return ids.length ? anilist.mangaDates(ids) : []
+  })
+  ipcMain.handle('manga:chapters', () => {
+    const data = snapshot()
+    const mangas = new Map((data.mangas ?? []).map((m) => [m.id, m]))
+    const tracked = (data.mangaEntries ?? []).flatMap((e) => {
+      const m = mangas.get(e.mangaId)
+      if (!m) return []
+      return [{ id: m.id, titles: [m.title.romaji, m.title.english].filter((t): t is string => !!t) }]
+    })
+    return mangaChapters(tracked)
   })
   ipcMain.handle('manga:sweep', (e) => sweepMangas(ownerOf(e)))
   ipcMain.handle('manga:reread', (_e, id: number) => startReread(id))

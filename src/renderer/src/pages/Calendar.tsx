@@ -2,13 +2,14 @@ import { humanMessage } from '@shared/api-outage'
 import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Clapperboard, Globe, LibraryBig, Radio } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { dayOfTime, mangaEvents, type MangaDates, type MangaEvent } from '@shared/manga-calendar'
+import { chapterEvents, dayOfTime, mangaEvents, type MangaDates, type MangaEvent } from '@shared/manga-calendar'
 import type { AiringEntry, Manga } from '@shared/types'
 import { MangaSheet } from '@/components/MangaSheet'
 import { EmptyState, ErrorBox, Modal, Poster, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { countdown, formatTime, titleOf } from '@/lib/format'
 import { useNow } from '@/lib/hooks'
+import { useMangaChapters } from '@/lib/manga-chapters'
 import { useApp } from '@/store/app'
 
 const DAY_MS = 86_400_000
@@ -159,10 +160,20 @@ function PickerBody({
 
 const EMPTY_SLOTS: AiringEntry[] = []
 
-const MANGA_LABELS: Record<MangaEvent['kind'], string> = {
+const MANGA_LABELS: Record<Exclude<MangaEvent['kind'], 'chapters'>, string> = {
   start: 'Début de parution',
   end: 'Fin de parution',
   adaptation: 'Adaptation animée'
+}
+
+const chapterNumber = (n: number): string => n.toLocaleString('fr-FR')
+
+/** « Ch. 131 », ou « Ch. 130 – 131 » quand plusieurs sortent le même jour. */
+function labelOf(event: MangaEvent): string {
+  if (event.kind !== 'chapters') return MANGA_LABELS[event.kind]
+  return event.from === event.to
+    ? `Ch. ${chapterNumber(event.to)}`
+    : `Ch. ${chapterNumber(event.from)} – ${chapterNumber(event.to)}`
 }
 
 /** Le titre d'un manga dans la langue choisie, comme `titleOf` pour un anime. */
@@ -211,9 +222,12 @@ function MangaSlot({
         </p>
         <p className="mt-1 flex items-center gap-1 text-[0.66rem]" style={{ color: rgba(glow, 1) }}>
           <Icon size={9} />
-          {MANGA_LABELS[event.kind]}
+          {labelOf(event)}
         </p>
         {adaptation && <p className="clamp-1 text-[0.64rem] text-faint">Tiré de {mangaTitle(manga, lang)}</p>}
+        {event.kind === 'chapters' && (
+          <p className="text-[0.64rem] uppercase tracking-wide text-faint">{event.langs.join(' · ')}</p>
+        )}
       </div>
     </button>
   )
@@ -252,15 +266,23 @@ export default function CalendarPage(): React.JSX.Element {
     }
   }, [mangaKey])
 
+  // Les chapitres viennent de MangaDex, à part : ils arrivent quand ils
+  // arrivent, sans retenir les dates d'AniList.
+  const chapters = useMangaChapters()
+
   const mangaByDay = useMemo(() => {
     const byDay = new Map<string, MangaEvent[]>()
-    if (dates.key !== mangaKey) return byDay
-    for (const event of mangaEvents(dates.list, [...mangaEntries.values()], new Set(entries.keys()))) {
+    const followed = [...mangaEntries.values()]
+    const events = [
+      ...(dates.key === mangaKey ? mangaEvents(dates.list, followed, new Set(entries.keys())) : []),
+      ...chapterEvents(chapters, followed)
+    ]
+    for (const event of events) {
       if (!mangas.has(event.mangaId)) continue
       byDay.set(event.day, [...(byDay.get(event.day) ?? []), event])
     }
     return byDay
-  }, [dates, mangaKey, mangaEntries, mangas, entries])
+  }, [dates, mangaKey, mangaEntries, mangas, entries, chapters])
 
   const ids = useMemo(
     () => [...entries.values()].filter((e) => e.status === 'watching' || e.status === 'planned').map((e) => e.animeId),
@@ -380,10 +402,10 @@ export default function CalendarPage(): React.JSX.Element {
               ? 'Chargement…'
               : total > 0
                 ? `${total} épisodes ${scope === 'all' ? 'toutes séries confondues' : 'dans tes séries'}${
-                    mangaTotal ? ` · ${mangaTotal} date${mangaTotal > 1 ? 's' : ''} manga` : ''
+                    mangaTotal ? ` · ${mangaTotal} sortie${mangaTotal > 1 ? 's' : ''} manga` : ''
                   } · ${weekRange(from)}`
                 : mangaTotal
-                  ? `${mangaTotal} date${mangaTotal > 1 ? 's' : ''} manga · ${weekRange(from)}`
+                  ? `${mangaTotal} sortie${mangaTotal > 1 ? 's' : ''} manga · ${weekRange(from)}`
                   : `Rien de prévu du ${weekRange(from)}`}
           </p>
         </div>
@@ -487,7 +509,7 @@ export default function CalendarPage(): React.JSX.Element {
                       const manga = mangas.get(event.mangaId)!
                       return (
                         <MangaSlot
-                          key={`${event.kind}-${event.mangaId}-${event.kind === 'adaptation' ? event.anime.id : ''}`}
+                          key={`${event.kind}-${event.mangaId}-${event.kind === 'adaptation' ? event.anime.id : event.kind === 'chapters' ? event.from : ''}`}
                           event={event}
                           manga={manga}
                           lang={lang}
