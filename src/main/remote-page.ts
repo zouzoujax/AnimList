@@ -357,12 +357,19 @@ const STYLE = `
   .tcard img { flex: none; width: 4.6rem; height: 6.5rem; border-radius: 9px; object-fit: cover; background: var(--panel-2); }
   .tcard .tinfo { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .25rem; }
   .tcard b { font-size: .88rem; line-height: 1.25; }
-  .tcard .tfacts { font-size: .76rem; color: var(--text); line-height: 1.4; }
-  .tcard .tmeta { font-size: .72rem; color: var(--muted); line-height: 1.4; }
-  .tcard .tsyn {
+  /* Les faits d'un titre, partagés par la mini-fiche de l'arbre et la fiche d'une série. */
+  .tfacts { font-size: .76rem; color: var(--text); line-height: 1.4; }
+  .tmeta { font-size: .72rem; color: var(--muted); line-height: 1.4; }
+  .tsyn {
     font-size: .74rem; color: var(--muted); line-height: 1.45; margin-top: .15rem;
     display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
   }
+  .tsyn.open { display: block; }
+  .about { display: flex; flex-direction: column; gap: .3rem; margin-top: .9rem; }
+  .about .tfacts { font-size: .84rem; }
+  .about .tmeta { font-size: .78rem; }
+  .about .tsyn { font-size: .8rem; }
+  .more { align-self: flex-start; padding: .2rem 0; font-size: .78rem; font-weight: 600; color: var(--text); cursor: pointer; background: none; border: 0; }
   .tcard.wait { min-height: 7.8rem; animation: pulse 1.4s ease-in-out infinite; }
   /* Sous le titre touché : ce qu'on peut en faire sans se lever. */
   .tacts { display: flex; flex-wrap: wrap; gap: .4rem; margin: .35rem 0 .5rem; }
@@ -920,20 +927,33 @@ const SCRIPT = `
   function nodeCard(n, card) {
     if (!card) return '<div class="tcard wait" aria-label="Lecture de la fiche"></div>'
     if (card.error) return ''
-    var etat = card.status || ''
-    if (card.nextAiring) etat += (etat ? ', ' : '') + 'épisode ' + card.nextAiring.episode + ' ' + when(card.nextAiring.at / 1000)
-    if (card.score) etat += (etat ? ' · ' : '') + card.score + ' %'
-    var autour = [card.studio].concat(card.genres || []).filter(Boolean).join(' · ')
     return '<div class="tcard"' + colorStyle(card.color) + '>' +
       (card.cover ? '<img src="' + esc(card.cover) + '" alt="">' : '') +
       '<div class="tinfo">' +
         '<b>' + esc(card.title) + '</b>' +
-        (card.facts.length ? '<div class="tfacts">' + esc(card.facts.join(' · ')) + '</div>' : '') +
-        (etat ? '<div class="tmeta">' + esc(etat) + '</div>' : '') +
-        (autour ? '<div class="tmeta">' + esc(autour) + '</div>' : '') +
-        (card.synopsis ? '<div class="tsyn">' + esc(card.synopsis) + '</div>' : '') +
+        factsHtml(card, false) +
       '</div>' +
     '</div>'
+  }
+
+  /**
+   * Format, date, durée, diffusion, note, studio, genres, résumé : les lignes
+   * communes à la mini-fiche de l'arbre et à la fiche d'une série. Dans la
+   * fiche, le résumé se déplie.
+   */
+  function factsHtml(card, unfold) {
+    var etat = card.status || ''
+    if (card.nextAiring) etat += (etat ? ', ' : '') + 'épisode ' + card.nextAiring.episode + ' ' + when(card.nextAiring.at / 1000)
+    if (card.score) etat += (etat ? ' · ' : '') + card.score + ' %'
+    var autour = [card.studio].concat(card.genres || []).filter(Boolean).join(' · ')
+    var ouvert = unfold && about.open
+    return (card.facts.length ? '<div class="tfacts">' + esc(card.facts.join(' · ')) + '</div>' : '') +
+      (etat ? '<div class="tmeta">' + esc(etat) + '</div>' : '') +
+      (autour ? '<div class="tmeta">' + esc(autour) + '</div>' : '') +
+      (card.synopsis ? '<div class="tsyn' + (ouvert ? ' open' : '') + '">' + esc(card.synopsis) + '</div>' : '') +
+      (unfold && card.synopsis && card.synopsis.length > 220
+        ? '<button class="more" data-act="syn">' + (ouvert ? 'Replier' : 'Lire la suite') + '</button>'
+        : '')
   }
 
   function nodeActs(n) {
@@ -1059,6 +1079,7 @@ const SCRIPT = `
           '<div class="meta">' + metaLine(s) + '</div>' +
         '</div>' +
       '</div>' +
+      (about.id === s.id && about.data && !about.data.error ? '<div class="about">' + factsHtml(about.data, true) + '</div>' : '') +
       frise(s, true) + legend() +
       (first || regarder ? '<div class="acts">' + first + regarder + '</div>' : '') +
       '<div class="acts">' + ba +
@@ -1169,6 +1190,8 @@ const SCRIPT = `
   var sheet = 0
   /** La franchise dépliée, et son arbre une fois arrivé. Voir renderTree. */
   var tree = { id: 0, data: null }
+  /** La fiche AniList de la série ouverte : faits et résumé, lus une fois. */
+  var about = { id: 0, data: null, open: false }
   var query = ''
   var discoverTab = 'trending'
 
@@ -1402,6 +1425,14 @@ const SCRIPT = `
       sheet = id
       eps = { id: 0, data: null, mode: eps.mode }
       tree = { id: 0, data: null }
+      if (about.id !== id) {
+        about = { id: id, data: null, open: false }
+        // Sans attendre : la fiche s'affiche tout de suite, les faits la
+        // rejoignent. Une série de la liste est déjà sur le PC, c'est immédiat.
+        call('/api/media?id=' + id).then(function (d) {
+          if (about.id === id) { about.data = d; load() }
+        }, function () { /* la fiche reste utilisable sans */ })
+      }
       await load()
       // Sur un téléphone la fiche remplace la liste : on remonte la voir.
       if (!isWide()) window.scrollTo(0, 0)
@@ -1457,6 +1488,8 @@ const SCRIPT = `
       }
       return
     }
+
+    if (action === 'syn') { about.open = !about.open; return load() }
 
     // Un titre de l'arbre : le sélectionner, ou le replier s'il l'était.
     if (action === 'tnode') {
