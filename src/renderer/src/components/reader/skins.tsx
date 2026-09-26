@@ -242,7 +242,7 @@ export function Epure({ ctl }: { ctl: ReaderControl }): React.JSX.Element {
     <div className="rd-epure absolute inset-0">
       {/* Le fil de progression, seule chose qui reste toujours à l'écran. */}
       <div className="rd-thread" dir={ctl.dir}>
-        <span style={{ width: `${ratio * 100}%` }} />
+        <span style={{ transform: `scaleX(${ratio})` }} />
       </div>
 
       <div className="absolute inset-0 pt-[3px]">

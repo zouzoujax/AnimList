@@ -262,10 +262,12 @@
   height: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
   box-shadow: 0 0 12px color-mix(in oklab, var(--accent) 70%, transparent);
-  transition: width 0.25s ease;
+  /* Un `scaleX` plutôt qu'une largeur : tourner une page ne relance pas la mise en page. */
+  transform-origin: left;
+  transition: transform 0.25s ease;
 }
 .rd-thread[dir='rtl'] span {
-  margin-left: auto;
+  transform-origin: right;
   background: linear-gradient(270deg, var(--accent), var(--accent-2));
 }
 .rd-menu {
