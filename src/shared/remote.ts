@@ -11,6 +11,8 @@
  * le jour où quelqu'un d'autre s'en sert.
  */
 
+import type { Media, MediaFormat, MediaStatus, SeasonName } from './types'
+
 /** Port par défaut. Haut, peu disputé, facile à retenir. */
 export const REMOTE_PORT = 8787
 
@@ -120,6 +122,7 @@ export type RemoteRoute =
   | 'status'
   | 'episodes'
   | 'franchise'
+  | 'media'
   | 'stats'
   | 'calendar'
   | 'ics'
@@ -169,6 +172,8 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'episodes'
     case '/api/franchise':
       return 'franchise'
+    case '/api/media':
+      return 'media'
     default:
       return 'unknown'
   }
@@ -199,4 +204,109 @@ const STATUSES = ['watching', 'planned', 'completed', 'paused', 'dropped'] as co
 
 export function isRemoteStatus(value: unknown): value is (typeof STATUSES)[number] {
   return typeof value === 'string' && (STATUSES as readonly string[]).includes(value)
+}
+
+// ---------------------------------------------------------------- mini-fiche
+
+const FORMATS: Record<MediaFormat, string> = {
+  TV: 'Série TV',
+  TV_SHORT: 'Format court',
+  MOVIE: 'Film',
+  SPECIAL: 'Spécial',
+  OVA: 'OVA',
+  ONA: 'ONA',
+  MUSIC: 'Clip'
+}
+
+const STATES: Record<MediaStatus, string> = {
+  FINISHED: 'Terminé',
+  RELEASING: 'En diffusion',
+  NOT_YET_RELEASED: 'Pas encore sorti',
+  CANCELLED: 'Annulé',
+  HIATUS: 'En pause'
+}
+
+const SEASONS: Record<SeasonName, string> = { WINTER: 'Hiver', SPRING: 'Printemps', SUMMER: 'Été', FALL: 'Automne' }
+
+const MONTHS = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre'
+]
+
+/** « 1 h 42 », « 24 min ». */
+function runtime(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`
+  return `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`
+}
+
+/** La mini-fiche d'un titre, telle que le téléphone l'affiche sous l'arbre. */
+export interface RemoteCard {
+  id: number
+  title: string
+  cover: string
+  color: string | null
+  /** « Film », « 2011 », « 1 h 42 » : ce qu'on lit d'une traite. */
+  facts: string[]
+  /** « Terminé », « En diffusion »… */
+  status: string | null
+  /** La prochaine diffusion, en millisecondes. */
+  nextAiring: { episode: number; at: number } | null
+  studio: string | null
+  genres: string[]
+  score: number | null
+  synopsis: string | null
+  trailer: boolean
+}
+
+/**
+ * Ce qu'on veut savoir d'un titre avant de le lancer ou de l'ajouter.
+ *
+ * Écrit ici, en français, plutôt que dans la page : la page n'a pas de
+ * compilateur, et ces libellés sont les mêmes que ceux de l'app.
+ *
+ * Un film se date au jour — c'est une sortie, pas une saison —, une série à sa
+ * saison. La durée d'un film est la sienne ; celle d'une série, par épisode.
+ */
+export function cardOf(media: Media): RemoteCard {
+  const facts: string[] = []
+  if (media.format) facts.push(FORMATS[media.format])
+
+  const start = media.startDate
+  const film = media.format === 'MOVIE'
+  if (film && start?.year) {
+    facts.push(start.month && start.day ? `${start.day} ${MONTHS[start.month - 1]} ${start.year}` : String(start.year))
+  } else if (media.season && media.seasonYear) {
+    facts.push(`${SEASONS[media.season]} ${media.seasonYear}`)
+  } else if (start?.year) {
+    facts.push(String(start.year))
+  }
+
+  if (!film && media.episodes) facts.push(media.episodes > 1 ? `${media.episodes} épisodes` : '1 épisode')
+  if (media.duration)
+    facts.push(film || media.episodes === 1 ? runtime(media.duration) : `${media.duration} min par épisode`)
+
+  return {
+    id: media.id,
+    title: media.title.english ?? media.title.romaji,
+    cover: media.cover.large,
+    color: media.cover.color,
+    facts,
+    status: media.status ? STATES[media.status] : null,
+    nextAiring: media.nextAiring ? { episode: media.nextAiring.episode, at: media.nextAiring.airingAt * 1000 } : null,
+    studio: media.studios[0] ?? null,
+    genres: media.genres.slice(0, 4),
+    score: media.averageScore,
+    synopsis: media.description,
+    trailer: !!media.trailer?.id
+  }
 }

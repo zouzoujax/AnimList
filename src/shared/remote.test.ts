@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  cardOf,
   checkChosen,
   makeToken,
   MAX_CHOSEN,
@@ -190,5 +191,63 @@ describe('isRemoteStatus', () => {
     expect(isRemoteStatus('completed')).toBe(true)
     expect(isRemoteStatus('deleted')).toBe(false)
     expect(isRemoteStatus(3)).toBe(false)
+  })
+})
+
+describe('cardOf', () => {
+  const base = {
+    id: 1,
+    idMal: null,
+    title: { romaji: 'Naruto: Blood Prison', english: null, native: null },
+    cover: { large: 'c.jpg', xl: '', color: '#e4a15d' },
+    banner: null,
+    popularity: 0,
+    nextAiring: null,
+    cachedAt: 0
+  }
+
+  it('date un film au jour et donne sa durée entière', () => {
+    const card = cardOf({
+      ...base,
+      format: 'MOVIE',
+      status: 'FINISHED',
+      episodes: 1,
+      duration: 102,
+      season: 'SUMMER',
+      seasonYear: 2011,
+      startDate: { year: 2011, month: 7, day: 30 },
+      genres: ['Action', 'Adventure'],
+      studios: ['Studio Pierrot'],
+      averageScore: 71,
+      description: 'Naruto est accusé…',
+      trailer: { id: 'abc', site: 'youtube' }
+    })
+    expect(card.facts).toEqual(['Film', '30 juillet 2011', '1 h 42'])
+    expect(card).toMatchObject({ status: 'Terminé', studio: 'Studio Pierrot', score: 71, trailer: true })
+  })
+
+  it('date une série à sa saison et donne la durée par épisode', () => {
+    const card = cardOf({
+      ...base,
+      format: 'TV',
+      status: 'RELEASING',
+      episodes: 24,
+      duration: 24,
+      season: 'FALL',
+      seasonYear: 2026,
+      startDate: { year: 2026, month: 10, day: 3 },
+      genres: [],
+      studios: [],
+      averageScore: null,
+      description: null,
+      nextAiring: { episode: 5, airingAt: 1_790_000_000 },
+      trailer: null
+    })
+    expect(card.facts).toEqual(['Série TV', 'Automne 2026', '24 épisodes', '24 min par épisode'])
+    expect(card).toMatchObject({
+      status: 'En diffusion',
+      nextAiring: { episode: 5, at: 1_790_000_000_000 },
+      trailer: false
+    })
   })
 })

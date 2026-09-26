@@ -29,6 +29,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { networkInterfaces } from 'node:os'
 import { BrowserWindow } from 'electron'
 import {
+  cardOf,
   checkChosen,
   makeToken,
   needsToken,
@@ -59,6 +60,7 @@ import { getMedia, getPrefs } from './store'
 import { setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
 import { getLaunched, rememberLaunch, setLaunched, type Launched } from './now'
 import { page } from './remote-page'
+import { translate } from './translate'
 
 export interface RemoteStatus {
   on: boolean
@@ -332,6 +334,23 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
    * cache. Un arbre qui ne dirait pas la même chose sur les deux écrans serait
    * pire que pas d'arbre du tout.
    */
+  /**
+   * La mini-fiche d'un titre touché dans l'arbre : format, date, durée,
+   * diffusion. La plupart ne sont pas dans la liste — un film jamais ajouté —,
+   * donc pas en cache : on les lit chez AniList, une requête par titre touché.
+   */
+  if (route === 'media') {
+    const id = Number(new URLSearchParams(url.slice(url.indexOf('?') + 1)).get('id'))
+    if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: 'Série inconnue.' })
+    const media = getMedia(id) ?? (await refreshMedia([id]).catch(() => []))[0]
+    if (!media) return json(res, 404, { error: 'Fiche introuvable chez AniList.' })
+    const card = cardOf(media)
+    // En français si une clé DeepL est posée, comme sur la fiche du PC ; le
+    // cache des traductions est le même. Une panne rend l'anglais.
+    if (card.synopsis) card.synopsis = (await translate([card.synopsis]).catch(() => [card.synopsis]))[0]
+    return json(res, 200, card)
+  }
+
   if (route === 'franchise') {
     const id = Number(new URLSearchParams(url.slice(url.indexOf('?') + 1)).get('id'))
     if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: 'Série inconnue.' })
@@ -626,18 +645,19 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   /**
    * Regarder un titre hors de la liste — un film touché dans l'arbre d'une
-   * franchise — demande sa fiche pour chercher ses titres sur Anime-Sama. Elle
-   * n'est pas en cache : on la redemande, comme pour l'ajout. La bande-annonce,
-   * elle, ne se propose que depuis une fiche de la liste.
+   * franchise — demande sa fiche : ses titres pour Anime-Sama, sa vidéo pour
+   * la bande-annonce. Elle n'est pas en cache : on la redemande, comme pour
+   * l'ajout.
    */
   const held = snapshot().media.find((m) => m.id === id)
-  const media = held ?? (route === 'watch' ? (await refreshMedia([id]).catch(() => []))[0] : undefined)
+  const media =
+    held ?? (route === 'watch' || route === 'trailer' ? (await refreshMedia([id]).catch(() => []))[0] : undefined)
   if (!media) return json(res, 404, { error: 'Série inconnue.' })
 
   if (route === 'trailer') {
     const video = media.trailer?.id
     if (!video) return json(res, 404, { error: 'Pas de bande-annonce pour cette série.' })
-    rememberLaunch(id, null, 'Bande-annonce')
+    rememberLaunch(id, null, 'Bande-annonce', media)
     const opened = await openTrailerWindow(win, video, media.title.english ?? media.title.romaji)
     return opened ? json(res, 200, { ok: true }) : json(res, 502, { error: 'La bande-annonce n’a pas pu s’ouvrir.' })
   }

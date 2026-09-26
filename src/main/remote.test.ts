@@ -183,6 +183,30 @@ describe('regarder depuis l’arbre d’une franchise', () => {
   })
 })
 
+describe('la mini-fiche d’un titre de l’arbre', () => {
+  it('lit chez AniList un titre hors de la liste, et le dit en français', async () => {
+    const anilist = await import('./anilist')
+    vi.mocked(anilist.refreshMedia).mockResolvedValueOnce([
+      media(60, { format: 'MOVIE', episodes: 1, duration: 102, trailer: { id: 'abc', site: 'youtube' } })
+    ])
+    const res = await fetch(`${base}/api/media?id=60`, { headers: { Authorization: `Bearer ${PASSWORD}` } })
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ id: 60, facts: ['Film', '1 h 42'], trailer: true })
+  })
+
+  it('lance la bande-annonce d’un titre hors de la liste', async () => {
+    const { BrowserWindow } = await import('electron')
+    const anilist = await import('./anilist')
+    const trailer = await import('./trailer')
+    vi.spyOn(BrowserWindow, 'getAllWindows').mockReturnValue([{ isDestroyed: () => false }] as never)
+    vi.mocked(anilist.refreshMedia).mockResolvedValueOnce([media(61, { trailer: { id: 'xyz', site: 'youtube' } })])
+    vi.mocked(trailer.openTrailerWindow).mockResolvedValueOnce(true)
+    const res = await post('/api/trailer', { id: 61 })
+    expect(res.status).toBe(200)
+    expect(vi.mocked(trailer.openTrailerWindow).mock.calls[0][1]).toBe('xyz')
+  })
+})
+
 // En dernier : éteindre et rallumer le serveur laisse à `fetch` des connexions
 // gardées ouvertes vers l'ancien, et la requête suivante tomberait dessus.
 describe('allumer la télécommande', () => {

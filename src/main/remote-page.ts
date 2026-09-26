@@ -349,6 +349,21 @@ const STYLE = `
   }
   .tleaf[data-on='true'] { border-color: var(--accent-line); }
   .tline[aria-expanded='true'], .tleaf[aria-expanded='true'] { background: var(--accent-soft); border-color: var(--accent-line); }
+  /* La mini-fiche du titre touché : l'affiche, puis ce qu'on veut savoir avant de lancer. */
+  .tcard {
+    display: flex; gap: .75rem; margin: .35rem 0 0; padding: .65rem; border-radius: 12px;
+    background: var(--panel); border: 1px solid var(--line);
+  }
+  .tcard img { flex: none; width: 4.6rem; height: 6.5rem; border-radius: 9px; object-fit: cover; background: var(--panel-2); }
+  .tcard .tinfo { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: .25rem; }
+  .tcard b { font-size: .88rem; line-height: 1.25; }
+  .tcard .tfacts { font-size: .76rem; color: var(--text); line-height: 1.4; }
+  .tcard .tmeta { font-size: .72rem; color: var(--muted); line-height: 1.4; }
+  .tcard .tsyn {
+    font-size: .74rem; color: var(--muted); line-height: 1.45; margin-top: .15rem;
+    display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .tcard.wait { min-height: 7.8rem; animation: pulse 1.4s ease-in-out infinite; }
   /* Sous le titre touché : ce qu'on peut en faire sans se lever. */
   .tacts { display: flex; flex-wrap: wrap; gap: .4rem; margin: .35rem 0 .5rem; }
   .tacts .btn { flex: 1 1 auto; min-height: 2.5rem; padding: 0 .8rem; font-size: .8rem; }
@@ -897,13 +912,39 @@ const SCRIPT = `
    * désormais : regarder, ajouter, ou ouvrir la fiche comme avant, au choix.
    * « Regarder » vise le premier épisode pas vu — un film n'en a qu'un.
    */
+  /**
+   * La mini-fiche : format, date, durée, diffusion. Lue chez AniList au
+   * premier toucher — la plupart de ces titres ne sont pas dans la liste —,
+   * un bloc qui pulse le temps de la réponse.
+   */
+  function nodeCard(n, card) {
+    if (!card) return '<div class="tcard wait" aria-label="Lecture de la fiche"></div>'
+    if (card.error) return ''
+    var etat = card.status || ''
+    if (card.nextAiring) etat += (etat ? ', ' : '') + 'épisode ' + card.nextAiring.episode + ' ' + when(card.nextAiring.at / 1000)
+    if (card.score) etat += (etat ? ' · ' : '') + card.score + ' %'
+    var autour = [card.studio].concat(card.genres || []).filter(Boolean).join(' · ')
+    return '<div class="tcard"' + colorStyle(card.color) + '>' +
+      (card.cover ? '<img src="' + esc(card.cover) + '" alt="">' : '') +
+      '<div class="tinfo">' +
+        '<b>' + esc(card.title) + '</b>' +
+        (card.facts.length ? '<div class="tfacts">' + esc(card.facts.join(' · ')) + '</div>' : '') +
+        (etat ? '<div class="tmeta">' + esc(etat) + '</div>' : '') +
+        (autour ? '<div class="tmeta">' + esc(autour) + '</div>' : '') +
+        (card.synopsis ? '<div class="tsyn">' + esc(card.synopsis) + '</div>' : '') +
+      '</div>' +
+    '</div>'
+  }
+
   function nodeActs(n) {
     if (tree.pick !== n.id) return ''
     var fini = n.total > 0 && n.seen >= n.total
     var ep = fini || !n.seen ? 1 : n.seen + 1
     var label = ep > 1 ? 'Reprendre ép. ' + ep : 'Regarder'
-    return '<div class="tacts">' +
+    var card = tree.info && tree.info.id === n.id ? tree.info.data : null
+    return nodeCard(n, card) + '<div class="tacts">' +
       btn('data-act="watch" data-id="' + n.id + '" data-ep="' + ep + '"', label, 'play', 'primary') +
+      (card && card.trailer ? btn('data-act="trailer" data-id="' + n.id + '"', 'Bande-annonce', 'film', '') : '') +
       (n.tracked
         ? '<span class="owned">Dans ta liste</span>'
         : btn('data-act="add" data-id="' + n.id + '"', 'Ajouter à ma liste', 'plus', '')) +
@@ -1420,7 +1461,19 @@ const SCRIPT = `
     // Un titre de l'arbre : le sélectionner, ou le replier s'il l'était.
     if (action === 'tnode') {
       tree.pick = tree.pick === id ? 0 : id
-      return load()
+      if (!tree.pick || (tree.info && tree.info.id === id)) return load()
+      tree.info = { id: id, data: null }
+      load()
+      var fiche
+      try {
+        fiche = await call('/api/media?id=' + id)
+      } catch (err) {
+        // Sans fiche, les boutons restent : on peut toujours lancer ou ajouter.
+        fiche = { error: err.message }
+      }
+      // Un autre titre a pu être touché pendant l'attente.
+      if (tree.info && tree.info.id === id) { tree.info.data = fiche; load() }
+      return
     }
 
     if (action === 'ep') {
