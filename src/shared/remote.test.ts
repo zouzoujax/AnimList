@@ -76,6 +76,8 @@ describe('routeOf', () => {
     expect(routeOf('/')).toBe('page')
     expect(routeOf('/api/state')).toBe('state')
     expect(routeOf('/calendrier.ics')).toBe('ics')
+    expect(routeOf('/api/reading')).toBe('reading')
+    expect(routeOf('/api/read')).toBe('read')
     expect(routeOf('/api/tick')).toBe('tick')
     expect(routeOf('/api/open')).toBe('open')
     expect(routeOf('/api/watch')).toBe('watch')

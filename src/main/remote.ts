@@ -16,7 +16,7 @@
  *    fichier, donc rien du disque ne peut fuir par une remontée
  *    d'arborescence.
  * 3. Peu de permissions d'écriture : cocher un épisode, ajouter une série,
- *    changer son statut. Pas de suppression, pas de réglages, pas d'export —
+ *    changer son statut, avancer un manga d'un chapitre. Pas de suppression, pas de réglages, pas d'export —
  *    et chaque écriture refait ici les vérifications que fait l'app.
  *
  * Il n'y a pas de chiffrement : c'est du HTTP en clair sur le réseau local. Ça
@@ -57,7 +57,7 @@ import { sessionAutoSkip, setSessionAutoSkip } from './binge'
 import { playerCommand, playerState, type PlayerAction, type PlayerState } from './playing'
 import { browse, refreshMedia } from './anilist'
 import { getMedia, getPrefs } from './store'
-import { setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
+import { advanceManga, setEntry, setWatched, setWatchedUpTo, snapshot } from './store'
 import { getLaunched, rememberLaunch, setLaunched, type Launched } from './now'
 import { page } from './remote-page'
 import { translate } from './translate'
@@ -133,6 +133,8 @@ function seriesRows(keep: (status: string) => boolean): {
     rows.push({
       id: entry.animeId,
       title: found.title.english ?? found.title.romaji,
+      // Pour la recherche de « Ma liste » : on tape souvent le titre japonais.
+      alt: found.title.romaji,
       cover: found.cover.large,
       // La couleur de la jaquette teinte la frise et la fiche : chaque série
       // se reconnaît à la sienne, comme dans le nouveau design de l'app.
@@ -160,6 +162,37 @@ function seriesRows(keep: (status: string) => boolean): {
     })
   }
 
+  rows.sort((a, b) => (b.updatedAt as number) - (a.updatedAt as number))
+  return { rows }
+}
+
+/**
+ * La liste de lecture, pour le téléphone.
+ *
+ * On lit un manga le téléphone à la main, rarement devant le PC : c'est là que
+ * le « +1 » sert. Rangée par dernière retouche, comme les séries.
+ */
+function readingRows(): { rows: Record<string, unknown>[] } {
+  const data = snapshot()
+  const mangas = new Map((data.mangas ?? []).map((m) => [m.id, m]))
+  const rows: Record<string, unknown>[] = []
+  for (const entry of data.mangaEntries ?? []) {
+    const manga = mangas.get(entry.mangaId)
+    if (!manga) continue
+    rows.push({
+      id: entry.mangaId,
+      title: manga.title.english ?? manga.title.romaji,
+      alt: manga.title.romaji,
+      cover: manga.cover.large,
+      color: manga.cover.color,
+      status: entry.status,
+      chapter: entry.chapter,
+      // `null` tant que la série paraît : AniList n'annonce pas de total.
+      total: manga.chapters,
+      rereads: entry.rereads,
+      updatedAt: entry.updatedAt
+    })
+  }
   rows.sort((a, b) => (b.updatedAt as number) - (a.updatedAt as number))
   return { rows }
 }
@@ -321,6 +354,8 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
       lastAired: media.nextAiring ? media.nextAiring.episode - 1 : (media.episodes ?? 0)
     })
   }
+
+  if (route === 'reading') return json(res, 200, readingRows())
 
   /**
    * L'arbre d'une franchise — ESSAI, comme sur le PC.
@@ -549,6 +584,23 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
 
   const id = Number(body.id)
   if (!Number.isInteger(id) || id <= 0) return json(res, 400, { error: 'Série inconnue.' })
+
+  /**
+   * Un chapitre lu, depuis le téléphone.
+   *
+   * Seulement « +1 » : taper un numéro est un rattrapage, qui se fait mieux
+   * sur la fiche du PC. Le pas est compté par le fichier, pas par la page —
+   * une page restée ouverte n'envoie pas un chapitre déjà dépassé.
+   */
+  if (route === 'read') {
+    const data = snapshot()
+    const entry = data.mangaEntries?.find((e) => e.mangaId === id)
+    if (!entry) return json(res, 404, { error: 'Ce manga n’est pas dans ta liste de lecture.' })
+    const total = data.mangas?.find((m) => m.id === id)?.chapters ?? null
+    if (total && entry.chapter >= total) return json(res, 409, { error: 'Tous les chapitres sont déjà lus.' })
+    const next = advanceManga(id, 1)
+    return json(res, 200, { chapter: next.chapter, status: next.status, ...readingRows() })
+  }
 
   if (route === 'add') {
     const media = snapshot().media.find((m) => m.id === id)

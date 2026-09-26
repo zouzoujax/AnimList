@@ -107,7 +107,7 @@ describe('les actions de la page', () => {
     const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]
     const ids = [...script.matchAll(/\{ id: '([a-z]+)', label:/g)].map((m) => m[1])
 
-    expect(ids).toEqual(['home', 'library', 'calendar', 'stats', 'discover'])
+    expect(ids).toEqual(['home', 'library', 'reading', 'calendar', 'stats', 'discover'])
     for (const id of ids) {
       // L'accueil est le cas par défaut, il n'a pas de branche à lui.
       if (id === 'home') continue
@@ -117,7 +117,15 @@ describe('les actions de la page', () => {
 
   it('demande au serveur des adresses qu’il connaît', () => {
     const script = /<script>([\s\S]*)<\/script>/.exec(html)![1]
-    for (const chemin of ['/api/state', '/api/library', '/api/calendar', '/api/stats', '/api/discover']) {
+    for (const chemin of [
+      '/api/state',
+      '/api/library',
+      '/api/reading',
+      '/api/read',
+      '/api/calendar',
+      '/api/stats',
+      '/api/discover'
+    ]) {
       expect(script).toContain(chemin)
     }
   })

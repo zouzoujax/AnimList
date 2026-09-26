@@ -126,6 +126,8 @@ export type RemoteRoute =
   | 'stats'
   | 'calendar'
   | 'ics'
+  | 'reading'
+  | 'read'
   | 'unknown'
 
 /**
@@ -174,6 +176,10 @@ export function routeOf(pathname: string): RemoteRoute {
       return 'franchise'
     case '/api/media':
       return 'media'
+    case '/api/reading':
+      return 'reading'
+    case '/api/read':
+      return 'read'
     default:
       return 'unknown'
   }

@@ -1,4 +1,5 @@
 import { BRANCH_LABELS } from '@shared/franchise'
+import { READ_STATUS_LABELS } from '@shared/types'
 
 /**
  * La page servie à la télécommande : téléphone, tablette, écran de bureau, TV.
@@ -108,15 +109,16 @@ const STYLE = `
   /* Onglets : en bas, là où le pouce arrive sans changer la prise en main. */
   nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    display: flex; gap: 4px;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    display: flex; gap: 2px;
+    padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
     background: rgba(9,10,18,.94); backdrop-filter: blur(14px);
     border-top: 1px solid var(--line);
   }
   nav button {
-    /* La hauteur fait la cible, pas la largeur : cinq onglets doivent tenir. */
+    /* La hauteur fait la cible, pas la largeur : six onglets doivent tenir,
+       « Calendrier » en entier, sur un téléphone de 360 pixels. */
     flex: 1; min-width: 0; min-height: 3.2rem; border: 0; border-radius: 12px; background: none;
-    color: var(--faint); font-size: .7rem; font-weight: 600;
+    color: var(--faint); font-size: .64rem; font-weight: 600; letter-spacing: -.01em;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer;
   }
   nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -266,6 +268,13 @@ const STYLE = `
   /* Le bouton au pied de la case, aligné d'une case à l'autre quel que soit
      le nombre de lignes du titre. */
   .tile-wrap { display: flex; flex-direction: column; gap: .45rem; }
+  div.tile { cursor: default; }
+  /* L'avancée d'un manga, quand son total est connu. */
+  .gauge { display: block; height: .3rem; margin-top: .4rem; border-radius: 99px; background: var(--line); overflow: hidden; }
+  .gauge i { display: block; height: 100%; border-radius: 99px; background: var(--c, var(--accent)); }
+  /* Une case de « Ma liste » enveloppée pour la recherche : elle garde sa place de grille. */
+  .find { display: contents; }
+  .find[hidden] { display: none; }
   .tile-wrap .btn { margin-top: auto; min-height: 2.3rem; font-size: .76rem; }
   .owned { color: var(--muted); font-size: .74rem; margin-top: auto; min-height: 2.3rem; display: flex; align-items: center; justify-content: center; }
 
@@ -454,11 +463,11 @@ const STYLE = `
   /* ---------------------------------------------------------------- divers */
 
   .search { display: flex; gap: .5rem; margin-bottom: .9rem; max-width: 36rem; }
-  input[type=text] {
+  input[type=text], input[type=search] {
     flex: 1; min-width: 0; min-height: 2.75rem; padding: 0 .9rem; border-radius: 12px;
     border: 1px solid var(--line); background: var(--panel); color: var(--text);
   }
-  input[type=text]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  input[type=text]:focus, input[type=search]:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
   form { display: flex; gap: .5rem; margin-top: 1rem; max-width: 26rem; }
 
   .empty, .err { color: var(--muted); padding: 2.5rem 0; font-size: .95rem; line-height: 1.6; max-width: 34rem; }
@@ -591,6 +600,7 @@ const SCRIPT = `
     list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
     home: 'M3 10.5 12 3l9 7.5M5 9.5V21h14V9.5',
     books: 'M4 4h5v16H4zM11 4h4v16h-4zM17.5 5l3.2 15',
+    book: 'M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z',
     compass: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM15.5 8.5l-2 5-5 2 2-5z',
     plus: 'M12 5v14M5 12h14',
     search: 'M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM21 21l-4.3-4.3',
@@ -1197,6 +1207,10 @@ const SCRIPT = `
   /** La fiche AniList de la série ouverte : faits et résumé, lus une fois. */
   var about = { id: 0, data: null, open: false }
   var query = ''
+  /** Ce qu'on tape dans « Ma liste » : un filtre sur place, sans aller-retour. */
+  var lquery = ''
+  /** Le statut montré dans « Lecture ». Vide : « En lecture » s'il y en a, sinon tout. */
+  var rfilter = ''
   var discoverTab = 'trending'
   /** Les jaquettes déjà reçues, et celle qu'on a touchée : sa fiche se dessine sans tout redemander. */
   var dItems = []
@@ -1205,6 +1219,7 @@ const SCRIPT = `
   var TABS = [
     { id: 'home', label: 'Accueil', icon: 'home' },
     { id: 'library', label: 'Ma liste', icon: 'books' },
+    { id: 'reading', label: 'Lecture', icon: 'book' },
     { id: 'calendar', label: 'Calendrier', icon: 'calendar' },
     { id: 'stats', label: 'Bilan', icon: 'chart' },
     { id: 'discover', label: 'Découvrir', icon: 'compass' }
@@ -1249,10 +1264,106 @@ const SCRIPT = `
 
     var shown = filter === 'all' ? rows : rows.filter(function (r) { return r.status === filter })
     countEl.textContent = plural(rows.length, 'série suivie', 'séries suivies') + '.'
+    appEl.innerHTML = findBox('lq', lquery, 'Chercher dans ma liste') +
+      '<div class="chips" role="group" aria-label="Filtrer par statut">' + chips + '</div>' +
+      (shown.length
+        ? '<div class="grid" id="found">' + shown.map(function (r) { return findable(r, seriesTile(r)) }).join('') + '</div>' +
+          '<div class="empty" id="none" hidden>Aucune série de ta liste ne correspond.</div>'
+        : '<div class="empty">Aucune série avec ce statut.</div>')
+    wireFind('lq', function (v) { lquery = v })
+  }
+
+  /**
+   * Chercher dans ce qu'on a déjà : un filtre sur place.
+   *
+   * Redessiner la grille à chaque lettre ferait perdre le clavier au champ ;
+   * on masque les cases qui ne correspondent pas, et c'est tout. Sans accents
+   * ni majuscules : « shingeki » trouve « Shingeki no Kyojin », « elan » trouve
+   * « Élan ».
+   */
+  function plain(text) {
+    return String(text || '').normalize('NFD').split('').filter(function (c) {
+      var k = c.charCodeAt(0)
+      return k < 0x300 || k > 0x36f
+    }).join('').toLowerCase()
+  }
+
+  function findBox(id, value, label) {
+    return '<div class="search"><input type="search" id="' + id + '" placeholder="' + label + '" value="' + esc(value) + '" ' +
+      'autocapitalize="off" autocomplete="off" aria-label="' + label + '"></div>'
+  }
+
+  /** Une case, enveloppée des titres qu'on peut y chercher. */
+  function findable(r, html) {
+    return '<div class="find" data-find="' + esc(plain(r.title + ' ' + (r.alt || ''))) + '">' + html + '</div>'
+  }
+
+  function applyFind(value) {
+    var q = plain(value).trim()
+    var seen = 0
+    var cases = document.querySelectorAll('#found > .find')
+    for (var i = 0; i < cases.length; i++) {
+      var hit = !q || cases[i].getAttribute('data-find').indexOf(q) >= 0
+      cases[i].hidden = !hit
+      if (hit) seen++
+    }
+    var none = document.getElementById('none')
+    if (none) none.hidden = seen > 0
+  }
+
+  function wireFind(id, keep) {
+    var box = document.getElementById(id)
+    if (!box) return
+    box.addEventListener('input', function () { keep(box.value); applyFind(box.value) })
+    applyFind(box.value)
+  }
+
+  var READ = ${JSON.stringify(READ_STATUS_LABELS)}
+
+  /** Un manga suivi : sa jaquette, où l'on en est, et le « +1 » au pied. */
+  function mangaTile(m) {
+    var total = m.total || 0
+    var done = m.status === 'completed' || (total && m.chapter >= total)
+    var where = m.chapter > 0 ? 'Ch. ' + m.chapter + (total ? ' / ' + total : '') : 'Pas commencé'
+    var bar = total
+      ? '<span class="gauge"><i style="width:' + Math.min(100, Math.round((m.chapter / total) * 100)) + '%"></i></span>'
+      : ''
+    var action = done
+      ? '<span class="owned">' + READ.completed + (m.rereads ? ' · relecture ' + m.rereads : '') + '</span>'
+      : btn('data-act="read" data-id="' + m.id + '" aria-label="Un chapitre de plus pour ' + esc(m.title) + '"',
+          'Ch. ' + (m.chapter + 1), 'plus', m.status === 'watching' ? 'primary' : '')
+    return '<div class="tile-wrap"' + colorStyle(m.color) + '>' +
+      '<div class="tile">' +
+        '<img src="' + esc(m.cover) + '" alt="" loading="lazy">' +
+        '<span class="title">' + esc(m.title) + '</span>' +
+        '<span class="meta" style="display:block">' + where + '</span>' + bar +
+      '</div>' +
+      action +
+    '</div>'
+  }
+
+  function renderReading(rows) {
+    sideEl.innerHTML = ''
+    if (!rows.length) {
+      countEl.textContent = 'Aucun manga suivi.'
+      appEl.innerHTML = '<div class="empty">Ajoute un manga depuis l’onglet Manga du PC : il apparaîtra ici, avec son « +1 ».</div>'
+      return
+    }
+    var counts = {}
+    rows.forEach(function (r) { counts[r.status] = (counts[r.status] || 0) + 1 })
+    var shownFilter = rfilter || (counts.watching ? 'watching' : 'all')
+    var chips = '<button class="chip" data-act="rfilter" data-filter="all" aria-pressed="' + (shownFilter === 'all') + '">' +
+      'Tout <small>' + rows.length + '</small></button>' +
+      Object.keys(READ).filter(function (k) { return counts[k] }).map(function (k) {
+        return '<button class="chip" data-act="rfilter" data-filter="' + k + '" aria-pressed="' + (shownFilter === k) + '">' +
+          READ[k] + ' <small>' + counts[k] + '</small></button>'
+      }).join('')
+    var shown = shownFilter === 'all' ? rows : rows.filter(function (r) { return r.status === shownFilter })
+    countEl.textContent = plural(rows.length, 'manga suivi', 'mangas suivis') + '. Un appui, un chapitre lu aujourd’hui.'
     appEl.innerHTML = '<div class="chips" role="group" aria-label="Filtrer par statut">' + chips + '</div>' +
       (shown.length
-        ? '<div class="grid">' + shown.map(seriesTile).join('') + '</div>'
-        : '<div class="empty">Aucune série avec ce statut.</div>')
+        ? '<div class="grid">' + shown.map(mangaTile).join('') + '</div>'
+        : '<div class="empty">Aucun manga avec ce statut.</div>')
   }
 
   /** « 3 h 04 », comme la barre latérale de l'app. */
@@ -1517,6 +1628,21 @@ const SCRIPT = `
       return load()
     }
     if (action === 'filter') { filter = el.getAttribute('data-filter'); return load() }
+    if (action === 'rfilter') { rfilter = el.getAttribute('data-filter'); return load() }
+
+    // Un chapitre lu. La réponse porte la liste à jour : pas de second appel.
+    if (action === 'read') {
+      el.disabled = true
+      try {
+        var lu = await call('/api/read', { id: id })
+        say('Chapitre ' + lu.chapter + (lu.status === 'completed' ? ' : manga terminé' : ''))
+        if (tab === 'reading') renderReading(lu.rows)
+      } catch (err) {
+        say(err.message)
+        el.disabled = false
+      }
+      return
+    }
 
     // Déplier, ou replier si c'était déjà celle-là.
     if (action === 'eps') {
@@ -1775,6 +1901,7 @@ const SCRIPT = `
     layout()
     try {
       if (tab === 'library') return renderLibrary((await call('/api/library')).rows)
+      if (tab === 'reading') return renderReading((await call('/api/reading')).rows)
       if (tab === 'calendar') {
         var programme = (await call('/api/calendar')).airing
         return renderCalendar(programme, sheet ? (await call('/api/library')).rows : null)
