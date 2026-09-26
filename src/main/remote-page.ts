@@ -226,8 +226,14 @@ const STYLE = `
   /* ---------------------------------------------------------------- grilles */
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.9rem, 1fr)); gap: 1rem .8rem; }
+  /*
+   * Une colonne calée en haut, pas un bloc : un bouton centre verticalement son
+   * contenu quand la rangée est plus haute que lui. Une case voisine au titre
+   * sur deux lignes faisait descendre toutes les jaquettes de sa rangée.
+   */
   .tile {
-    position: relative; display: block; width: 100%; padding: 0; text-align: left;
+    position: relative; display: flex; flex-direction: column; justify-content: flex-start;
+    width: 100%; padding: 0; text-align: left;
     background: none; border: 0; cursor: pointer; border-radius: 12px;
   }
   .tile img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 12px; background: var(--panel-2); display: block; }
