@@ -28,7 +28,7 @@ export function ReadingStats(): React.JSX.Element | null {
     // L'abréviation d'usage : trois lettres confondaient juin et juillet.
     label: new Date(m.year, m.month, 1).toLocaleDateString('fr-FR', { month: 'short' }),
     value: m.chapters,
-    detail: `${monthLabel(new Date(m.year, m.month, 1))} ·${num(m.chapters)} chapitre${m.chapters > 1 ? 's' : ''}`
+    detail: `${monthLabel(new Date(m.year, m.month, 1))} · ${num(m.chapters)} chapitre${m.chapters > 1 ? 's' : ''}`
   }))
   const read = stats.months.some((m) => m.chapters > 0)
 

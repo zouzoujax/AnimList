@@ -113,7 +113,9 @@ const FIRST_DELAY_MS = 150_000
 export function startMangaWatcher(win: BrowserWindow): () => void {
   const kick = (): void => {
     const prefs = getPrefs()
-    if (!prefs.mangaAlerts) return
+    // Sans notifications, le passage relèverait les nouvelles sans les dire :
+    // elles seraient perdues pour le jour où on les réactive.
+    if (!prefs.mangaAlerts || !prefs.notifications) return
     if (Date.now() - prefs.lastMangaSweep < EVERY_MS) return
     void sweepMangas(win)
   }

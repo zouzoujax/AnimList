@@ -70,7 +70,9 @@ export function logProgress(
  * lecture » ; on atteint le dernier chapitre d'une série finie, on passe
  * « lu ». Une série qui paraît encore n'annonce pas de total, et ne se
  * termine donc jamais toute seule. « Abandonné » et « en pause » sont des
- * choix : rien ici ne les défait, sauf revenir à zéro.
+ * choix : avancer ou reculer ne les défait pas, même jusqu'à zéro. Seul le
+ * dernier chapitre l'emporte sur la pause — un manga lu jusqu'au bout est lu ;
+ * un abandon, lui, reste un abandon.
  */
 export function settleStatus(entry: MangaEntry, total: number | null, now: number): MangaEntry {
   const next = { ...entry }

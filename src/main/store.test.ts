@@ -21,6 +21,7 @@ import {
   startRewatch,
   updateEvent,
   isTracked,
+  cacheMangas,
   removeMangaEntry,
   setMangaChapter,
   advanceManga,
@@ -449,5 +450,18 @@ describe('lecture des mangas', () => {
     removeMangaEntry(51)
     expect(snapshot().mangaEntries).toEqual([])
     expect(snapshot().reads).toEqual([])
+  })
+
+  it('une série qui finit de paraître passe « Lu » si on en est au dernier chapitre', () => {
+    setMangaEntry(53, { status: 'watching' }, manga(53, null))
+    setMangaChapter(53, 120, true)
+    setMangaEntry(54, { status: 'dropped' }, manga(54, null))
+    setMangaChapter(54, 120, true)
+    cacheMangas([manga(53, 120), manga(54, 120)])
+    const byId = new Map(snapshot().mangaEntries?.map((e) => [e.mangaId, e]))
+    expect(byId.get(53)).toMatchObject({ chapter: 120, status: 'completed' })
+    expect(byId.get(53)?.finishedAt).not.toBeNull()
+    // Un abandon reste un abandon, même lu jusqu'au bout.
+    expect(byId.get(54)?.status).toBe('dropped')
   })
 })

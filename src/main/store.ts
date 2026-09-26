@@ -919,14 +919,25 @@ export function libraryState(): LibraryState {
 
 // ---------------------------------------------------------------- mangas
 
-/** Tient à jour la fiche des mangas suivis ; les autres ne sont pas gardés. */
+/**
+ * Tient à jour la fiche des mangas suivis ; les autres ne sont pas gardés.
+ *
+ * Une série qui finit de paraître reçoit enfin un total : qui en est déjà au
+ * dernier chapitre l'a lue en entier, et sa fiche passe « Lu » sans attendre
+ * un « +1 » qui n'a plus rien à compter.
+ */
 export function cacheMangas(list: Manga[]): void {
   let touched = false
+  const now = Date.now()
   for (const manga of list) {
     const id = String(manga.id)
-    if (!db.mangaEntries[id]) continue
+    const entry = db.mangaEntries[id]
+    if (!entry) continue
     db.mangas[id] = manga
     touched = true
+    const total = manga.chapters
+    if (!total || entry.chapter < total || entry.status === 'completed' || entry.status === 'dropped') continue
+    db.mangaEntries[id] = { ...settleStatus(entry, total, now), updatedAt: now }
   }
   if (touched) changed()
 }
