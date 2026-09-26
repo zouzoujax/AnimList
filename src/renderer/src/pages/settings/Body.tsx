@@ -779,8 +779,8 @@ export default function SettingsBody(): React.JSX.Element {
         </Row>
 
         <Row
-          label="Bas de la barre latérale (essai)"
-          hint="Quatre formules à comparer : une seule restera, les autres partiront avec ce réglage."
+          label="Bas de la barre latérale"
+          hint="Ce qui s’affiche entre la navigation et « Ces 7 jours » : les séries à reprendre, les sorties du jour, les deux, ou tes listes."
         >
           <div className="flex flex-wrap gap-1.5">
             {(

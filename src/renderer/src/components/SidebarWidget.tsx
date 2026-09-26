@@ -1,9 +1,8 @@
 /**
- * ESSAI — le bas de la barre latérale, entre la navigation et « Ces 7 jours ».
+ * Le bas de la barre latérale, entre la navigation et « Ces 7 jours ».
  *
- * Quatre formules à comparer (réglage `sidebarWidget`) : « À suivre », « Ce
- * soir », les deux ensemble, ou les listes perso. Une seule restera ; les
- * autres partiront avec le réglage.
+ * Quatre formules au choix (réglage `sidebarWidget`) : « À suivre », les
+ * sorties d'aujourd'hui et de demain, les deux ensemble, ou les listes perso.
  *
  * Tout tient dans une colonne de 200 pixels : une ligne par élément, une petite
  * jaquette, le titre coupé plutôt que replié.

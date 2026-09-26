@@ -550,8 +550,8 @@ export interface Prefs {
   mangaSeen: Record<string, MangaSeen>
   lastMangaSweep: number
   /**
-   * ESSAI — ce qui remplit le bas de la barre latérale, au-dessus de « Ces 7
-   * jours ». Quatre formules à comparer ; une seule restera.
+   * Ce qui remplit le bas de la barre latérale, au-dessus de « Ces 7 jours » :
+   * voir `components/SidebarWidget.tsx`.
    */
   sidebarWidget: SidebarWidget
   /**
