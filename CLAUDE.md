@@ -5,6 +5,7 @@ App de bureau Windows pour suivre ses animes. Electron + electron-vite, React 19
 ## Commandes
 
 - `npm run dev` : lancer en développement (fermer d'abord toute fenêtre AnimeList ouverte)
+- `ANIMELIST_DISPLAY=19W_LCD_TV` devant `npm run dev` ou `npx electron .` : ouvre la fenêtre sur le deuxième écran sans prendre le focus — toujours pour un lancement de vérification
 - `npm run lint` · `npm run typecheck` · `npm test` (Vitest) · `npm run format`
 - `npm run build` : typecheck + build
 - `npm run screenshots -- <dossier> --themes=<ids|all> --only=<pages> [--new-design]` : captures avec les données de démo, jamais la vraie bibliothèque
