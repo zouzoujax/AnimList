@@ -423,6 +423,8 @@ const STYLE = `
     padding: .45rem; border-radius: 12px; background: var(--panel); border: 1px solid var(--line); text-align: left;
   }
   .slot img { width: 2.4rem; height: 3.3rem; border-radius: 7px; object-fit: cover; flex: none; background: var(--panel-2); }
+  /* La série dont la fiche est ouverte à côté. */
+  .slot[aria-current='true'] { border-color: var(--accent-line); background: var(--panel-2); }
   /* L'heure sur un fond teinté de la couleur de la série : on reconnaît la
      série sans que sa couleur ne touche au texte. */
   .slot .hour {
@@ -1283,8 +1285,19 @@ const SCRIPT = `
     return d.getHours() + ' h ' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes()
   }
 
-  function renderCalendar(airing) {
-    sideEl.innerHTML = ''
+  /**
+   * Le calendrier. Une série touchée ouvre sa fiche, comme dans la liste — elle
+   * l'ouvrait sur le PC, et il fallait aller jusqu'à la souris pour la cocher
+   * ou la lancer. La liste n'arrive que lorsqu'une fiche est ouverte : toutes les
+   * séries du calendrier sont dans la liste, leur fiche en vient.
+   */
+  function renderCalendar(airing, rows) {
+    if (rows) {
+      if (renderSheet(rows, 'Calendrier')) return
+    } else {
+      sideEl.innerHTML = ''
+      layout()
+    }
     countEl.textContent = airing.length
       ? plural(airing.length, 'épisode annoncé', 'épisodes annoncés') + ' dans les deux semaines.'
       : 'Rien d’annoncé pour l’instant.'
@@ -1317,7 +1330,8 @@ const SCRIPT = `
       var n = parJour[j.cle].length
       return '<section class="day"><h2>' + esc(jour(j.at)) + '<small>' + plural(n, 'épisode', 'épisodes') + '</small></h2>' +
         parJour[j.cle].map(function (a) {
-          return '<button class="slot" data-act="open" data-id="' + a.animeId + '"' + colorStyle(a.color) + '>' +
+          return '<button class="slot" data-act="pick" data-id="' + a.animeId + '" aria-current="' + (sheet === a.animeId) + '"' +
+            colorStyle(a.color) + '>' +
             '<img src="' + esc(a.cover) + '" alt="" loading="lazy">' +
             '<span class="hour">' + esc(heure(a.airingAt)) + '</span>' +
             '<span class="grow"><span class="title">' + esc(a.title) + '</span>' +
@@ -1761,7 +1775,10 @@ const SCRIPT = `
     layout()
     try {
       if (tab === 'library') return renderLibrary((await call('/api/library')).rows)
-      if (tab === 'calendar') return renderCalendar((await call('/api/calendar')).airing)
+      if (tab === 'calendar') {
+        var programme = (await call('/api/calendar')).airing
+        return renderCalendar(programme, sheet ? (await call('/api/library')).rows : null)
+      }
       if (tab === 'stats') return renderStats(await call('/api/stats'))
       if (tab === 'discover') {
         appEl.innerHTML = '<div class="skel"></div><div class="skel"></div>'
