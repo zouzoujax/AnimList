@@ -27,7 +27,6 @@ import type {
   LocalFolder,
   Manga,
   MangaKind,
-  MangaShelf,
   Media,
   MediaDetail,
   Paged,
@@ -130,17 +129,6 @@ const api = {
       ipcRenderer.invoke('manga:browse', kind, page, search, genre, country),
     /** La fiche d'un manga seul, quand on arrive depuis la relation d'un anime. */
     detail: (id: number): Promise<Manga> => ipcRenderer.invoke('manga:detail', id)
-  },
-  reader: {
-    /** Les mangas du dossier choisi, série par série, avec la progression. */
-    shelf: (): Promise<MangaShelf> => ipcRenderer.invoke('reader:shelf'),
-    /** Ouvre le sélecteur de dossier, puis relit l'étagère. */
-    choose: (): Promise<MangaShelf> => ipcRenderer.invoke('reader:choose'),
-    forget: (): Promise<void> => ipcRenderer.invoke('reader:forget'),
-    /** Les adresses des pages d'un tome, dans l'ordre. */
-    pages: (volume: string): Promise<string[]> => ipcRenderer.invoke('reader:pages', volume),
-    remember: (volume: string, page: number, pages: number): Promise<boolean> =>
-      ipcRenderer.invoke('reader:remember', volume, page, pages)
   },
 
   watch: {

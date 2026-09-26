@@ -30,7 +30,6 @@ import {
   subtitleTwin
 } from '@shared/episode-files'
 import { resumePoint } from '@shared/playback'
-import { MANGA_SCHEME_PRIVILEGES } from './manga-reader'
 import { allFolders, clearPosition, getFolder, positionsFor, setPosition, setFolder } from './store'
 
 export const MEDIA_SCHEME = 'animelist-media'
@@ -164,13 +163,11 @@ export async function openInSystemPlayer(path: string): Promise<boolean> {
  * considéré comme sûr et le lecteur refuse d'y chercher un flux.
  */
 export function registerMediaScheme(): void {
-  // Un seul appel pour tous les protocoles : un second remplacerait le premier.
   protocol.registerSchemesAsPrivileged([
     {
       scheme: MEDIA_SCHEME,
       privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, bypassCSP: false }
-    },
-    MANGA_SCHEME_PRIVILEGES
+    }
   ])
 }
 

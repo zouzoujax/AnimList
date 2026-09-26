@@ -17,7 +17,6 @@ import { promises as fs } from 'node:fs'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { writeDemoMangas } from './demo-mangas.mjs'
 
 const ENDPOINT = 'https://graphql.anilist.co'
 /*
@@ -441,9 +440,6 @@ async function main() {
     history.map((h) => JSON.stringify(h)).join('\n') + '\n',
     'utf8'
   )
-
-  // Les mangas du lecteur : des planches dessinées pour l'occasion.
-  await writeDemoMangas(dir)
 
   process.stdout.write(`${entries.length} entrées, ${history.length} épisodes inventés\n`)
   process.stdout.write(`Bibliothèque de démonstration : ${dir}\n`)

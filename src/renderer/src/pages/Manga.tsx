@@ -18,15 +18,13 @@
 import { humanMessage } from '@shared/api-outage'
 import { useEffect, useState } from 'react'
 import { motion } from 'motion/react'
-import { Compass, Flame, Library, Search, Star, TrendingUp, X } from 'lucide-react'
+import { Flame, Search, Star, TrendingUp, X } from 'lucide-react'
 import type { Manga, MangaKind } from '@shared/types'
 import { ORIGIN_FILTERS, ORIGIN_HINTS, ORIGIN_LABELS, type MangaOrigin } from '@shared/origin'
 import { MANGA_STATUS, MangaSheet } from '@/components/MangaSheet'
 import { ErrorBox, Modal, Poster, PosterSkeletons, Spinner } from '@/components/ui'
 import { rgba, toneAccent } from '@/lib/color'
 import { useDebounced, useInView } from '@/lib/hooks'
-import { useApp } from '@/store/app'
-import Shelf from '@/components/reader/Shelf'
 
 const TABS: { kind: MangaKind; label: string; icon: typeof Flame }[] = [
   { kind: 'trending', label: 'Tendances', icon: Flame },
@@ -70,40 +68,6 @@ function Card({ manga, index, onOpen }: { manga: Manga; index: number; onOpen: (
 }
 
 export default function MangaPage(): React.JSX.Element {
-  // « Mes mangas » d'abord : c'est là qu'on lit. Le catalogue se consulte.
-  const route = useApp((s) => s.route)
-  const [view, setView] = useState<'local' | 'catalogue'>(
-    route.name === 'manga' && route.tab === 'catalogue' ? 'catalogue' : 'local'
-  )
-
-  return (
-    <div className="page">
-      <div className="mb-6 flex flex-wrap items-end gap-4">
-        <div className="min-w-0 flex-1">
-          <h1 className="title-xl mb-1 text-[1.85rem]">Manga</h1>
-          <p className="text-[0.85rem] text-muted">
-            {view === 'local'
-              ? 'Tes mangas, lus depuis ton disque : page seule, double page ou défilement, dans le sens manga.'
-              : 'Le catalogue AniList, pour lire ce qui prolonge une série. Manga, manhwa et manhua sont distingués — AniList les mélange. Rien n’est suivi ici : cette page se consulte.'}
-          </p>
-        </div>
-        <div className="flex gap-1.5">
-          <button data-on={view === 'local'} className="chip" onClick={() => setView('local')}>
-            <Library size={13} />
-            Mes mangas
-          </button>
-          <button data-on={view === 'catalogue'} className="chip" onClick={() => setView('catalogue')}>
-            <Compass size={13} />
-            Catalogue
-          </button>
-        </div>
-      </div>
-      {view === 'local' ? <Shelf /> : <Catalogue />}
-    </div>
-  )
-}
-
-function Catalogue(): React.JSX.Element {
   const [tab, setTab] = useState<MangaKind>('trending')
   // `null` : les trois traditions mélangées, comme AniList les sert.
   const [origin, setOrigin] = useState<MangaOrigin | null>(null)
@@ -174,7 +138,13 @@ function Catalogue(): React.JSX.Element {
   const sentinel = useInView(loadMore)
 
   return (
-    <>
+    <div className="page">
+      <h1 className="title-xl mb-1 text-[1.85rem]">Manga</h1>
+      <p className="mb-6 text-[0.85rem] text-muted">
+        Le catalogue AniList, pour lire ce qui prolonge une série. Manga, manhwa et manhua sont distingués — AniList les
+        mélange. Rien n’est suivi ici : cette page se consulte.
+      </p>
+
       <div className="glass sticky top-0 z-20 mb-7 rounded-[20px] p-3 backdrop-blur-xl">
         <div className="flex flex-wrap items-center gap-2.5">
           <div className="relative min-w-[240px] flex-1">
@@ -255,6 +225,6 @@ function Catalogue(): React.JSX.Element {
       <Modal open={open !== null} onClose={() => setOpen(null)} width={640}>
         {open && <MangaSheet manga={open} onClose={() => setOpen(null)} />}
       </Modal>
-    </>
+    </div>
   )
 }

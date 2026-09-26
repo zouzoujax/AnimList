@@ -1,5 +1,4 @@
 import { BrowserWindow, app, ipcMain, shell } from 'electron'
-import { chooseRoot, forgetRoot, rememberPage, scanShelf, volumePages } from './manga-reader'
 import type {
   BrowseQuery,
   EntryPatch,
@@ -193,14 +192,6 @@ export function registerIpc(): void {
       anilist.mangas(kind, page, search, genre, getPrefs().showAdult, country)
   )
   ipcMain.handle('manga:detail', (_e, id: number) => anilist.mangaById(id))
-  // Les mangas du disque : le dossier choisi, ses tomes, et où on s'est arrêté.
-  ipcMain.handle('reader:shelf', () => scanShelf())
-  ipcMain.handle('reader:choose', () => chooseRoot())
-  ipcMain.handle('reader:forget', () => forgetRoot())
-  ipcMain.handle('reader:pages', (_e, volume: string) => volumePages(volume))
-  ipcMain.handle('reader:remember', (_e, volume: string, page: number, pages: number) =>
-    rememberPage(volume, page, pages)
-  )
   ipcMain.handle('anime:person', (_e, kind: 'character' | 'staff', id: number) => anilist.personWorks(kind, id))
   ipcMain.handle('anime:season', () => anilist.currentSeason())
   ipcMain.handle('anime:returning', () => anilist.returningSoon(getPrefs().showAdult))
